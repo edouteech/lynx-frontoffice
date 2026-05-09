@@ -1,0 +1,207 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { deleteCustomer, fetchCustomers } from '../../api/customer'
+import { getApiErrorMessage } from '../../lib/apiError'
+import type { Customer } from '../../types/api'
+import { CustomerCreateModal } from './create'
+
+export default function CustomersIndex() {
+  const [page, setPage] = useState(1)
+  const [paginated, setPaginated] = useState<{
+    data: Customer[]
+    current_page: number
+    last_page: number
+    total: number
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalCustomer, setModalCustomer] = useState<Customer | null>(null)
+
+  const refreshList = useCallback(async () => {
+    setError(null)
+    try {
+      const res = await fetchCustomers(page)
+      setPaginated({
+        data: res.data,
+        current_page: res.current_page,
+        last_page: res.last_page,
+        total: res.total,
+      })
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }, [page])
+
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetchCustomers(page)
+        if (!cancelled) {
+          setPaginated({
+            data: res.data,
+            current_page: res.current_page,
+            last_page: res.last_page,
+            total: res.total,
+          })
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(getApiErrorMessage(e))
+          setPaginated(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [page])
+
+  const handleDelete = useCallback(
+    async (c: Customer) => {
+      if (!window.confirm(`Supprimer le client « ${c.name} » ?`)) return
+      setError(null)
+      try {
+        await deleteCustomer(c.id)
+        const res = await fetchCustomers(page)
+        setPaginated({
+          data: res.data,
+          current_page: res.current_page,
+          last_page: res.last_page,
+          total: res.total,
+        })
+      } catch (err) {
+        setError(getApiErrorMessage(err))
+      }
+    },
+    [page]
+  )
+
+  const columns: Column<Customer>[] = useMemo(
+    () => [
+      { key: 'name', label: 'Nom', sortable: true },
+      {
+        key: 'email',
+        label: 'Email',
+        sortable: true,
+        render: (v) => (v ? String(v) : <span className="text-gray-400">—</span>),
+      },
+      {
+        key: 'phone',
+        label: 'Téléphone',
+        sortable: true,
+        render: (v) => (v ? String(v) : <span className="text-gray-400">—</span>),
+      },
+      {
+        key: 'tax_id',
+        label: 'IFU',
+        sortable: true,
+        render: (v) => (v ? String(v) : <span className="text-gray-400">—</span>),
+      },
+      {
+        key: 'aib',
+        label: 'AIB',
+        render: (v) =>
+          v ? (
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+              Oui
+            </span>
+          ) : (
+            <span className="text-gray-400">Non</span>
+          ),
+      },
+    ],
+    []
+  )
+
+  const actions: Action<Customer>[] = useMemo(
+    () => [
+      {
+        label: 'Modifier',
+        icon: Pencil,
+        variant: 'primary',
+        onClick: (c) => {
+          setModalCustomer(c)
+          setModalOpen(true)
+        },
+      },
+      {
+        label: 'Supprimer',
+        icon: Trash2,
+        variant: 'danger',
+        onClick: (c) => void handleDelete(c),
+      },
+    ],
+    [handleDelete]
+  )
+
+  return (
+    <div className="space-y-6">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-900">Clients</h1>
+          <p className="mt-1 text-gray-600">
+            Gestion des clients (création, modification, suppression).
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setModalCustomer(null)
+            setModalOpen(true)
+          }}
+          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
+        >
+          <Plus className="h-4 w-4" />
+          Nouveau client
+        </button>
+      </header>
+
+      {error && (
+        <div
+          className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
+      <DataTable<Customer>
+        data={paginated?.data ?? []}
+        columns={columns}
+        actions={actions}
+        loading={loading && !paginated}
+        exportFilename="clients"
+        searchable
+        searchPlaceholder="Rechercher un client…"
+        serverPagination={
+          paginated
+            ? {
+                currentPage: paginated.current_page,
+                lastPage: paginated.last_page,
+                total: paginated.total,
+                onPageChange: (p) => setPage(p),
+                disabled: loading,
+              }
+            : undefined
+        }
+        emptyMessage="Aucun client"
+      />
+
+      <CustomerCreateModal
+        open={modalOpen}
+        customer={modalCustomer}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => void refreshList()}
+      />
+    </div>
+  )
+}
+
