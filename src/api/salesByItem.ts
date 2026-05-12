@@ -6,6 +6,8 @@ export interface SalesByItem {
   product: string;
   quantity_sold: number;
   total_cost: number;
+  total_cost_ht: number;
+  total_cost_ttc: number;
   revenue_ht: number;
   discount_amount: number;
   revenue_net: number;

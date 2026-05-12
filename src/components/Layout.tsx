@@ -35,7 +35,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col lg:ml-64 bg-[#EFF6FF]">
+      {/*<div className="flex flex-1 flex-col lg:ml-64 bg-[#EFF6FF]">*/}
+      <div className="flex flex-1 flex-col lg:ml-64 bg-[#EFF6FF] min-w-0 overflow-x-hidden">
+
         <Navbar 
           onLogoutClick={() => setShowLogoutConfirm(true)} 
           onMenuClick={() => setIsSidebarOpen(true)}

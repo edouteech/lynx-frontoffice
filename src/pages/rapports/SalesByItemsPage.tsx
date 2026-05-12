@@ -1,24 +1,20 @@
 import { useMemo, useState, useEffect } from "react";
-import { UserRound, Printer, Store, Filter, RotateCcw } from "lucide-react";
+import { UserRound, Printer, Store, Filter, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
-import { fetchSalesByItem } from "../../api/salesByItem";
+import { fetchSalesByItem, type SalesByItem } from "../../api/salesByItem";
 import { fetchUsers } from "../../api/users";
 import { fetchStores } from "../../api/stores";
 
-type Row = {
-  article: string;
-  qty: number;
-  cost: number;
-  reductions: number;
-  amountHT: number;
-  amountTTC: number;
-  profit: number;
-  margin_percent: number;
+/* ================= TYPES ================= */
+
+type Row = SalesByItem & {
   employeeId: string;
   storeId: string;
   soldAt: string;
 };
+
+/* ================= FORMAT UTILS ================= */
 
 function formatFcfa(value: number) {
   return new Intl.NumberFormat("fr-FR", {
@@ -30,97 +26,118 @@ function formatFcfa(value: number) {
     .replace("XOF", "FCFA");
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value);
+}
+
 function toDateTimeLocalValue(d: Date, time: string = "00:00") {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${time}`;
 }
 
-function mapApiToRow(item: any): Row {
-  return {
-    article: item.product,
-    qty: item.quantity_sold,
-    cost: item.total_cost,
-    reductions: item.discount_amount,
-    amountHT: item.revenue_ht,
-    amountTTC: item.revenue_net,
-    profit: item.profit,
-    margin_percent: item.margin_percent,
-    employeeId: "all",
-    storeId: "all",
-    soldAt: new Date().toISOString(),
-  };
+/* ================= KPI CARD ================= */
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  accent,
+  tooltip,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+  tooltip?: string;
+}) {
+  return (
+    <div 
+      className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md"
+      title={tooltip}
+    >
+      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full opacity-10 ${accent} transition-transform group-hover:scale-110`} />
+      
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent} shadow-inner`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <p className="text-sm font-bold uppercase tracking-wide text-gray-500">{label}</p>
+      </div>
+
+      <div className="mt-2 text-gray-900">
+        {value}
+      </div>
+      {sub && <div className="mt-2 border-t border-gray-50 pt-2">{sub}</div>}
+    </div>
+  );
 }
 
-function SimpleTable({
+/* ================= MINI TREND TABLE ================= */
+
+function MiniTrendTable({
   title,
+  subtitle,
   data,
+  type,
   loading,
 }: {
   title: string;
+  subtitle: string;
   data: Row[];
+  type: "top" | "flop";
   loading?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-400 bg-gray-50 px-5 py-4">
-        <h2 className="text-sm font-semibold text-[#2563EB]">{title}</h2>
+    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-gray-800">{title}</h3>
+          <p className="text-xs text-gray-400">{subtitle}</p>
+        </div>
+        <div className={`rounded-full p-2 ${type === "top" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>
+          {type === "top" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-500">
-              <th className="px-5 py-3 font-medium">Produit</th>
-              <th className="px-5 py-3 font-medium text-right">Quantités</th>
-              <th className="px-5 py-3 font-medium text-right">
-                Chiffre d'affaires
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3} className="px-5 py-8 text-center text-gray-400">
-                  Chargement...
-                </td>
-              </tr>
-            ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-5 py-8 text-center text-gray-400">
-                  Aucune donnée
-                </td>
-              </tr>
-            ) : (
-              data.map((item, index) => (
-                <tr
-                  key={index}
-                  className="border-t border-gray-100 hover:bg-gray-50 transition"
-                >
-                  <td className="px-5 py-4">
-                    <span className="inline-flex rounded-md bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
-                      {item.article}
-                    </span>
-                  </td>
-
-                  <td className="px-5 py-4 text-right text-gray-700">
-                    {new Intl.NumberFormat("fr-FR", {
-                      maximumFractionDigits: 2,
-                    }).format(item.qty)}
-                  </td>
-
-                  <td className="px-5 py-4 text-right font-medium text-gray-900">
-                    {formatFcfa(item.amountTTC)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-12 w-full animate-pulse rounded-xl bg-gray-50" />
+          ))
+        ) : data.length === 0 ? (
+          <div className="py-8 text-center text-xs text-gray-400">Aucune donnée</div>
+        ) : (
+          data.map((item, index) => (
+            <div
+              key={index}
+              className="group flex items-center justify-between rounded-xl border border-transparent p-3 transition-all hover:border-gray-100 hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold text-gray-500 group-hover:bg-white group-hover:shadow-sm">
+                  {index + 1}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-700">{item.product}</div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-tight">{formatNumber(item.quantity_sold)} unités vendues</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-bold text-gray-900">{formatFcfa(item.revenue_net)}</div>
+                <div className={`text-[10px] font-medium ${Number(item.margin_percent) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {Number(item.margin_percent).toFixed(1)}% marge
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
 }
+
+/* ================= PAGE ================= */
 
 export default function SalesByItemsPage() {
   const defaultFrom = useMemo(() => {
@@ -182,15 +199,14 @@ export default function SalesByItemsPage() {
         const res = await fetchSalesByItem({
           start_date: appliedFrom,
           end_date: appliedTo,
-          store_id:
-            appliedStoreId !== "all" ? Number(appliedStoreId) : undefined,
-          employee_id:
-            appliedEmployeeId !== "all" ? Number(appliedEmployeeId) : undefined,
+          store_id: appliedStoreId !== "all" ? Number(appliedStoreId) : undefined,
+          employee_id: appliedEmployeeId !== "all" ? Number(appliedEmployeeId) : undefined,
         });
 
-        setRows(res.data.map(mapApiToRow));
-        setTopArticles(res.top_selling.map(mapApiToRow));
-        setFlopArticles(res.least_selling.map(mapApiToRow));
+        const mapped = res.data.map(item => ({ ...item, employeeId: "all", storeId: "all", soldAt: new Date().toISOString() }));
+        setRows(mapped);
+        setTopArticles(res.top_selling.map(item => ({ ...item, employeeId: "all", storeId: "all", soldAt: new Date().toISOString() })));
+        setFlopArticles(res.least_selling.map(item => ({ ...item, employeeId: "all", storeId: "all", soldAt: new Date().toISOString() })));
       } catch (e) {
         console.error(e);
         setRows([]);
@@ -205,102 +221,115 @@ export default function SalesByItemsPage() {
   }, [appliedFrom, appliedTo, appliedStoreId, appliedEmployeeId]);
 
   useEffect(() => {
-    async function loadUsers() {
+    async function loadMeta() {
       try {
-        const res = await fetchUsers(1);
+        const [usersRes, storesRes] = await Promise.all([
+          fetchUsers(1),
+          fetchStores(1),
+        ]);
 
-        const mapped = res.data.map((u) => ({
-          id: String(u.id),
-          name: u.name,
-        }));
+        setEmployees([
+          { id: "all", name: "Tous les employés" },
+          ...usersRes.data.map((u) => ({ id: String(u.id), name: u.name })),
+        ]);
 
-        setEmployees([{ id: "all", name: "Tous les employés" }, ...mapped]);
+        setStores([
+          { id: "all", name: "Tous les magasins" },
+          ...storesRes.data.map((s) => ({ id: String(s.id), name: s.name })),
+        ]);
       } catch (e) {
-        console.error("Erreur chargement users", e);
+        console.error("Erreur chargement metadata", e);
       }
     }
-
-    loadUsers();
+    loadMeta();
   }, []);
 
-  useEffect(() => {
-    async function loadStores() {
-      try {
-        const res = await fetchStores(1);
+  /* ================= KPI CALCULATIONS ================= */
+  
+  const totals = useMemo(() => {
+    return rows.reduce((acc, row) => ({
+      revenue_ttc: acc.revenue_ttc + Number(row.revenue_net),
+      revenue_ht: acc.revenue_ht + Number(row.revenue_ht),
+      total_cost: acc.total_cost + Number(row.total_cost),
+      profit: acc.profit + Number(row.profit),
+      items_sold: acc.items_sold + Number(row.quantity_sold),
+    }), { revenue_ttc: 0, revenue_ht: 0, total_cost: 0, profit: 0, items_sold: 0 });
+  }, [rows]);
 
-        const mapped = res.data.map((s) => ({
-          id: String(s.id),
-          name: s.name,
-        }));
-
-        setStores([{ id: "all", name: "Tous les magasins" }, ...mapped]);
-      } catch (e) {
-        console.error("Erreur chargement magasins", e);
-      }
-    }
-
-    loadStores();
-  }, []);
-
-  const filteredRows = useMemo(() => rows, [rows]);
+  const avgMarginPct = useMemo(() => {
+    if (totals.total_cost === 0) return 0;
+    return (totals.profit / totals.total_cost) * 100;
+  }, [totals]);
 
   const columns: Column<Row>[] = useMemo(
     () => [
-      { key: "article", label: "Articles", sortable: true },
-      {
-        key: "qty",
-        label: "Quantité vendue",
+      { 
+        key: "product", 
+        label: "Produit", 
         sortable: true,
-        align: "right",
-        render: (v) =>
-          new Intl.NumberFormat("fr-FR", {
-            maximumFractionDigits: 2,
-          }).format(Number(v ?? 0)),
+        render: (v) => <span className="font-semibold text-gray-900">{String(v)}</span>
       },
       {
-        key: "cost",
-        label: "coût",
+        key: "quantity_sold",
+        label: "Qté vendue",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
+        render: (v) => (
+          <span className="inline-flex items-center rounded-lg bg-gray-50 px-2.5 py-1 text-xs font-bold text-gray-700">
+            {formatNumber(Number(v ?? 0))}
+          </span>
+        ),
       },
       {
-        key: "reductions",
-        label: "Reductions",
+        key: "total_cost_ht",
+        label: "Coût d'achat",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
+        render: (_, row) => (
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-gray-500">HT: {formatFcfa(row.total_cost_ht)}</span>
+            <span className="font-medium text-gray-700">TTC: {formatFcfa(row.total_cost_ttc)}</span>
+          </div>
+        ),
       },
       {
-        key: "amountHT",
-        label: "Montants HT",
+        key: "revenue_ht",
+        label: "CA HT",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
+        render: (v) => <span className="font-medium">{formatFcfa(Number(v ?? 0))}</span>,
       },
       {
-        key: "amountTTC",
-        label: "Montants TTC",
+        key: "revenue_net",
+        label: "CA TTC",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
+        render: (v) => <span className="font-bold text-blue-700">{formatFcfa(Number(v ?? 0))}</span>,
       },
       {
         key: "profit",
-        label: "Profit",
+        label: "Marge HT",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
+        render: (v) => (
+          <span className={`font-semibold ${Number(v) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            {formatFcfa(Number(v ?? 0))}
+          </span>
+        ),
       },
       {
         key: "margin_percent",
-        label: "Marge %",
+        label: "Taux marge",
         sortable: true,
         align: "right",
-        render: (v) =>
-          new Intl.NumberFormat("fr-FR", {
-            maximumFractionDigits: 2,
-          }).format(Number(v ?? 0)) + " %",
+        render: (v) => {
+          const pct = Number(v ?? 0);
+          return (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${pct >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+              {pct.toFixed(1)} %
+            </span>
+          );
+        },
       },
     ],
     [],
@@ -310,16 +339,18 @@ export default function SalesByItemsPage() {
     <div className="space-y-6">
       <header className="mb-7">
         <h1 className="text-2xl font-semibold text-gray-900">
-          Ventes par articles
+          Analyse par articles
         </h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Détails des performances par produit et palmarès des ventes
+        </p>
       </header>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      {/* FILTERS */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm mb-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
           <label className="lg:col-span-3">
-            <div className="mb-1 text-xs font-semibold text-gray-600">
-              Les employés
-            </div>
+            <div className="mb-1 text-xs font-semibold text-gray-600">Employé</div>
             <div className="relative">
               <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
@@ -349,9 +380,7 @@ export default function SalesByItemsPage() {
           </div>
 
           <label className="lg:col-span-3">
-            <div className="mb-1 text-xs font-semibold text-gray-600">
-              Les magasins
-            </div>
+            <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
             <div className="relative">
               <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
@@ -393,43 +422,87 @@ export default function SalesByItemsPage() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SimpleTable
-          title="Top 5 articles"
+      {/* KPI CARDS */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Chiffre d'affaire"
+          value={
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-gray-900">TTC = {formatFcfa(totals.revenue_ttc)}</span>
+              <span className="text-sm font-medium text-gray-600">HT = {formatFcfa(totals.revenue_ht)}</span>
+            </div>
+          }
+          icon={BadgeDollarSign}
+          accent="bg-blue-600"
+        />
+        <KpiCard
+          label="Marge globale"
+          value={
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-gray-900">{formatFcfa(totals.profit)}</span>
+              <span className="text-sm font-medium text-emerald-600">Taux = {avgMarginPct.toFixed(1)} %</span>
+            </div>
+          }
+          tooltip={`Marge HT = CA HT - Coût HT\nTaux = (Marge HT / Coût HT) * 100`}
+          icon={TrendingUp}
+          accent="bg-emerald-600"
+        />
+        <KpiCard
+          label="Volume d'articles"
+          value={<span className="text-2xl font-bold text-gray-900">{formatNumber(totals.items_sold)}</span>}
+          icon={ShoppingBag}
+          accent="bg-violet-600"
+        />
+        <KpiCard
+          label="Top Produit (CA)"
+          value={<span className="text-lg font-bold text-gray-900 truncate">{topArticles[0]?.product || "---"}</span>}
+          sub={<span className="text-xs text-gray-500">{topArticles[0] ? formatFcfa(topArticles[0].revenue_net) : ""}</span>}
+          icon={Percent}
+          accent="bg-amber-600"
+        />
+      </div>
+
+      {/* TOP / FLOP ARTICLES */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <MiniTrendTable
+          title="Top 5 Articles"
+          subtitle="Meilleures ventes en quantité"
           data={topArticles}
+          type="top"
           loading={loading}
         />
-        <SimpleTable
-          title="Flop 5 articles"
+        <MiniTrendTable
+          title="Flop 5 Articles"
+          subtitle="Moins bonnes ventes en quantité"
           data={flopArticles}
+          type="flop"
           loading={loading}
         />
       </div>
 
+      {/* MAIN TABLE */}
       <div className="mt-6">
         <DataTable<Row>
-          data={filteredRows}
+          data={rows}
           columns={columns}
-          title="Les chiffres d’affaires par articles"
+          title="Performance détaillée par produit"
           searchable
-          searchPlaceholder="Recherche…"
+          searchPlaceholder="Rechercher un produit…"
           exportFilename="ventes-par-articles"
-          emptyMessage="aucune donnée disponible"
+          emptyMessage={loading ? "Chargement..." : "Aucun article vendu sur cette période"}
           customFilters={
             <button
-              type="button"
               onClick={() => window.print()}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              aria-label="Imprimer"
-              title="Imprimer"
             >
-              {" "}
-              <Printer className="h-4 w-4 text-gray-500" /> Imprimer{" "}
+              <Printer className="h-4 w-4" />
+              Imprimer
             </button>
           }
-          getRowId={(r) => r.article}
+          getRowId={(r) => r.product}
         />
       </div>
     </div>
   );
 }
+

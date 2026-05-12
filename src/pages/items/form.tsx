@@ -724,7 +724,7 @@ export default function ItemFormPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Coûts" hint="Prix d'achat fournisseur HT">
+                  <Field label="Coûts" hint="Prix d'achat fournisseur TTC">
                     <div className="relative">
                       <Inp type="number" step="0.01" min="0" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0.00" className="pr-12" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>

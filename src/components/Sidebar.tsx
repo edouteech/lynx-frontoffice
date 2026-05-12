@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react'
+import { useState, useEffect, type ComponentType } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -51,6 +51,124 @@ interface NavItem {
   children?: NavSubItem[]
 }
 
+const navItems: NavItem[] = [
+  {
+    id: 'dashboard-menu',
+    label: 'Tableau de bord',
+    icon: LayoutDashboard,
+    children: [
+      { id: 'rapports/synthese-globale', label: 'Synthèse globale', icon: LineChart },
+      { id: 'rapports/resume-detaille', label: 'Synthèse détaillé', icon: TrendingUp },
+      { id: 'stock/evaluation',            label: 'Stock global',     icon: TrendingUp },
+    ],
+  },
+  {
+    id: 'rapports-menu',
+    label: 'Rapports',
+    icon: BarChart3,
+    children: [
+      { id: 'rapports/ventes', label: 'Récap ventes', icon: LineChart },
+      {
+        id: 'rapports/ventes-par-articles',
+        label: 'Ventes par articles',
+        icon: Package,
+      },
+      {
+        id: 'rapports/ventes-par-employe',
+        label: 'Ventes par employé',
+        icon: Users,
+      },
+      {
+        id: 'rapports/ventes-par-categorie',
+        label: 'Ventes par catégorie',
+        icon: FolderTree,
+      },
+      {
+        id: 'rapports/ventes-par-moyen-de-paiement',
+        label: 'Moyens de paiement',
+        icon: CreditCard,
+      },
+      {
+        id: 'rapports/ventes-par-taxe',
+        label: 'Ventes par taxe',
+        icon: Percent,
+      },
+      {
+        id: 'rapports/factures-des-ventes',
+        label: 'Facture des ventes',
+        icon: ReceiptText,
+      },
+      {
+        id: 'rapports/rachats-d-article',
+        label: "Rachats d'article",
+        icon: Undo2,
+      },
+      {
+        id: 'rapports/periode-de-travail',
+        label: 'Période de travail',
+        icon: Clock,
+      },
+    ],
+  },
+  {
+    id: 'articles-menu',
+    label: 'Articles',
+    icon: Package,
+    children: [
+      { id: 'items', label: 'Liste des articles', icon: List },
+      { id: 'item-categories', label: 'Catégories', icon: FolderTree },
+      { id: 'favorites', label: 'Favoris', icon: Star },
+    ],
+  },
+  {
+    id: 'stock-menu',
+    label: 'Stock',
+    icon: Boxes,
+    children: [
+      { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
+      { id: 'central-orders', label: 'Commandes centrale', icon: Store },
+      { id: 'purchase-orders', label: 'Commandes fournisseur', icon: ClipboardList },
+      { id: 'stock-transfers', label: 'Transferts', icon: ArrowLeftRight },
+      { id: 'stock-adjustments', label: 'Ajustements', icon: PackagePlus },
+      { id: 'sales', label: 'Ventes', icon: ShoppingBag },
+      { id: 'stock/evaluation', label: 'Évaluation de stock', icon: TrendingUp },
+      { id: 'stock/movements',  label: 'Historique des stocks', icon: History },
+      { id: 'inventories', label: 'Inventaires', icon: ClipboardCheck },
+    ],
+  },
+  { id: 'stores', label: 'Magasins', icon: Store },
+  { id: 'cash-registers', label: 'Caisses', icon: Wallet },
+  { id: 'customers', label: 'Clients', icon: UserRoundPlus },
+  { id: 'vat-rates', label: 'TVA', icon: Percent },
+  { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
+  {
+    id: 'equipe',
+    label: 'Équipe',
+    icon: Users,
+    children: [
+      { id: 'roles', label: 'Rôles', icon: Shield },
+      { id: 'users', label: 'Utilisateurs', icon: UserRound },
+    ],
+  },
+  {
+    id: 'parametres-menu',
+    label: 'Paramètres',
+    icon: Settings,
+    children: [
+      {
+        id: 'settings/general',
+        label: 'Générale',
+        icon: SlidersHorizontal,
+      },
+      {
+        id: 'settings/receipts',
+        label: 'Reçus',
+        icon: ReceiptText,
+      },
+    ],
+  },
+]
+
 export default function Sidebar(_props: { onLogoutClick?: () => void }) {
   const {
     user,
@@ -64,165 +182,24 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
 
   const activeTab = pathWithoutSlash
 
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
-    () => ({
-      'dashboard-menu':
-        pathWithoutSlash === 'rapports/ventes-par-magasin' ||
-        pathWithoutSlash === 'stock/evaluation',
-      'articles-menu':
-        pathWithoutSlash === 'categories' ||
-        pathWithoutSlash.startsWith('categories/') ||
-        pathWithoutSlash === 'favorites' ||
-        pathWithoutSlash.startsWith('favorites/') ||
-        pathWithoutSlash === 'articles' ||
-        pathWithoutSlash.startsWith('articles/'),
-      'stock-menu':
-        pathWithoutSlash === 'suppliers' ||
-        pathWithoutSlash.startsWith('suppliers/') ||
-        pathWithoutSlash === 'central-orders' ||
-        pathWithoutSlash.startsWith('central-orders/') ||
-        pathWithoutSlash === 'purchase-orders' ||
-        pathWithoutSlash.startsWith('purchase-orders/') ||
-        pathWithoutSlash === 'stock-transfers' ||
-        pathWithoutSlash.startsWith('stock-transfers/') ||
-        pathWithoutSlash === 'stock-adjustments' ||
-        pathWithoutSlash.startsWith('stock-adjustments/') ||
-        pathWithoutSlash === 'sales' ||
-        pathWithoutSlash.startsWith('sales/') ||
-        pathWithoutSlash === 'stock/evaluation' ||
-        pathWithoutSlash === 'stock/movements' ||
-        pathWithoutSlash === 'inventories' ||
-        pathWithoutSlash.startsWith('inventories/'),
-      'parametres-menu': pathWithoutSlash.startsWith('parametres'),
-      'rapports-menu': pathWithoutSlash.startsWith('rapports'),
-      equipe: ['roles', 'utilisateurs'].some(
-        (p) =>
-          pathWithoutSlash === p || pathWithoutSlash.startsWith(`${p}/`)
-      ),
-    })
-  )
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+
+  // Auto-expand active section on route change
+  useEffect(() => {
+    const activeSection = navItems.find((item) =>
+      item.children?.some(
+        (child) => activeTab === child.id || activeTab.startsWith(`${child.id}/`)
+      )
+    )
+    if (activeSection) {
+      setOpenSections((prev) => ({ ...prev, [activeSection.id]: true }))
+    }
+  }, [activeTab])
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const navItems: NavItem[] = [
-    {
-      id: 'dashboard-menu',
-      label: 'Tableau de bord',
-      icon: LayoutDashboard,
-      children: [
-        { id: 'rapports/synthese-globale', label: 'Synthèse globale', icon: LineChart },
-        { id: 'rapports/resume-detaille', label: 'Synthèse détaillé', icon: TrendingUp },
-        { id: 'stock/evaluation',            label: 'Stock global',     icon: TrendingUp },
-      ],
-    },
-    {
-      id: 'rapports-menu',
-      label: 'Rapports',
-      icon: BarChart3,
-      children: [
-        { id: 'rapports/ventes', label: 'Récap ventes', icon: LineChart },
-        {
-          id: 'rapports/ventes-par-articles',
-          label: 'Ventes par articles',
-          icon: Package,
-        },
-        {
-          id: 'rapports/ventes-par-employe',
-          label: 'Ventes par employé',
-          icon: Users,
-        },
-        {
-          id: 'rapports/ventes-par-categorie',
-          label: 'Ventes par catégorie',
-          icon: FolderTree,
-        },
-        {
-          id: 'rapports/ventes-par-moyen-de-paiement',
-          label: 'Moyens de paiement',
-          icon: CreditCard,
-        },
-        {
-          id: 'rapports/ventes-par-taxe',
-          label: 'Ventes par taxe',
-          icon: Percent,
-        },
-        {
-          id: 'rapports/factures-des-ventes',
-          label: 'Facture des ventes',
-          icon: ReceiptText,
-        },
-        {
-          id: 'rapports/rachats-d-article',
-          label: "Rachats d'article",
-          icon: Undo2,
-        },
-        {
-          id: 'rapports/periode-de-travail',
-          label: 'Période de travail',
-          icon: Clock,
-        },
-      ],
-    },
-    {
-      id: 'articles-menu',
-      label: 'Articles',
-      icon: Package,
-      children: [
-        { id: 'items', label: 'Liste des articles', icon: List },
-        { id: 'item-categories', label: 'Catégories', icon: FolderTree },
-        { id: 'favorites', label: 'Favoris', icon: Star },
-      ],
-    },
-    {
-      id: 'stock-menu',
-      label: 'Stock',
-      icon: Boxes,
-      children: [
-        { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
-        { id: 'central-orders', label: 'Commandes centrale', icon: Store },
-        { id: 'purchase-orders', label: 'Commandes fournisseur', icon: ClipboardList },
-        { id: 'stock-transfers', label: 'Transferts', icon: ArrowLeftRight },
-        { id: 'stock-adjustments', label: 'Ajustements', icon: PackagePlus },
-        { id: 'sales', label: 'Ventes', icon: ShoppingBag },
-        { id: 'stock/evaluation', label: 'Évaluation de stock', icon: TrendingUp },
-        { id: 'stock/movements',  label: 'Historique des stocks', icon: History },
-        { id: 'inventories', label: 'Inventaires', icon: ClipboardCheck },
-      ],
-    },
-    { id: 'stores', label: 'Magasins', icon: Store },
-    { id: 'cash-registers', label: 'Caisses', icon: Wallet },
-    { id: 'customers', label: 'Clients', icon: UserRoundPlus },
-    { id: 'vat-rates', label: 'TVA', icon: Percent },
-    { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
-    {
-      id: 'equipe',
-      label: 'Équipe',
-      icon: Users,
-      children: [
-        { id: 'roles', label: 'Rôles', icon: Shield },
-        { id: 'users', label: 'Utilisateurs', icon: UserRound },
-      ],
-    },
-    {
-      id: 'parametres-menu',
-      label: 'Paramètres',
-      icon: Settings,
-      children: [
-        {
-          id: 'settings/general',
-          label: 'Générale',
-          icon: SlidersHorizontal,
-        },
-        {
-          id: 'settings/receipts',
-          label: 'Reçus',
-          icon: ReceiptText,
-        },
-      ],
-    },
-  ]
 
   const navItemsFiltered = navItems.filter((item) => {
     // Tableau de bord

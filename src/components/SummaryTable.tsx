@@ -220,11 +220,11 @@ export default function SummaryTable<T extends object>({
 
               if (type === 'grandtotal') {
                 return (
-                  <tr key={rowIndex} className="border-t-2 border-slate-900 font-black bg-slate-50">
+                  <tr key={rowIndex} className="border-t-2 border-b-2 border-slate-500 font-bold bg-blue-50 sticky bottom-0">
                     {columns.map((col, i) => (
                       <td
                         key={i}
-                        className={`border-r border-slate-900 px-4 py-4 last:border-r-0 ${
+                        className={`border-r border-slate-400 px-4 py-4 last:border-r-0 ${
                           col.align === 'right' ? 'text-right' : 'text-left'
                         } text-slate-900`}
                       >

@@ -5,12 +5,18 @@ import { api } from "./apiClient";
 export interface SalesByEmployee {
   id: number;
   employee: string;
+  total_transactions: number;
   quantity_sold: number;
-  total_cost: number;
+  total_cost_ht: number;
+  total_cost_ttc: number;
   revenue_ht: number;
-  discount_amount: number;
+  revenue_ttc: number;
   revenue_net: number;
+  discount_amount: number;
+  profit_ht: number;
   profit: number;
+  margin_percent: number;
+  commission_amount: number;
 }
 
 export interface SalesByEmployeeResponse {

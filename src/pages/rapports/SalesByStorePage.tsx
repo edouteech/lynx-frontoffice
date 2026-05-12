@@ -35,30 +35,41 @@ function KpiCard({
   sub,
   icon: Icon,
   accent,
+  tooltip,
 }: {
   label: string;
-  value: string;
-  sub?: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
   icon: React.ComponentType<{ className?: string }>;
   accent: string;
+  tooltip?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
-      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full opacity-10 ${accent}`} />
-      <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent}`}>
-        <Icon className="h-5 w-5 text-white" />
+    <div 
+      className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md"
+      title={tooltip}
+    >
+      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full opacity-10 ${accent} transition-transform group-hover:scale-110`} />
+      
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent} shadow-inner`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <p className="text-sm font-bold uppercase tracking-wide text-gray-500">{label}</p>
       </div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+
+      <div className="mt-2 text-gray-900">
+        {value}
+      </div>
+      {sub && <div className="mt-2 border-t border-gray-50 pt-2">{sub}</div>}
     </div>
   );
 }
 
 /* ================= HISTOGRAM ================= */
 
-function StoreHistogram({ data }: { data: SalesByStore[] }) {
-  const sorted = [...data].sort((a, b) => b.revenue_net - a.revenue_net);
+function StoreHistogram({ data, title, subtitle, valueKey, yLabel, colorScale }: { data: SalesByStore[], title: string, subtitle: string, valueKey: keyof SalesByStore, yLabel: string, colorScale: string[] }) {
+  const sorted = [...data].sort((a, b) => Number(b[valueKey]) - Number(a[valueKey]));
   if (!sorted.length) return null;
 
   const CHART_H  = 260;
@@ -70,17 +81,15 @@ function StoreHistogram({ data }: { data: SalesByStore[] }) {
   const PAD_BOT  = 64;
   const GRID     = 5;
 
-  const maxVal = sorted[0]?.revenue_net ?? 1;
+  const maxVal = Math.max(...sorted.map(s => Number(s[valueKey])), 1);
   const totalW = PAD_LEFT + sorted.length * (BAR_W + BAR_GAP) - BAR_GAP + PAD_RIGHT;
 
-  const COLORS = [
-    "#3B82F6","#6366F1","#8B5CF6","#EC4899",
-    "#F59E0B","#10B981","#06B6D4","#F97316",
-  ];
+  const COLORS = colorScale;
 
   function fmtK(v: number) {
     if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} M`;
     if (v >= 1_000)     return `${(v / 1_000).toFixed(0)} k`;
+    if (v % 1 !== 0)    return v.toFixed(1);
     return String(v);
   }
 
@@ -89,78 +98,81 @@ function StoreHistogram({ data }: { data: SalesByStore[] }) {
   }
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 overflow-x-auto">
-      <h3 className="mb-1 text-sm font-bold text-gray-700">CA Net par magasin</h3>
-      <p className="mb-4 text-xs text-gray-400">Trié par CA net décroissant</p>
-      <svg
-        width={Math.max(totalW, 400)}
-        height={CHART_H + PAD_TOP + PAD_BOT}
-        className="overflow-visible"
-        aria-label="Histogramme CA net par magasin"
-      >
-        {/* Grille horizontale + étiquettes axe Y */}
-        {Array.from({ length: GRID + 1 }, (_, i) => {
-          const y   = PAD_TOP + (CHART_H / GRID) * i;
-          const val = maxVal * (1 - i / GRID);
-          return (
-            <g key={i}>
-              <line
-                x1={PAD_LEFT}
-                x2={totalW - PAD_RIGHT}
-                y1={y} y2={y}
-                stroke={i === GRID ? "#94A3B8" : "#E2E8F0"}
-                strokeWidth={i === GRID ? 1.5 : 1}
-                strokeDasharray={i === GRID ? undefined : "4 3"}
-              />
-              <text x={PAD_LEFT - 6} y={y + 4} textAnchor="end" fontSize={9} fill="#94A3B8">
-                {fmtK(val)}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Label axe Y */}
-        <text
-          x={10} y={PAD_TOP + CHART_H / 2}
-          textAnchor="middle" fontSize={9} fill="#94A3B8"
-          transform={`rotate(-90, 10, ${PAD_TOP + CHART_H / 2})`}
+    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col">
+      <h3 className="mb-1 text-sm font-bold text-gray-700">{title}</h3>
+      <p className="mb-4 text-xs text-gray-400">{subtitle}</p>
+      
+      <div className="overflow-x-auto">
+        <svg
+          width={Math.max(totalW, 400)}
+          height={CHART_H + PAD_TOP + PAD_BOT}
+          className="overflow-visible"
         >
-          CA Net (FCFA)
-        </text>
+          {/* Grille horizontale + étiquettes axe Y */}
+          {Array.from({ length: GRID + 1 }, (_, i) => {
+            const y   = PAD_TOP + (CHART_H / GRID) * i;
+            const val = maxVal * (1 - i / GRID);
+            return (
+              <g key={i}>
+                <line
+                  x1={PAD_LEFT}
+                  x2={totalW - PAD_RIGHT}
+                  y1={y} y2={y}
+                  stroke={i === GRID ? "#94A3B8" : "#E2E8F0"}
+                  strokeWidth={i === GRID ? 1.5 : 1}
+                  strokeDasharray={i === GRID ? undefined : "4 3"}
+                />
+                <text x={PAD_LEFT - 6} y={y + 4} textAnchor="end" fontSize={9} fill="#94A3B8">
+                  {fmtK(val)}
+                </text>
+              </g>
+            );
+          })}
 
-        {/* Barres + valeurs + labels X */}
-        {sorted.map((store, i) => {
-          const barH  = maxVal > 0 ? (store.revenue_net / maxVal) * CHART_H : 0;
-          const x     = PAD_LEFT + i * (BAR_W + BAR_GAP);
-          const y     = PAD_TOP + CHART_H - barH;
-          const color = COLORS[i % COLORS.length];
+          {/* Label axe Y */}
+          <text
+            x={10} y={PAD_TOP + CHART_H / 2}
+            textAnchor="middle" fontSize={9} fill="#94A3B8"
+            transform={`rotate(-90, 10, ${PAD_TOP + CHART_H / 2})`}
+          >
+            {yLabel}
+          </text>
 
-          return (
-            <g key={store.store_id}>
-              {/* Barre */}
-              <rect x={x} y={y} width={BAR_W} height={barH} fill={color} rx={6} opacity={0.85}>
-                <title>{store.store_name} : {formatFcfa(store.revenue_net)}</title>
-              </rect>
+          {/* Barres + valeurs + labels X */}
+          {sorted.map((store, i) => {
+            const val = Number(store[valueKey]);
+            const barH  = maxVal > 0 ? (val / maxVal) * CHART_H : 0;
+            const x     = PAD_LEFT + i * (BAR_W + BAR_GAP);
+            const y     = PAD_TOP + CHART_H - barH;
+            const color = COLORS[i % COLORS.length];
 
-              {/* Valeur au-dessus */}
-              <text
-                x={x + BAR_W / 2} y={y - 7}
-                textAnchor="middle" fontSize={9} fontWeight="700" fill={color}
-              >
-                {formatFcfa(store.revenue_net)}
-              </text>
+            return (
+              <g key={store.store_id}>
+                {/* Barre */}
+                <rect x={x} y={y} width={BAR_W} height={barH} fill={color} rx={6} opacity={0.85}>
+                  <title>{store.store_name} : {formatFcfa(val)}</title>
+                </rect>
 
-              {/* Nom magasin */}
-              <text
-                x={x + BAR_W / 2} y={PAD_TOP + CHART_H + 18}
-                textAnchor="middle" fontSize={10} fontWeight="600" fill="#374151"
-              >
-                {abbr(store.store_name)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+                {/* Valeur au-dessus */}
+                <text
+                  x={x + BAR_W / 2} y={y - 7}
+                  textAnchor="middle" fontSize={9} fontWeight="700" fill={color}
+                >
+                  {formatFcfa(val)}
+                </text>
+
+                {/* Nom magasin */}
+                <text
+                  x={x + BAR_W / 2} y={PAD_TOP + CHART_H + 18}
+                  textAnchor="middle" fontSize={10} fontWeight="600" fill="#374151"
+                >
+                  {abbr(store.store_name)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }
@@ -292,13 +304,17 @@ export default function SalesByStorePage() {
   }, [appliedFrom, appliedTo, appliedStoreId, appliedCategoryId]);
 
   /* KPIs */
-  const totalRevenuNet = useMemo(() => rows.reduce((s, r) => s + Number(r.revenue_net ?? 0), 0), [rows]);
-  const totalProfit     = useMemo(() => rows.reduce((s, r) => s + Number(r.profit ?? 0), 0), [rows]);
-  const totalTx         = useMemo(() => rows.reduce((s, r) => s + Number(r.total_transactions ?? 0), 0), [rows]);
-  const avgMargin       = useMemo(() => {
-    if (!rows.length) return 0;
-    return rows.reduce((s, r) => s + Number(r.profit_margin_pct ?? 0), 0) / rows.length;
-  }, [rows]);
+  const totalRevenuTTC = useMemo(() => rows.reduce((s, r) => s + Number(r.revenue_ttc ?? 0), 0), [rows]);
+  const totalRevenuHT  = useMemo(() => rows.reduce((s, r) => s + Number(r.revenue_ht ?? 0), 0), [rows]);
+  const totalCost      = useMemo(() => rows.reduce((s, r) => s + Number(r.total_cost ?? 0), 0), [rows]);
+  const totalProfitHT  = useMemo(() => totalRevenuHT - totalCost, [totalRevenuHT, totalCost]);
+  const totalTx        = useMemo(() => rows.reduce((s, r) => s + Number(r.total_transactions ?? 0), 0), [rows]);
+  const totalCommissions = useMemo(() => rows.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0), [rows]);
+  
+  const avgMargin = useMemo(() => {
+    if (totalCost === 0) return 0;
+    return (totalProfitHT / totalCost) * 100;
+  }, [totalProfitHT, totalCost]);
 
   /* Table columns */
   const columns: Column<SalesByStore>[] = useMemo(
@@ -307,6 +323,7 @@ export default function SalesByStorePage() {
         key: "store_name",
         label: "Magasin",
         sortable: true,
+        nowrap: true,
         render: (v) => (
           <span className="flex items-center gap-2 font-semibold text-gray-900">
             <Store className="h-4 w-4 text-blue-400" />
@@ -319,20 +336,36 @@ export default function SalesByStorePage() {
         label: "Transactions",
         sortable: true,
         align: "right",
+        nowrap: true,
         render: (v) => formatNumber(Number(v ?? 0)),
       },
       {
         key: "total_items_sold",
-        label: "Articles vendus",
+        label: "QTE Articles vendus",
         sortable: true,
         align: "right",
+        nowrap: true,
         render: (v) => formatNumber(Number(v ?? 0)),
       },
       {
-        key: "revenue_ht",
-        label: "CA Brut HT",
+        key: "total_cost_ht",
+        label: "Coût d'achat",
         sortable: true,
         align: "right",
+        nowrap: true,
+        render: (_, row) => (
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-gray-500">HT: {formatFcfa(row.total_cost_ht)}</span>
+            <span className="font-medium text-gray-700">TTC: {formatFcfa(row.total_cost_ttc)}</span>
+          </div>
+        ),
+      },
+      {
+        key: "revenue_ht",
+        label: "CA HT",
+        sortable: true,
+        align: "right",
+        nowrap: true,
         render: (v) => formatFcfa(Number(v ?? 0)),
       },
       {
@@ -340,31 +373,27 @@ export default function SalesByStorePage() {
         label: "Remises",
         sortable: true,
         align: "right",
+        nowrap: true,
         render: (v) => (
           <span className="text-red-500">-{formatFcfa(Number(v ?? 0))}</span>
         ),
       },
       {
-        key: "revenue_net",
-        label: "CA Net",
+        key: "revenue_ttc",
+        label: "CA TTC",
         sortable: true,
         align: "right",
+        nowrap: true,
         render: (v) => (
           <span className="font-bold text-blue-700">{formatFcfa(Number(v ?? 0))}</span>
         ),
       },
       {
-        key: "total_cost",
-        label: "Coût d'achat",
+        key: "profit_ht",
+        label: "Marge HT",
         sortable: true,
         align: "right",
-        render: (v) => formatFcfa(Number(v ?? 0)),
-      },
-      {
-        key: "profit",
-        label: "Marge brute",
-        sortable: true,
-        align: "right",
+        nowrap: true,
         render: (v) => <ProfitBadge value={Number(v ?? 0)} />,
       },
       {
@@ -372,6 +401,7 @@ export default function SalesByStorePage() {
         label: "Taux marge",
         sortable: true,
         align: "right",
+        nowrap: true,
         render: (v) => {
           const pct = Number(v ?? 0);
           return (
@@ -382,6 +412,21 @@ export default function SalesByStorePage() {
             </span>
           );
         },
+      },
+      {
+        key: "commission_amount",
+        label: "Commissions",
+        sortable: true,
+        align: "right",
+        nowrap: true,
+        render: (v, row) => (
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-gray-400">
+              {Number(row.commission_rate).toFixed(1)}%
+            </span>
+            <span className="font-semibold text-amber-600">{formatFcfa(Number(v ?? 0))}</span>
+          </div>
+        ),
       },
     ],
     [],
@@ -470,37 +515,78 @@ export default function SalesByStorePage() {
       </div>
 
       {/* ================= KPI CARDS ================= */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="CA Net total"
-          value={formatFcfa(totalRevenuNet)}
+          label="Chiffre d'affaire"
+          value={
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-gray-900">
+                TTC = {formatFcfa(totalRevenuTTC)}
+              </span>
+              <span className="text-sm font-medium text-gray-600">
+                HT = {formatFcfa(totalRevenuHT)}
+              </span>
+            </div>
+          }
           icon={BadgeDollarSign}
-          accent="bg-blue-500"
+          accent="bg-blue-600"
         />
         <KpiCard
-          label="Marge brute"
-          value={formatFcfa(totalProfit)}
-          sub={totalProfit >= 0 ? "Bénéficiaire" : "Déficitaire"}
+          label="Marge"
+          value={
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-gray-900">
+                {formatFcfa(totalProfitHT)}
+              </span>
+              <span className="text-sm font-medium text-emerald-600">
+                Taux = {avgMargin.toFixed(1)} %
+              </span>
+            </div>
+          }
+          tooltip={`marge HT = vente HT - achat HT\nTaux de marge = (prix de vente HT - cout d'achat HT) / cout d'achat HT * 100`}
           icon={TrendingUp}
-          accent={totalProfit >= 0 ? "bg-emerald-500" : "bg-red-500"}
+          accent="bg-emerald-600"
         />
         <KpiCard
           label="Transactions"
-          value={formatNumber(totalTx)}
+          value={
+            <span className="text-2xl font-bold text-gray-900">
+              {formatNumber(totalTx)}
+            </span>
+          }
           icon={ShoppingBag}
-          accent="bg-violet-500"
+          accent="bg-violet-600"
         />
         <KpiCard
-          label="Taux marge moyen"
-          value={`${avgMargin.toFixed(1)} %`}
+          label="Commissions"
+          value={
+            <span className="text-2xl font-bold text-gray-900">
+              {formatFcfa(totalCommissions)}
+            </span>
+          }
           icon={Percent}
-          accent="bg-amber-500"
+          accent="bg-amber-600"
         />
       </div>
 
-      {/* ================= CHART ================= */}
-      <div className="mb-6">
-        <StoreHistogram data={rows} />
+      {/* ================= CHARTS ================= */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <StoreHistogram 
+          data={rows} 
+          title="CA TTC par magasin" 
+          subtitle="Trié par CA TTC décroissant"
+          valueKey="revenue_ttc"
+          yLabel="CA TTC (FCFA)"
+          colorScale={["#3B82F6","#6366F1","#8B5CF6","#EC4899","#F59E0B","#10B981","#06B6D4","#F97316"]}
+        />
+        <StoreHistogram 
+          data={rows} 
+          title="Commissions par magasin" 
+          subtitle="Trié par commissions décroissantes"
+          valueKey="commission_amount"
+          yLabel="Commissions (FCFA)"
+          colorScale={["#F59E0B","#F97316","#EF4444","#EC4899","#8B5CF6","#6366F1","#3B82F6","#10B981"]}
+        />
       </div>
 
       {/* ================= TABLE ================= */}

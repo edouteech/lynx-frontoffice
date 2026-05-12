@@ -29,6 +29,7 @@ export function StoreCreateModal({
   const [token, setToken] = useState('')
   const [isPurchasingCenter, setIsPurchasingCenter] = useState(false)
   const [status, setStatus] = useState('active')
+  const [commissionRate, setCommissionRate] = useState<string>('')
 
   const isEdit = store !== null
 
@@ -45,6 +46,7 @@ export function StoreCreateModal({
       setToken('')
       setIsPurchasingCenter(false)
       setStatus('active')
+      setCommissionRate('')
       return
     }
     setName(store.name)
@@ -53,6 +55,7 @@ export function StoreCreateModal({
     setToken(store.token ?? '')
     setIsPurchasingCenter(store.is_purchasing_center)
     setStatus(store.status || 'active')
+    setCommissionRate(store.commission_rate != null ? String(store.commission_rate) : '')
   }, [open, store])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,6 +67,7 @@ export function StoreCreateModal({
       token: token.trim() || null,
       is_purchasing_center: isPurchasingCenter,
       status,
+      commission_rate: commissionRate !== '' ? parseFloat(commissionRate) : null,
     }
     setError(null)
     setSubmitting(true)
@@ -193,6 +197,25 @@ export function StoreCreateModal({
               ))}
             </select>
           </div>
+          <div>
+            <label
+              htmlFor="store-form-commission"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Taux de commission (%)
+            </label>
+            <input
+              id="store-form-commission"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+              placeholder="Ex. 5.00"
+            />
+          </div>
           <div className="flex items-center sm:col-span-2">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
               <input
@@ -201,7 +224,7 @@ export function StoreCreateModal({
                 onChange={(e) => setIsPurchasingCenter(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-[#3B82F6] focus:ring-[#3B82F6]"
               />
-              Central d’achat
+              Central d'achat
             </label>
           </div>
         </div>

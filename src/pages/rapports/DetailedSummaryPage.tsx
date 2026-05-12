@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { Filter, Wallet, CreditCard, Landmark, Receipt, RotateCcw } from "lucide-react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { Filter, Wallet, CreditCard, Landmark, Receipt, RotateCcw, Loader2, AlertCircle } from "lucide-react";
 import SummaryTable, { type SummaryColumn } from "../../components/SummaryTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
+import { fetchDetailedSummary, type DetailedSummary } from "../../api/salesSummary";
 
 /* ================= FORMAT UTILS ================= */
 
@@ -32,51 +33,6 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     return undefined
   }, obj)
 }
-
-/* ================= TYPES ================= */
-
-interface DetailedSummary {
-  agency: string;
-  total_alu: number;
-  total_access: number;
-  total_vitres: number;
-  ventes_magasin: number;
-  total_vente: number;
-  cheq_banq: number;
-  momo: number;
-  depenses: number;
-  comm_a_prendre: number;
-  solde_espece: number;
-  rowType?: 'normal' | 'subtotal' | 'partner' | 'grandtotal';
-}
-
-/* ================= MOCK DATA ================= */
-
-const MOCK_DATA: DetailedSummary[] = [
-  { agency: "BELIER", total_alu: 15644300, total_access: 712850, total_vitres: 0, ventes_magasin: 0, total_vente: 16357150, cheq_banq: 0, momo: 3523250, depenses: 0, comm_a_prendre: 416959, solde_espece: 12401941, rowType: 'normal' },
-  { agency: "GODOMEY", total_alu: 14438200, total_access: 0, total_vitres: 867300, ventes_magasin: 0, total_vente: 15305500, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 768767, solde_espece: 14536733, rowType: 'normal' },
-  { agency: "KPONDEHOU", total_alu: 13132700, total_access: 951300, total_vitres: 0, ventes_magasin: 0, total_vente: 14084000, cheq_banq: 0, momo: 1972500, depenses: 0, comm_a_prendre: 632183, solde_espece: 11342717, rowType: 'normal' },
-  { agency: "AITCHEDJI", total_alu: 9931250, total_access: 648350, total_vitres: 1891600, ventes_magasin: 0, total_vente: 12471200, cheq_banq: 0, momo: 6928400, depenses: 0, comm_a_prendre: 330663, solde_espece: 5212137, rowType: 'normal' },
-  { agency: "COCOCODJI", total_alu: 8555150, total_access: 792000, total_vitres: 852775, ventes_magasin: 0, total_vente: 10199925, cheq_banq: 0, momo: 1557550, depenses: 0, comm_a_prendre: 231170, solde_espece: 8411205, rowType: 'normal' },
-  { agency: "AKASSATO", total_alu: 9015500, total_access: 572300, total_vitres: 566600, ventes_magasin: 0, total_vente: 10154400, cheq_banq: 0, momo: 4190150, depenses: 0, comm_a_prendre: 450906, solde_espece: 5513344, rowType: 'normal' },
-  { agency: "PORTO2", total_alu: 8717650, total_access: 772298, total_vitres: 444305, ventes_magasin: 0, total_vente: 9934253, cheq_banq: 0, momo: 996850, depenses: 0, comm_a_prendre: 336184, solde_espece: 8601219, rowType: 'normal' },
-  { agency: "PORTO1", total_alu: 7985800, total_access: 497100, total_vitres: 1409500, ventes_magasin: 0, total_vente: 9892400, cheq_banq: 0, momo: 1096150, depenses: 0, comm_a_prendre: 291900, solde_espece: 8504350, rowType: 'normal' },
-  { agency: "PARAKOU", total_alu: 8043964, total_access: 0, total_vitres: 1379637, ventes_magasin: 0, total_vente: 9423601, cheq_banq: 0, momo: 9423601, depenses: 0, comm_a_prendre: 0, solde_espece: 0, rowType: 'normal' },
-  { agency: "DEKOUNGBE", total_alu: 8294100, total_access: 471500, total_vitres: 262400, ventes_magasin: 0, total_vente: 9028000, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 382821, solde_espece: 8645179, rowType: 'normal' },
-  { agency: "MISSERETE", total_alu: 6320250, total_access: 685300, total_vitres: 1379600, ventes_magasin: 0, total_vente: 8385150, cheq_banq: 0, momo: 1539450, depenses: 0, comm_a_prendre: 281400, solde_espece: 6564300, rowType: 'normal' },
-  { agency: "BOHICON", total_alu: 6315200, total_access: 545700, total_vitres: 1333150, ventes_magasin: 0, total_vente: 8194050, cheq_banq: 7887817, momo: 0, depenses: 0, comm_a_prendre: 306233, solde_espece: 0, rowType: 'normal' },
-  { agency: "JERICHO", total_alu: 7307250, total_access: 681600, total_vitres: 0, ventes_magasin: 0, total_vente: 7988850, cheq_banq: 273500, momo: 1124000, depenses: 0, comm_a_prendre: 249927, solde_espece: 6133423, rowType: 'normal' },
-  { agency: "ALLADA", total_alu: 2289250, total_access: 524950, total_vitres: 877000, ventes_magasin: 0, total_vente: 3691200, cheq_banq: 3235953, momo: 343500, depenses: 0, comm_a_prendre: 111747, solde_espece: 0, rowType: 'normal' },
-  { agency: "DJREGBE", total_alu: 2141350, total_access: 248400, total_vitres: 260400, ventes_magasin: 0, total_vente: 2650150, cheq_banq: 0, momo: 495100, depenses: 0, comm_a_prendre: 285356, solde_espece: 1869694, rowType: 'normal' },
-  { agency: "REV YEMODE", total_alu: 850000, total_access: 0, total_vitres: 0, ventes_magasin: 0, total_vente: 850000, cheq_banq: 850000, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 0, rowType: 'normal' },
-  { agency: "REV GANIOU", total_alu: 0, total_access: 0, total_vitres: 0, ventes_magasin: 0, total_vente: 0, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 0, rowType: 'normal' },
-  { agency: "MASTER", total_alu: 0, total_access: 456500, total_vitres: 0, ventes_magasin: 0, total_vente: 456500, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 426500, rowType: 'normal' },
-  { agency: "SAMUEL VERRES", total_alu: 0, total_access: 0, total_vitres: 0, ventes_magasin: 0, total_vente: 0, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 0, rowType: 'normal' },
-  { agency: "ABDOUL VERRES", total_alu: 0, total_access: 0, total_vitres: 430550, ventes_magasin: 0, total_vente: 430550, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 430550, rowType: 'normal' },
-  { agency: "NESTOR VERRES", total_alu: 0, total_access: 0, total_vitres: 810100, ventes_magasin: 0, total_vente: 810100, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 810100, rowType: 'normal' },
-  { agency: "ETS CTEMAV", total_alu: 2000000, total_access: 0, total_vitres: 0, ventes_magasin: 0, total_vente: 2000000, cheq_banq: 0, momo: 0, depenses: 0, comm_a_prendre: 0, solde_espece: 2000000, rowType: 'normal' },
-  { agency: "TOTAL", total_alu: 128981914, total_access: 8560148, total_vitres: 12764917, ventes_magasin: 0, total_vente: 152306979, cheq_banq: 12247270, momo: 33190501, depenses: 17761951, comm_a_prendre: 5076216, solde_espece: 103403392, rowType: 'grandtotal' },
-];
 
 /* ================= KPI CARD ================= */
 
@@ -121,93 +77,141 @@ export default function DetailedSummaryPage() {
     return toDateTimeLocalValue(lastDay, "23:59");
   }, []);
 
-  const defaultCommission = "7";
-
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
-  const [commission, setCommission] = useState(defaultCommission);
+  const [data, setData] = useState<DetailedSummary[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<{ id: number; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const hasFilters = from !== defaultFrom || to !== defaultTo || commission !== defaultCommission;
+  const hasFilters = from !== defaultFrom || to !== defaultTo;
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetchDetailedSummary({
+        start_date: from,
+        end_date: to,
+      });
+      if (res.success) {
+        setData(res.data);
+        setCategories(res.categories);
+        setPaymentMethods(res.payment_methods);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Impossible de charger les données du rapport.");
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleClearFilters = () => {
     setFrom(defaultFrom);
     setTo(defaultTo);
-    setCommission(defaultCommission);
   };
 
   /* Calculations for KPIs */
-  const totalSales = useMemo(() => MOCK_DATA.find(r => r.rowType === 'grandtotal')?.total_vente ?? 0, []);
-  const totalCash = useMemo(() => MOCK_DATA.find(r => r.rowType === 'grandtotal')?.solde_espece ?? 0, []);
-  const totalMomo = useMemo(() => MOCK_DATA.find(r => r.rowType === 'grandtotal')?.momo ?? 0, []);
-  const totalExpenses = useMemo(() => MOCK_DATA.find(r => r.rowType === 'grandtotal')?.depenses ?? 0, []);
+  const grandTotal = useMemo(() => data.find(r => r.rowType === 'grandtotal'), [data]);
+  const totalSales = grandTotal?.total_vente ?? 0;
+  
+  const totalCash = useMemo(() => {
+    const cashPm = paymentMethods.find(pm => 
+      pm.name.toLowerCase().includes('espece') || 
+      pm.name.toLowerCase().includes('cash') || 
+      pm.name.toLowerCase().includes('liquide')
+    );
+    return cashPm ? (grandTotal?.payments[cashPm.id] ?? 0) : 0;
+  }, [paymentMethods, grandTotal]);
+  
+  const totalMomo = useMemo(() => {
+    const momoPm = paymentMethods.find(pm => 
+      pm.name.toLowerCase().includes('momo') || 
+      pm.name.toLowerCase().includes('mobile') || 
+      pm.name.toLowerCase().includes('mtn') || 
+      pm.name.toLowerCase().includes('moov')
+    );
+    return momoPm ? (grandTotal?.payments[momoPm.id] ?? 0) : 0;
+  }, [paymentMethods, grandTotal]);
+
+  const totalExpenses = grandTotal?.depenses ?? 0;
 
   const columns: SummaryColumn<DetailedSummary>[] = useMemo(
-    () => [
-      {
-        key: "agency",
-        label: "AGENCES",
-        render: (v, item) => (
-          <span className={`font-bold tracking-tight ${item.rowType === 'partner' ? 'text-indigo-600' : 'text-slate-800'}`}>
-            {String(v)}
-          </span>
-        ),
-      },
-      {
-        key: "total_alu",
-        label: "TOTAL ALU",
-        align: "right",
-        render: (v) => v ? formatNumber(Number(v)) : '',
-      },
-      {
-        key: "total_access",
-        label: "TOTAL ACCESS",
-        align: "right",
-        render: (v) => v ? formatNumber(Number(v)) : '',
-      },
-      {
-        key: "total_vitres",
-        label: "TOTAL VITRES",
-        align: "right",
-        render: (v) => v ? formatNumber(Number(v)) : '',
-      },
-      {
+    () => {
+      const cols: SummaryColumn<DetailedSummary>[] = [
+        {
+          key: "agency",
+          label: "Magasin",
+          render: (v, item) => (
+            <span className={`font-bold tracking-tight ${item.rowType === 'partner' ? 'text-indigo-600' : 'text-slate-800'}`}>
+              {String(v)}
+            </span>
+          ),
+        }
+      ];
+
+      // Colonnes catégories
+      categories.forEach(cat => {
+        cols.push({
+          key: `categories.${cat.id}`,
+          label: cat.name.toUpperCase(),
+          align: "right",
+          render: (v) => v ? formatNumber(Number(v)) : '0',
+        });
+      });
+
+      // Colonne Total Vente
+      cols.push({
         key: "total_vente",
-        label: "TOTAL VENTE",
+        label: "TOTAL VENTE TTC",
         align: "right",
         render: (v) => <span className="font-black text-red-600">{formatNumber(Number(v))}</span>,
-      },
-      {
-        key: "cheq_banq",
-        label: "CHEQ/BANQ",
-        align: "right",
-        render: (v) => v ? formatNumber(Number(v)) : '',
-      },
-      {
-        key: "momo",
-        label: "MOMO",
-        align: "right",
-        render: (v) => <span className="font-bold text-emerald-700">{v ? formatNumber(Number(v)) : ''}</span>,
-      },
-      {
-        key: "solde_espece",
-        label: "ESPECE",
-        align: "right",
-        render: (v) => <span className="font-black text-blue-800">{formatNumber(Number(v))}</span>,
-      },
-      {
-        key: "depenses",
-        label: "DEPENSES",
-        align: "right",
-        render: (v) => <span className="text-red-500">{v ? formatNumber(Number(v)) : ''}</span>,
-      },
-      {
-        key: "comm_a_prendre",
-        label: "COMM A PRENDRE",
-        align: "right",
-        render: (v) => v ? formatNumber(Number(v)) : '',
-      },
-    ],
-    [],
+      });
+
+      // Colonnes Moyens de Paiement
+      paymentMethods.forEach(pm => {
+        cols.push({
+          key: `payments.${pm.id}`,
+          label: pm.name.toUpperCase(),
+          align: "right",
+          render: (v) => {
+            const isHighlight = pm.name.toLowerCase().includes('momo') || 
+                              pm.name.toLowerCase().includes('espece') ||
+                              pm.name.toLowerCase().includes('mobile');
+            return (
+              <span className={isHighlight ? "font-bold text-emerald-700" : ""}>
+                {v ? formatNumber(Number(v)) : '0'}
+              </span>
+            );
+          },
+        });
+      });
+
+      // Colonnes Dépenses et Commissions
+      cols.push(
+        {
+          key: "depenses",
+          label: "DEPENSES",
+          align: "right",
+          render: (v) => <span className="text-red-500">{v ? formatNumber(Number(v)) : '0'}</span>,
+        },
+        {
+          key: "comm_a_prendre",
+          label: "COMMISSION",
+          align: "right",
+          render: (v) => v ? formatNumber(Number(v)) : '0',
+        },
+      );
+
+      return cols;
+    },
+    [categories, paymentMethods],
   );
 
   return (
@@ -234,21 +238,6 @@ export default function DetailedSummaryPage() {
             />
           </div>
 
-          <div className="w-full lg:w-35">
-            <div className="mb-1 text-xs font-semibold text-gray-600">Taux de Commission</div>
-            <select
-              value={commission}
-              onChange={(e) => setCommission(e.target.value)}
-              className="h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm outline-none transition-colors hover:bg-gray-50 focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-            >
-              {[...Array(10)].map((_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {i + 1}%
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div className="flex gap-2 shrink-0">
             {hasFilters && (
               <button
@@ -258,7 +247,10 @@ export default function DetailedSummaryPage() {
                 <RotateCcw className="h-4 w-4" />
               </button>
             )}
-            <button className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#3B82F6]/20 hover:bg-[#2563EB] active:scale-95 transition-all">
+            <button 
+              onClick={loadData}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#3B82F6]/20 hover:bg-[#2563EB] active:scale-95 transition-all"
+            >
               <Filter className="h-4 w-4" />
               Filtrer
             </button>
@@ -266,48 +258,73 @@ export default function DetailedSummaryPage() {
         </div>
       </div>
 
-      {/* ================= KPI CARDS ================= */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard
-          label="Total Ventes"
-          value={formatFcfa(totalSales)}
-          icon={Receipt}
-          accent="bg-blue-500"
-        />
-        <KpiCard
-          label="Solde Espèce"
-          value={formatFcfa(totalCash)}
-          icon={Wallet}
-          accent="bg-emerald-500"
-        />
-        <KpiCard
-          label="Total MoMo"
-          value={formatFcfa(totalMomo)}
-          icon={CreditCard}
-          accent="bg-violet-500"
-        />
-        <KpiCard
-          label="Dépenses"
-          value={formatFcfa(totalExpenses)}
-          icon={Landmark}
-          accent="bg-rose-500"
-        />
-      </div>
+      {loading ? (
+        <div className="flex h-64 flex-col items-center justify-center space-y-4 rounded-2xl border border-gray-100 bg-white/50 shadow-sm backdrop-blur-sm">
+          <Loader2 className="h-10 w-10 animate-spin text-[#3B82F6]" />
+          <p className="text-sm font-medium text-gray-500">Génération du rapport en cours...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center space-y-4 rounded-2xl border border-red-100 bg-red-50 p-12 text-center">
+          <div className="rounded-full bg-red-100 p-3">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <div className="max-w-md">
+            <h3 className="text-lg font-bold text-red-900">Une erreur est survenue</h3>
+            <p className="mt-2 text-sm text-red-700">{error}</p>
+          </div>
+          <button
+            onClick={loadData}
+            className="rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all"
+          >
+            Réessayer
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* ================= KPI CARDS ================= */}
+          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard
+              label="Total Ventes TTC"
+              value={formatFcfa(totalSales)}
+              icon={Receipt}
+              accent="bg-blue-500"
+            />
+            <KpiCard
+              label="Solde Espèce"
+              value={formatFcfa(totalCash)}
+              icon={Wallet}
+              accent="bg-emerald-500"
+            />
+            <KpiCard
+              label="Total MoMo"
+              value={formatFcfa(totalMomo)}
+              icon={CreditCard}
+              accent="bg-violet-500"
+            />
+            <KpiCard
+              label="Dépenses"
+              value={formatFcfa(totalExpenses)}
+              icon={Landmark}
+              accent="bg-rose-500"
+            />
+          </div>
 
-      {/* ================= TABLE ================= */}
-      <div className="mt-6">
-        <SummaryTable<DetailedSummary>
-          data={MOCK_DATA}
-          columns={columns}
-          title="Récapitulatif des Ventes"
-          searchable
-          searchPlaceholder="Rechercher une ligne..."
-          onPrint={() => window.print()}
-          exportFilename="resume-detaille-ventes"
-          getRowType={(r) => r.rowType || 'normal'}
-          getNestedValue={(obj, path) => getNestedValue(obj as any, path)}
-        />
-      </div>
+          {/* ================= TABLE ================= */}
+          <div className="mt-6">
+            <SummaryTable<DetailedSummary>
+              data={data}
+              columns={columns}
+              title="Récapitulatif des Ventes"
+              searchable
+              searchPlaceholder="Rechercher une ligne..."
+              onPrint={() => window.print()}
+              exportFilename="resume-detaille-ventes"
+              getRowType={(r) => r.rowType || 'normal'}
+              getNestedValue={(obj, path) => getNestedValue(obj as any, path)}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

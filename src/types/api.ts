@@ -68,6 +68,7 @@ export interface Store {
   token: string | null
   is_purchasing_center: boolean
   status: string
+  commission_rate: number | null
   organization_id: number
   created_at: string
   updated_at: string

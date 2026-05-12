@@ -65,6 +65,12 @@ export interface DataTableProps<T extends object> {
   /** Si défini, les lignes affichées = `data` (une page API), le pied gère Précédent/Suivant serveur. */
   serverPagination?: ServerPagination
   getRowId?: (item: T) => string | number
+  /** Fixe l'en-tête en haut lors du défilement vertical. */
+  stickyHeader?: boolean
+  /** Fixe la première colonne à gauche lors du défilement horizontal. */
+  stickyFirstColumn?: boolean
+  /** Hauteur maximale du conteneur (pour scroll vertical). */
+  maxHeight?: string
 }
 
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -114,6 +120,9 @@ export default function DataTable<T extends object>({
   pageSizeOptions = [10, 25, 50, 100],
   serverPagination,
   getRowId,
+  stickyHeader = false,
+  stickyFirstColumn = false,
+  maxHeight,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -330,20 +339,25 @@ export default function DataTable<T extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50">
+      <div 
+        className="overflow-x-auto overflow-y-auto"
+        style={{ maxHeight: maxHeight }}
+      >
+        <table className="min-w-full text-left text-sm border-separate border-spacing-0">
+          <thead className={`border-b border-gray-200 bg-gray-50 ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
             <tr>
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 ${
+                  className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200 ${
                     column.align === 'center'
                       ? 'text-center'
                       : column.align === 'right'
                         ? 'text-right'
                         : 'text-left'
-                  } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-100' : ''}`}
+                  } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-100' : ''} ${
+                    stickyFirstColumn && index === 0 ? 'sticky left-0 z-20 bg-gray-50' : ''
+                  }`}
                   onClick={() =>
                     column.sortable && handleSort(String(column.key))
                   }
@@ -408,13 +422,15 @@ export default function DataTable<T extends object>({
                   {columns.map((column, colIndex) => (
                     <td
                       key={colIndex}
-                      className={`px-4 py-3 text-gray-900 ${
+                      className={`px-4 py-3 text-gray-900 border-b border-gray-100 ${
                         column.align === 'center'
                           ? 'text-center'
                           : column.align === 'right'
                             ? 'text-right'
                             : 'text-left'
-                      } ${column.nowrap ? 'whitespace-nowrap' : ''}`}
+                      } ${column.nowrap ? 'whitespace-nowrap' : ''} ${
+                        stickyFirstColumn && colIndex === 0 ? 'sticky left-0 z-10 bg-white group-hover:bg-gray-50' : ''
+                      }`}
                     >
                       {column.render
                         ? column.render(

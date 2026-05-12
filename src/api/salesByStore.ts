@@ -8,11 +8,18 @@ export interface SalesByStore {
   total_transactions: number;
   total_items_sold: number;
   revenue_ht: number;
+  revenue_ttc: number;
+  revenue_net: number; // Keep for backward compatibility
   total_discount: number;
-  revenue_net: number;
   total_cost: number;
+  total_cost_ht: number;
+  total_cost_ttc: number;
   profit: number;
+  profit_ht: number;
+  profit_ttc: number;
   profit_margin_pct: number;
+  commission_rate: number;
+  commission_amount: number;
 }
 
 export interface SalesByStoreResponse {
