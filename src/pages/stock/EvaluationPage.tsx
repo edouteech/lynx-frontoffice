@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Package, TrendingUp } from 'lucide-react'
 import { fetchProducts } from '../../api/products'
 import { fetchStores } from '../../api/stores'
@@ -114,6 +115,9 @@ function deriveRow(p: Product, storeId: string): ProductRow {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function StockEvaluationPage() {
+  const [searchParams] = useSearchParams()
+  const type = searchParams.get('type')
+
   const [stores, setStores] = useState<Store[]>([])
   const [storeId, setStoreId] = useState('')
   const [page, setPage] = useState(1)
@@ -182,8 +186,14 @@ export default function StockEvaluationPage() {
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Évaluation de stock</h1>
-              <p className="text-sm text-gray-500">Valorisation et marges de votre catalogue</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {type === 'dashboard' ? 'Stock Global' : 'Évaluation de stock'}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {type === 'dashboard' 
+                  ? 'Aperçu global de la valeur de votre stock' 
+                  : 'Valorisation et marges de votre catalogue'}
+              </p>
             </div>
           </div>
 
@@ -227,20 +237,20 @@ export default function StockEvaluationPage() {
 
         {/* ─── table ───────────────────────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-
-          {loading && !paginated ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Package className="mb-3 h-12 w-12 text-gray-300" />
-              <p className="text-sm text-gray-500">Aucun article trouvé.</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            {loading && !paginated ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Package className="mb-3 h-12 w-12 text-gray-300" />
+                <p className="text-sm text-gray-500">Aucun article trouvé.</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    {/* ... table content remains the same ... */}
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
@@ -391,6 +401,7 @@ export default function StockEvaluationPage() {
             </>
           )}
         </div>
+
 
         <p className="text-xs text-gray-400 text-center">
           Les totaux affichés sont calculés sur les articles de la page en cours.

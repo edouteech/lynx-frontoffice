@@ -33,6 +33,7 @@ import {
   Undo2,
   TrendingUp,
   History,
+  PieChart,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { resolveBackendUrl } from '../lib/url'
@@ -59,7 +60,7 @@ const navItems: NavItem[] = [
     children: [
       { id: 'rapports/synthese-globale', label: 'Synthèse globale', icon: LineChart },
       { id: 'rapports/resume-detaille', label: 'Synthèse détaillé', icon: TrendingUp },
-      { id: 'stock/evaluation',            label: 'Stock global',     icon: TrendingUp },
+      { id: 'stock/evaluation?type=dashboard', label: 'Stock global', icon: PieChart },
     ],
   },
   {
@@ -131,7 +132,7 @@ const navItems: NavItem[] = [
       { id: 'stock-transfers', label: 'Transferts', icon: ArrowLeftRight },
       { id: 'stock-adjustments', label: 'Ajustements', icon: PackagePlus },
       { id: 'sales', label: 'Ventes', icon: ShoppingBag },
-      { id: 'stock/evaluation', label: 'Évaluation de stock', icon: TrendingUp },
+      { id: 'stock/evaluation?type=stock', label: 'Évaluation de stock', icon: BarChart3 },
       { id: 'stock/movements',  label: 'Historique des stocks', icon: History },
       { id: 'inventories', label: 'Inventaires', icon: ClipboardCheck },
     ],
@@ -183,7 +184,7 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
   
   const activeTab = pathWithoutSlash === 'dashboard'
     ? (canSeeDashboard ? 'rapports/synthese-globale' : 'rapports/ventes')
-    : pathWithoutSlash
+    : (pathWithoutSlash + location.search)
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
 
