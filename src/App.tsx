@@ -4,7 +4,9 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePermission from './components/RequirePermission'
 import Layout from './components/Layout'
-import Dashboard from './pages/dashboard/Dashboard'
+import { useAuth } from './contexts/useAuth'
+import { hasPermissionCode } from './lib/permissions'
+
 import ItemCategoriesIndex from './pages/item-categories'
 import StoresIndex from './pages/stores/index'
 import StoreShow from './pages/stores/show'
@@ -49,8 +51,8 @@ import SalesByTaxPage from './pages/rapports/SalesByTaxPage'
 import SalesInvoicesPage from './pages/rapports/SalesInvoicesPage'
 import ItemBuybacksPage from './pages/rapports/ItemBuybacksPage'
 import WorkPeriodsPage from './pages/rapports/WorkPeriodsPage'
-import SalesByStorePage from './pages/rapports/SalesByStorePage'
-import DetailedSummaryPage from './pages/rapports/DetailedSummaryPage'
+import SalesByStorePage from './pages/dashboard/SalesByStorePage'
+import DetailedSummaryPage from './pages/dashboard/DetailedSummaryPage'
 import StockEvaluationPage from './pages/stock/EvaluationPage'
 import StockMovementsPage from './pages/stock/MovementsPage'
 import InventoriesIndex from './pages/inventories/index'
@@ -59,6 +61,19 @@ import InventoryShowPage from './pages/inventories/show'
 
 function withLayout(page: ReactElement) {
   return <Layout>{page}</Layout>
+}
+
+function DashboardWrapper() {
+  const { user, activeOrganizationId, bootstrapping } = useAuth()
+  if (bootstrapping) return null
+  
+  const canSeeDashboard = hasPermissionCode(user, activeOrganizationId, 'admin_panel.dashboard.view')
+  
+  if (canSeeDashboard) {
+    return <SalesByStorePage />
+  }
+  
+  return <SalesRecapPage />
 }
 
 export default function App() {
@@ -83,9 +98,7 @@ export default function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.dashboard.view">
-                {withLayout(<Dashboard />)}
-              </RequirePermission>
+              {withLayout(<DashboardWrapper />)}
             </ProtectedRoute>
           }
         />

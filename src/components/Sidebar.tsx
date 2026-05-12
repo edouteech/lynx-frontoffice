@@ -179,8 +179,11 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
   const pathWithoutSlash = location.pathname.replace(/^\//, '')
-
-  const activeTab = pathWithoutSlash
+  const canSeeDashboard = hasPermissionCode(user, activeOrganizationId, 'admin_panel.dashboard.view')
+  
+  const activeTab = pathWithoutSlash === 'dashboard'
+    ? (canSeeDashboard ? 'rapports/synthese-globale' : 'rapports/ventes')
+    : pathWithoutSlash
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
 
