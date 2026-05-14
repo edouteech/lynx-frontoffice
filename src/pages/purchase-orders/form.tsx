@@ -57,6 +57,7 @@ interface PendingItem {
   productName: string
   productSku: string | null
   productCategory: string | null
+  currentStock: number
   quantity: number
   unitCost: number
 }
@@ -170,6 +171,14 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
       .catch(() => setError('Impossible de charger la commande.'))
       .finally(() => setLoadingOrder(false))
   }, [id, isEdit])
+
+  // ── Recharger les produits avec stock par magasin quand le magasin change ───
+  useEffect(() => {
+    if (!storeId) return
+    fetchProducts({ page: 1, store_id: Number(storeId) })
+      .then(prods => setAllProducts(prods.data))
+      .catch(console.error)
+  }, [storeId])
 
   // ── When product is selected in add form → prefill cost ──────────────────────
   useEffect(() => {
@@ -585,9 +594,10 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Noms</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Catégorie</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stocks</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Entrants</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté après</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock dispo</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock commandé</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock livré</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock restant</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
                   {canEdit && <th className="w-10 px-4 py-3" />}
@@ -596,7 +606,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
               <tbody className="divide-y divide-gray-100">
                 {filteredDisplayItems.length === 0 ? (
                   <tr>
-                    <td colSpan={canEdit ? 8 : 7} className="px-4 py-12 text-center">
+                    <td colSpan={canEdit ? 9 : 8} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <Package className="h-10 w-10" />
                         <span className="text-sm">aucune donnée disponible</span>
@@ -608,7 +618,6 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                     const edits = isEdit ? itemEdits[item.id] : pendingEdits[item.id]
                     const currentQty = edits?.quantity ?? String(item.quantity)
                     const currentCost = edits?.unit_cost ?? String(item.unit_cost)
-                    const stockAfter = item.current_stock + (parseFloat(currentQty) || 0)
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50">
@@ -619,11 +628,15 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         <td className="px-4 py-3 text-gray-600">
                           {item.product_category ?? <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock dispo */}
                         <td className="px-4 py-3 text-right">
                           {isEdit
-                            ? <span className="text-gray-600">{item.current_stock.toLocaleString('fr-FR')}</span>
+                            ? <span className="text-gray-700">{item.current_stock.toLocaleString('fr-FR')}</span>
                             : <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock commandé — éditable */}
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
                             <input
@@ -639,14 +652,29 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                               className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
                             />
                           ) : (
-                            <span>{item.quantity.toLocaleString('fr-FR')}</span>
+                            <span className="font-medium text-gray-700">{item.quantity.toLocaleString('fr-FR')}</span>
                           )}
                         </td>
+
+                        {/* Stock livré */}
                         <td className="px-4 py-3 text-right">
-                          <span className={`font-medium ${isEdit ? 'text-blue-600' : 'text-gray-400'}`}>
-                            {isEdit ? stockAfter.toLocaleString('fr-FR') : '—'}
-                          </span>
+                          {isEdit
+                            ? <span className={`font-medium ${item.received_quantity > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                {item.received_quantity.toLocaleString('fr-FR')}
+                              </span>
+                            : <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock restant */}
+                        <td className="px-4 py-3 text-right">
+                          {isEdit
+                            ? <span className={`font-medium ${item.remaining_quantity <= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                                {item.remaining_quantity <= 0 ? '✓' : item.remaining_quantity.toLocaleString('fr-FR')}
+                              </span>
+                            : <span className="text-gray-400">—</span>}
+                        </td>
+
+                        {/* Coût */}
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
                             <div className="flex items-center justify-end gap-1">

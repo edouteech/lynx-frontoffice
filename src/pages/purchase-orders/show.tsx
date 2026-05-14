@@ -83,9 +83,9 @@ function ReceiveModal({ items, onClose, onSubmit, receiving }: ReceiveModalProps
                   <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                     <tr>
                       <th className="px-4 py-3 text-left">Article</th>
-                      <th className="px-4 py-3 text-right">Commandé</th>
-                      <th className="px-4 py-3 text-right">Reçu</th>
-                      <th className="px-4 py-3 text-right">Restant</th>
+                      <th className="px-4 py-3 text-right">Stock commandé</th>
+                      <th className="px-4 py-3 text-right">Stock livré</th>
+                      <th className="px-4 py-3 text-right">Stock restant</th>
                       <th className="px-4 py-3 text-right">À recevoir</th>
                     </tr>
                   </thead>
@@ -500,9 +500,10 @@ export default function PurchaseOrderShow() {
                     <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                       <tr>
                         <th className="px-4 py-3 text-left">Article</th>
-                        <th className="px-4 py-3 text-right">Qté cmd.</th>
-                        <th className="px-4 py-3 text-right">Reçu</th>
-                        <th className="px-4 py-3 text-right">Restant</th>
+                        <th className="px-4 py-3 text-right">Stock dispo</th>
+                        <th className="px-4 py-3 text-right">Stock commandé</th>
+                        <th className="px-4 py-3 text-right">Stock livré</th>
+                        <th className="px-4 py-3 text-right">Stock restant</th>
                         <th className="px-4 py-3 text-right">P.U.</th>
                         <th className="px-4 py-3 text-right">Total</th>
                       </tr>
@@ -519,12 +520,21 @@ export default function PurchaseOrderShow() {
                                 {item.product_category && <span className="text-xs text-gray-400">{item.product_category}</span>}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-gray-700">{item.quantity}</td>
+                            {/* Stock dispo */}
+                            <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+                              {item.current_stock.toLocaleString('fr-FR')}
+                            </td>
+                            {/* Stock commandé */}
+                            <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-700">
+                              {item.quantity.toLocaleString('fr-FR')}
+                            </td>
+                            {/* Stock livré */}
                             <td className="px-4 py-3 text-right tabular-nums">
                               <span className={item.received_quantity > 0 ? 'font-medium text-green-600' : 'text-gray-400'}>
-                                {item.received_quantity}
+                                {item.received_quantity.toLocaleString('fr-FR')}
                               </span>
                             </td>
+                            {/* Stock restant */}
                             <td className="px-4 py-3 text-right tabular-nums">
                               {isFullyReceived ? (
                                 <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
@@ -532,7 +542,9 @@ export default function PurchaseOrderShow() {
                                   Complet
                                 </span>
                               ) : (
-                                <span className="font-medium text-amber-600">{item.remaining_quantity}</span>
+                                <span className="font-medium text-amber-600">
+                                  {item.remaining_quantity.toLocaleString('fr-FR')}
+                                </span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-gray-700">
