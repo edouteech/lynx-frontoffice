@@ -354,6 +354,8 @@ export interface SaleItem {
   product_sku: string | null
   product_category: string | null
   current_stock: number
+  stock_store_at_sale?: number | null
+  stock_global_at_sale?: number | null
   quantity: number
   unit_price: number
   total: number
