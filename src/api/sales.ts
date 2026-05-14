@@ -14,6 +14,8 @@ export async function fetchSale(id: number | string): Promise<Sale> {
 export interface CreateSalePayload {
   store_id: number
   customer_id?: number | null
+  cash_register_id?: number | null
+  payment_method_id?: number | null
   sale_date?: string | null
   note?: string | null
   discount_percentage?: number

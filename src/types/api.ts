@@ -199,6 +199,8 @@ export interface CashRegister {
   store_id: number
   status: string
   organization_id: number
+  open_session?: CashRegisterSession | null
+  store?: Store
   created_at: string
   updated_at: string
 }
@@ -357,10 +359,30 @@ export interface SaleItem {
   total: number
 }
 
+export interface CashRegisterSession {
+  id: number
+  cash_register_id: number
+  organization_id: number
+  opening_balance: number
+  closing_balance: number | null
+  note: string | null
+  opened_at: string
+  closed_at: string | null
+  status: 'open' | 'closed'
+  sales_total?: number
+  expected_closing_balance?: number
+  difference?: number | null
+  cash_register?: CashRegister
+  created_at: string
+  updated_at: string
+}
+
 export interface Sale {
   id: number
   organization_id: number
   store_id: number
+  cash_register_id: number | null
+  payment_method_id: number | null
   customer_id: number | null
   sale_date: string | null
   note: string | null
@@ -369,6 +391,8 @@ export interface Sale {
   extra_fees: number
   subtotal?: number
   store?: Store
+  cash_register?: CashRegister
+  payment_method?: PaymentMethod
   customer?: Customer
   items?: SaleItem[]
   created_at: string

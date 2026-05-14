@@ -10,11 +10,13 @@ import {
   confirmSale,
 } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
+import { fetchCashRegisters } from '../../api/cashRegisters'
 import { fetchProducts } from '../../api/products'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchCustomers } from '../../api/customer'
+import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { Customer, ItemCategory, Product, SaleItem, Store } from '../../types/api'
+import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, SaleItem, Store } from '../../types/api'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -69,12 +71,16 @@ export default function SaleForm() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<ItemCategory[]>([])
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
+  const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingSale, setLoadingSale] = useState(isEdit)
 
   // header
   const [storeId, setStoreId] = useState('')
   const [customerId, setCustomerId] = useState('')
+  const [cashRegisterId, setCashRegisterId] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState('')
   const [saleDate, setSaleDate] = useState('')
   const [note, setNote] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
@@ -130,6 +136,8 @@ export default function SaleForm() {
       .then(s => {
         setStoreId(String(s.store_id))
         setCustomerId(s.customer_id ? String(s.customer_id) : '')
+        setCashRegisterId(s.cash_register_id ? String(s.cash_register_id) : '')
+        setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
         setSaleDate(s.sale_date ?? '')
         setNote(s.note ?? '')
         setDiscountPct(String(s.discount_percentage))
@@ -144,6 +152,22 @@ export default function SaleForm() {
       .catch(() => setError('Impossible de charger la vente.'))
       .finally(() => setLoadingSale(false))
   }, [id, isEdit])
+
+  // ── Charger caisses + moyens de paiement quand le magasin change ──────────
+  useEffect(() => {
+    if (!storeId) {
+      setCashRegisters([])
+      setStorePaymentMethods([])
+      return
+    }
+    Promise.all([
+      fetchCashRegisters(1, undefined, storeId),
+      fetchStorePaymentMethods(storeId),
+    ]).then(([regs, methods]) => {
+      setCashRegisters(regs.data)
+      setStorePaymentMethods(methods)
+    }).catch(console.error)
+  }, [storeId])
 
   // ── Pré-remplir le prix de vente quand on sélectionne un produit ──────────
   useEffect(() => {
@@ -279,6 +303,8 @@ export default function SaleForm() {
         const sale = await createSale({
           store_id:             Number(storeId),
           customer_id:          customerId ? Number(customerId) : null,
+          cash_register_id:     cashRegisterId ? Number(cashRegisterId) : null,
+          payment_method_id:    paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:            saleDate || null,
           note:                 note.trim() || null,
           discount_percentage:  parseFloat(discountPct) || 0,
@@ -294,6 +320,8 @@ export default function SaleForm() {
         await updateSale(id!, {
           store_id:            Number(storeId),
           customer_id:         customerId ? Number(customerId) : null,
+          cash_register_id:    cashRegisterId ? Number(cashRegisterId) : null,
+          payment_method_id:   paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:           saleDate || null,
           note:                note.trim() || null,
           discount_percentage: parseFloat(discountPct) || 0,
@@ -462,6 +490,36 @@ export default function SaleForm() {
                 <Sel value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={isConfirmed}>
                   <option value="">— Anonyme —</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Sel>
+              </div>
+            </div>
+
+            {/* Caisse + Moyen de paiement */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Caisse</label>
+                <Sel
+                  value={cashRegisterId}
+                  onChange={e => setCashRegisterId(e.target.value)}
+                  disabled={isConfirmed || !storeId}
+                >
+                  <option value="">— Sans caisse —</option>
+                  {cashRegisters.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Sel>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Moyen de paiement</label>
+                <Sel
+                  value={paymentMethodId}
+                  onChange={e => setPaymentMethodId(e.target.value)}
+                  disabled={isConfirmed || !storeId}
+                >
+                  <option value="">— Non renseigné —</option>
+                  {storePaymentMethods.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
                 </Sel>
               </div>
             </div>
