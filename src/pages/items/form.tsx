@@ -1063,19 +1063,6 @@ export default function ItemFormPage() {
                 </div>
               </>
             )}
-            {!isEdit && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Enregistrer l'article
-                </button>
-              </div>
-            )}
           </Card>
         )}
 
