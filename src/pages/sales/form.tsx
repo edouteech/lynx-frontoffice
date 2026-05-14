@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronDown, FileText, Loader2,
+  AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
   Plus, Receipt, Save, ShoppingBag, Trash2,
 } from 'lucide-react'
 import {
   fetchSale, createSale, updateSale,
   addSaleItem, updateSaleItem, removeSaleItem,
-  confirmSale,
 } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
 import { fetchCashRegisters } from '../../api/cashRegisters'
@@ -108,13 +107,12 @@ export default function SaleForm() {
 
   // UI
   const [saving, setSaving] = useState(false)
-  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [confirmErrors, setConfirmErrors] = useState<string[]>([])
+  const [stockErrors, setStockErrors] = useState<string[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const isConfirmed = status === 'confirmed'
-  const isDraft = status === 'draft'
+  const isDraft     = status === 'draft'
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -213,11 +211,6 @@ export default function SaleForm() {
       : (i.product_category ?? '').toLowerCase().includes(q)
   })
 
-  // Vérification des stocks insuffisants (mode édition uniquement)
-  const insufficientItems = isEdit
-    ? displayItems.filter(i => i.current_stock < i.quantity)
-    : []
-
   // ── Totaux ─────────────────────────────────────────────────────────────────
   const subtotal = displayItems.reduce((s, i) => s + i.total, 0)
   const discount = subtotal * (parseFloat(discountPct) || 0) / 100
@@ -293,9 +286,11 @@ export default function SaleForm() {
   // ── Enregistrer ───────────────────────────────────────────────────────────
   async function handleSave() {
     if (!storeId) { setError('Veuillez sélectionner un magasin.'); return }
+    if (!isEdit && pendingItems.length === 0) { setError('Ajoutez au moins un article avant d\'enregistrer.'); return }
 
     setSaving(true)
     setError(null)
+    setStockErrors([])
     setSuccessMsg(null)
 
     try {
@@ -327,16 +322,6 @@ export default function SaleForm() {
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees:          parseFloat(extraFees) || 0,
         })
-        await Promise.all(
-          items
-            .filter(i => itemEdits[i.id])
-            .map(i =>
-              updateSaleItem(id!, i.id, {
-                quantity:   parseFloat(itemEdits[i.id].quantity)   || i.quantity,
-                unit_price: parseFloat(itemEdits[i.id].unit_price) || i.unit_price,
-              })
-            )
-        )
         const refreshed = await fetchSale(id!)
         setItems(refreshed.items ?? [])
         setItemEdits(prev => {
@@ -348,37 +333,17 @@ export default function SaleForm() {
         })
         setSuccessMsg('Vente enregistrée.')
       }
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // ── Confirmer la vente ─────────────────────────────────────────────────────
-  async function handleConfirm() {
-    if (!window.confirm('Confirmer cette vente ? Le stock du magasin sera mis à jour immédiatement.')) return
-    setConfirming(true)
-    setError(null)
-    setConfirmErrors([])
-    setSuccessMsg(null)
-    try {
-      const updated = await confirmSale(id!)
-      setStatus(updated.status)
-      const refreshed = await fetchSale(id!)
-      setItems(refreshed.items ?? [])
-      setSuccessMsg('Vente confirmée ! Le stock a été mis à jour.')
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string; errors?: string[] } } }
       const data = apiErr?.response?.data
       if (data?.errors?.length) {
-        setConfirmErrors(data.errors)
+        setStockErrors(data.errors)
         setError(data.message ?? 'Stock insuffisant.')
       } else {
         setError(getApiErrorMessage(err))
       }
     } finally {
-      setConfirming(false)
+      setSaving(false)
     }
   }
 
@@ -417,7 +382,7 @@ export default function SaleForm() {
           <div className="flex gap-2">
             <button type="button" onClick={() => navigate('/sales')}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Annuler
+              {isConfirmed ? 'Retour' : 'Annuler'}
             </button>
             {isEdit && isConfirmed && (
               <button
@@ -429,18 +394,7 @@ export default function SaleForm() {
                 Voir la facture
               </button>
             )}
-            {isEdit && isDraft && (
-              <button
-                type="button"
-                onClick={() => void handleConfirm()}
-                disabled={confirming || saving || displayItems.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
-              >
-                {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Confirmer la vente
-              </button>
-            )}
-            {isDraft && (
+            {!isConfirmed && (
               <button
                 type="button"
                 onClick={() => void handleSave()}
@@ -448,7 +402,7 @@ export default function SaleForm() {
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer
+                Enregistrer la vente
               </button>
             )}
           </div>
@@ -461,13 +415,13 @@ export default function SaleForm() {
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
         )}
-        {confirmErrors.length > 0 && (
+        {stockErrors.length > 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <p className="mb-2 flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4" /> Articles avec stock insuffisant :
             </p>
             <ul className="ml-4 list-disc space-y-1">
-              {confirmErrors.map((e, i) => <li key={i}>{e}</li>)}
+              {stockErrors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           </div>
         )}
@@ -821,15 +775,6 @@ export default function SaleForm() {
               </tbody>
             </table>
           </div>
-
-          {/* Avertissement stock insuffisant */}
-          {isEdit && insufficientItems.length > 0 && (
-            <div className="border-t border-amber-100 bg-amber-50 px-6 py-3 text-xs text-amber-700 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {insufficientItems.length} article{insufficientItems.length > 1 ? 's' : ''} avec un stock insuffisant —
-              la confirmation sera bloquée.
-            </div>
-          )}
 
           {/* Footer : remise + frais + totaux */}
           <div className="border-t border-gray-100 px-6 py-4">

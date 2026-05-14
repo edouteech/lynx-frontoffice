@@ -297,6 +297,7 @@ export default function InventoryShowPage() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté attendue</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté réelle</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût unitaire</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Différence</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Diff. coût</th>
                     <th className="w-8 px-3 py-3" />
@@ -368,6 +369,13 @@ export default function InventoryShowPage() {
                           )}
                         </td>
 
+                        {/* Coût unitaire */}
+                        <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+                          {item.purchase_price != null
+                            ? <>{item.purchase_price.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs text-gray-400">CFA</span></>
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+
                         {/* Différence */}
                         <td className="px-4 py-3 text-right">
                           <DiffCell diff={liveDiff} />
@@ -400,7 +408,7 @@ export default function InventoryShowPage() {
                     <td className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Total diff. coût
                     </td>
-                    <td colSpan={3} />
+                    <td colSpan={4} />
                     <td className="px-4 py-3 text-right tabular-nums">
                       {(() => {
                         const total = items.reduce((sum, item) => {
