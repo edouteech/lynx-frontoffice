@@ -298,6 +298,7 @@ export default function InventoryShowPage() {
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté attendue</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté réelle</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Différence</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Diff. coût</th>
                     <th className="w-8 px-3 py-3" />
                   </tr>
                 </thead>
@@ -308,6 +309,10 @@ export default function InventoryShowPage() {
                     const liveDiff = parsedActual !== null
                       ? Math.round((parsedActual - item.expected_quantity) * 1000) / 1000
                       : item.difference
+
+                    const diffCost = liveDiff != null && item.selling_price != null
+                      ? liveDiff * item.selling_price
+                      : null
 
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${
@@ -368,6 +373,19 @@ export default function InventoryShowPage() {
                           <DiffCell diff={liveDiff} />
                         </td>
 
+                        {/* Diff. coût */}
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {diffCost == null ? (
+                            <span className="text-gray-300">—</span>
+                          ) : diffCost === 0 ? (
+                            <span className="font-medium text-gray-500">0 <span className="text-xs font-normal text-gray-400">CFA</span></span>
+                          ) : (
+                            <span className={`font-semibold ${diffCost > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {diffCost > 0 ? '+' : ''}{diffCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} <span className="text-xs font-normal">CFA</span>
+                            </span>
+                          )}
+                        </td>
+
                         {/* Save indicator */}
                         <td className="px-3 py-3 text-center">
                           <SaveIndicator state={saveStates[item.id] ?? 'idle'} />
@@ -377,6 +395,34 @@ export default function InventoryShowPage() {
                     )
                   })}
                 </tbody>
+                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                  <tr>
+                    <td className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Total diff. coût
+                    </td>
+                    <td colSpan={3} />
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {(() => {
+                        const total = items.reduce((sum, item) => {
+                          const raw = actualQtys[item.id] ?? ''
+                          const parsed = raw.trim() !== '' ? parseFloat(raw) : null
+                          const diff = parsed !== null
+                            ? parsed - item.expected_quantity
+                            : item.difference
+                          if (diff == null || item.selling_price == null) return sum
+                          return sum + diff * item.selling_price
+                        }, 0)
+                        if (total === 0) return <span className="font-bold text-gray-500">0 <span className="text-xs font-normal text-gray-400">CFA</span></span>
+                        return (
+                          <span className={`font-bold ${total > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {total > 0 ? '+' : ''}{total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} <span className="text-xs font-normal">CFA</span>
+                          </span>
+                        )
+                      })()}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}

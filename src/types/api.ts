@@ -410,6 +410,7 @@ export interface InventoryItem {
   expected_quantity: number
   actual_quantity: number | null
   difference: number | null
+  selling_price: number | null
 }
 
 export interface Inventory {
