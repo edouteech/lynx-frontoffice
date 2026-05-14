@@ -428,6 +428,30 @@ export interface Inventory {
   updated_at: string
 }
 
+export interface PurchaseOrderReceptionOrderItem {
+  order_item_id: number
+  product_id: number
+  product_name: string
+  product_sku: string | null
+  product_category: string | null
+  quantity_ordered: number
+  quantity_received: number | null
+  unit_cost: number
+}
+
+export interface PurchaseOrderReception {
+  id: number
+  purchase_order_id: number
+  note: string | null
+  file_path: string | null
+  file_name: string | null
+  received_at: string | null
+  items_count: number
+  total_received: number
+  created_at: string
+  order_items?: PurchaseOrderReceptionOrderItem[]
+}
+
 export interface Paginated<T> {
   data: T[]
   current_page: number

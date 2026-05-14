@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, CheckCircle2, Edit, Loader2, Package,
-  Printer, ShieldCheck, Truck, X,
+  ArrowLeft, CheckCircle2, ChevronRight, Edit, Loader2, Package,
+  Printer, ShieldCheck, Truck,
 } from 'lucide-react'
 import {
   fetchPurchaseOrder,
   markPurchaseOrderCompleted,
-  receivePurchaseOrder,
   confirmPurchaseOrder,
   validatePurchaseOrder,
 } from '../../api/purchaseOrders'
+import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { PurchaseOrder, PurchaseOrderItem } from '../../types/api'
+import type { PurchaseOrder, PurchaseOrderReception } from '../../types/api'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -24,117 +24,6 @@ const STATUS: Record<string, { label: string; className: string }> = {
   completed:          { label: 'Terminée',              className: 'bg-green-100 text-green-700' },
 }
 
-// ── Receive modal ─────────────────────────────────────────────────────────────
-
-interface ReceiveModalProps {
-  items: PurchaseOrderItem[]
-  onClose: () => void
-  onSubmit: (entries: { item_id: number; quantity_received: number }[]) => Promise<void>
-  receiving: boolean
-}
-
-function ReceiveModal({ items, onClose, onSubmit, receiving }: ReceiveModalProps) {
-  const pending = items.filter(i => i.remaining_quantity > 0)
-  const [qtys, setQtys] = useState<Record<number, string>>(() => {
-    const init: Record<number, string> = {}
-    for (const i of pending) init[i.id] = String(i.remaining_quantity)
-    return init
-  })
-
-  function setAll() {
-    const next: Record<number, string> = {}
-    for (const i of pending) next[i.id] = String(i.remaining_quantity)
-    setQtys(next)
-  }
-
-  async function handleSubmit() {
-    const entries = pending
-      .map(i => ({ item_id: i.id, quantity_received: parseFloat(qtys[i.id] ?? '0') || 0 }))
-      .filter(e => e.quantity_received > 0)
-    if (entries.length === 0) return
-    await onSubmit(entries)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Réception de marchandises</h2>
-          <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="px-6 py-4">
-          {pending.length === 0 ? (
-            <p className="text-center text-sm text-gray-500 py-4">
-              Tous les articles ont déjà été réceptionnés.
-            </p>
-          ) : (
-            <>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm text-gray-600">Saisissez les quantités reçues :</p>
-                <button type="button" onClick={setAll} className="text-xs font-medium text-blue-600 hover:text-blue-800">
-                  Tout recevoir
-                </button>
-              </div>
-              <div className="overflow-hidden rounded-xl border border-gray-200">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left">Article</th>
-                      <th className="px-4 py-3 text-right">Stock commandé</th>
-                      <th className="px-4 py-3 text-right">Stock livré</th>
-                      <th className="px-4 py-3 text-right">Stock restant</th>
-                      <th className="px-4 py-3 text-right">À recevoir</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {pending.map(item => (
-                      <tr key={item.id} className="bg-white">
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-gray-900">{item.product_name}</p>
-                          {item.product_sku && <p className="text-xs text-gray-400">{item.product_sku}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{item.quantity}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-green-600">{item.received_quantity}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-amber-600">{item.remaining_quantity}</td>
-                        <td className="px-4 py-3 text-right">
-                          <input
-                            type="number" min={0} max={item.remaining_quantity} step="any"
-                            value={qtys[item.id] ?? ''}
-                            onChange={e => setQtys(prev => ({ ...prev, [item.id]: e.target.value }))}
-                            className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-          <button type="button" onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            Annuler
-          </button>
-          {pending.length > 0 && (
-            <button type="button" onClick={() => void handleSubmit()} disabled={receiving}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
-              {receiving && <Loader2 className="h-4 w-4 animate-spin" />}
-              <Truck className="h-4 w-4" />
-              Valider la réception
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PurchaseOrderShow() {
@@ -144,12 +33,12 @@ export default function PurchaseOrderShow() {
   const [order, setOrder] = useState<PurchaseOrder | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showReceive, setShowReceive] = useState(false)
-  const [receiving, setReceiving] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [validating, setValidating] = useState(false)
-  const printRef = useRef<HTMLDivElement>(null)
+
+  const [receptions, setReceptions] = useState<PurchaseOrderReception[]>([])
+  const [receptionLoading, setReceptionLoading] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -167,19 +56,14 @@ export default function PurchaseOrderShow() {
 
   useEffect(() => { void load() }, [load])
 
-  async function handleReceive(entries: { item_id: number; quantity_received: number }[]) {
-    if (!order) return
-    setReceiving(true)
-    try {
-      const updated = await receivePurchaseOrder(order.id, entries)
-      setOrder(updated)
-      setShowReceive(false)
-    } catch (e) {
-      setError(getApiErrorMessage(e))
-    } finally {
-      setReceiving(false)
-    }
-  }
+  useEffect(() => {
+    if (!id) return
+    setReceptionLoading(true)
+    fetchReceptions(id)
+      .then(setReceptions)
+      .catch(console.error)
+      .finally(() => setReceptionLoading(false))
+  }, [id])
 
   async function handleConfirm() {
     if (!order) return
@@ -271,7 +155,7 @@ export default function PurchaseOrderShow() {
         }
       `}</style>
 
-      <div className="min-h-screen bg-[#EFF6FF] p-8 print:ml-0 print:p-6" id="print-area" ref={printRef}>
+      <div className="min-h-screen bg-[#EFF6FF] p-8 print:ml-0 print:p-6" id="print-area">
         {/* Header */}
         <header className="no-print mb-8 flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -317,7 +201,6 @@ export default function PurchaseOrderShow() {
               </button>
             )}
 
-            {/* Actions centrales d'achat */}
             {canConfirm && (
               <button onClick={() => void handleConfirm()} disabled={confirming}
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
@@ -334,9 +217,8 @@ export default function PurchaseOrderShow() {
               </button>
             )}
 
-            {/* Réceptionner — uniquement quand validée */}
             {canReceive && (
-              <button onClick={() => setShowReceive(true)}
+              <button onClick={() => navigate(`/purchase-orders/${order.id}/receive`)}
                 className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
                 <Truck className="h-4 w-4" />
                 Réceptionner
@@ -481,7 +363,7 @@ export default function PurchaseOrderShow() {
 
           {/* Right: items table */}
           <div className="lg:col-span-2">
-            <div className="rounded-2xl bg-white shadow-sm overflow-hidden">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
               <div className="flex items-center gap-2 border-b border-gray-200 px-5 py-4">
                 <Package className="h-4 w-4 text-gray-400" />
                 <h2 className="text-sm font-semibold text-gray-900">
@@ -520,21 +402,17 @@ export default function PurchaseOrderShow() {
                                 {item.product_category && <span className="text-xs text-gray-400">{item.product_category}</span>}
                               </div>
                             </td>
-                            {/* Stock dispo */}
                             <td className="px-4 py-3 text-right tabular-nums text-gray-700">
                               {item.current_stock.toLocaleString('fr-FR')}
                             </td>
-                            {/* Stock commandé */}
                             <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-700">
                               {item.quantity.toLocaleString('fr-FR')}
                             </td>
-                            {/* Stock livré */}
                             <td className="px-4 py-3 text-right tabular-nums">
                               <span className={item.received_quantity > 0 ? 'font-medium text-green-600' : 'text-gray-400'}>
                                 {item.received_quantity.toLocaleString('fr-FR')}
                               </span>
                             </td>
-                            {/* Stock restant */}
                             <td className="px-4 py-3 text-right tabular-nums">
                               {isFullyReceived ? (
                                 <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
@@ -563,16 +441,74 @@ export default function PurchaseOrderShow() {
             </div>
           </div>
         </div>
-      </div>
 
-      {showReceive && order.items && (
-        <ReceiveModal
-          items={order.items}
-          onClose={() => setShowReceive(false)}
-          onSubmit={handleReceive}
-          receiving={receiving}
-        />
-      )}
+        {/* Receptions history */}
+        <div className="no-print mt-6 overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-gray-200 px-5 py-4">
+            <Truck className="h-4 w-4 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-900">
+              Historique des réceptions {!receptionLoading && `(${receptions.length})`}
+            </h2>
+            {receptionLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+          </div>
+
+          {receptionLoading ? null : receptions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-gray-400">
+              <Truck className="h-8 w-8" />
+              <p className="text-sm">Aucune réception enregistrée</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Réception</th>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-right">Articles</th>
+                    <th className="px-4 py-3 text-right">Total reçu</th>
+                    <th className="px-4 py-3 text-right">Note</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {receptions.map(rec => (
+                    <tr
+                      key={rec.id}
+                      className="cursor-pointer bg-white hover:bg-gray-50/50"
+                      onClick={() => navigate(`/purchase-orders/${order.id}/receptions/${rec.id}`)}
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        #{String(rec.id).padStart(4, '0')}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {rec.received_at
+                          ? new Date(rec.received_at).toLocaleDateString('fr-FR')
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+                        {rec.items_count}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900">
+                        {rec.total_received.toLocaleString('fr-FR')}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-500">
+                        {rec.note ? (
+                          <span className="max-w-[200px] truncate inline-block">{rec.note}</span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <ChevronRight className="ml-auto h-4 w-4 text-gray-400" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </>
   )
 }

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(attach)",
+      "Bash(document)",
+      "Bash(receipt\")",
+      "Bash(dir \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Models\\\\\" | findstr /i \"file attach document receipt\")",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Models\\\\\" | Where-Object { $_.Name -match \"file|attach|document\" })"
+    ]
+  }
+}

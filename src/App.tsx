@@ -36,6 +36,8 @@ import SuppliersIndex from './pages/suppliers'
 import PurchaseOrdersIndex from './pages/purchase-orders'
 import PurchaseOrderForm from './pages/purchase-orders/form'
 import PurchaseOrderShow from './pages/purchase-orders/show'
+import PurchaseOrderReceive from './pages/purchase-orders/receive'
+import PurchaseOrderReceptionShow from './pages/purchase-orders/reception-show'
 import StockTransfersIndex from './pages/stock-transfers/index'
 import StockTransferForm from './pages/stock-transfers/form'
 import StockAdjustmentsIndex from './pages/stock-adjustments/index'
@@ -237,6 +239,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<PurchaseOrderForm />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id/receive"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceive />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id/receptions/:receptionId"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceptionShow />)}
             </ProtectedRoute>
           }
         />
