@@ -179,9 +179,10 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   }, [selectedProductId, allProducts])
 
   // ── Filtered products by category ───────────────────────────────────────────
-  const filteredProducts = filterCategoryId
-    ? allProducts.filter(p => String(p.item_category_id) === filterCategoryId)
-    : allProducts
+  const filteredProducts = allProducts.filter(p => {
+    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
+    return true
+  })
 
   // ── Active display items ─────────────────────────────────────────────────────
   const displayItems: PurchaseOrderItem[] = isEdit
@@ -229,29 +230,48 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
     const qty = parseFloat(addQty) || 1
     const cost = parseFloat(addCost) || 0
 
-    if (!isEdit) {
-      const tempId = ++tempIdRef.current
-      setPendingItems(prev => [...prev, {
-        tempId,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        productCategory: product.category?.name ?? null,
-        quantity: qty,
-        unitCost: cost,
-      }])
-      setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_cost: String(cost) } }))
-    } else {
-      try {
-        const item = await addPurchaseOrderItem(id!, { product_id: product.id, quantity: qty, unit_cost: cost })
-        setItems(prev => [...prev, item])
-        setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_cost: String(item.unit_cost) } }))
-      } catch (err) { setError(getApiErrorMessage(err)) }
-    }
-
+    // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
     setAddQty('1')
     setAddCost('')
+
+    if (!isEdit) {
+      const existingPending = pendingItems.find(pi => pi.productId === product.id)
+      if (existingPending) {
+        const currentQty = parseFloat(pendingEdits[existingPending.tempId]?.quantity ?? String(existingPending.quantity)) || 0
+        setPendingEdits(prev => ({
+          ...prev,
+          [existingPending.tempId]: { ...prev[existingPending.tempId], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        const tempId = ++tempIdRef.current
+        setPendingItems(prev => [...prev, {
+          tempId,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          productCategory: product.category?.name ?? null,
+          quantity: qty,
+          unitCost: cost,
+        }])
+        setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_cost: String(cost) } }))
+      }
+    } else {
+      const existingItem = items.find(i => i.product_id === product.id)
+      if (existingItem) {
+        const currentQty = parseFloat(itemEdits[existingItem.id]?.quantity ?? String(existingItem.quantity)) || 0
+        setItemEdits(prev => ({
+          ...prev,
+          [existingItem.id]: { ...prev[existingItem.id], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        try {
+          const item = await addPurchaseOrderItem(id!, { product_id: product.id, quantity: qty, unit_cost: cost })
+          setItems(prev => [...prev, item])
+          setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_cost: String(item.unit_cost) } }))
+        } catch (err) { setError(getApiErrorMessage(err)) }
+      }
+    }
   }
 
   // ── Remove item ──────────────────────────────────────────────────────────────

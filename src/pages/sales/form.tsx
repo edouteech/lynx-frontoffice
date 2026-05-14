@@ -153,9 +153,10 @@ export default function SaleForm() {
   }, [selectedProductId, allProducts])
 
   // ── Produits filtrés ───────────────────────────────────────────────────────
-  const filteredProducts = filterCategoryId
-    ? allProducts.filter(p => String(p.item_category_id) === filterCategoryId)
-    : allProducts
+  const filteredProducts = allProducts.filter(p => {
+    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
+    return true
+  })
 
   // ── Items affichés ─────────────────────────────────────────────────────────
   const displayItems: SaleItem[] = isEdit
@@ -203,32 +204,53 @@ export default function SaleForm() {
     if (!selectedProductId || !addQty || parseFloat(addQty) <= 0) return
     const product = allProducts.find(p => String(p.id) === selectedProductId)
     if (!product) return
+
     const qty   = parseFloat(addQty) || 1
     const price = parseFloat(addPrice) || 0
 
-    if (!isEdit) {
-      const tempId = ++tempIdRef.current
-      setPendingItems(prev => [...prev, {
-        tempId,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        productCategory: product.category?.name ?? null,
-        quantity: qty,
-        unitPrice: price,
-      }])
-      setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_price: String(price) } }))
-    } else {
-      try {
-        const item = await addSaleItem(id!, { product_id: product.id, quantity: qty, unit_price: price })
-        setItems(prev => [...prev, item])
-        setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_price: String(item.unit_price) } }))
-      } catch (err) { setError(getApiErrorMessage(err)) }
-    }
+    // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
     setAddQty('1')
     setAddPrice('')
-  }, [selectedProductId, addQty, addPrice, allProducts, isEdit, id])
+
+    if (!isEdit) {
+      const existingPending = pendingItems.find(pi => pi.productId === product.id)
+      if (existingPending) {
+        const currentQty = parseFloat(pendingEdits[existingPending.tempId]?.quantity ?? String(existingPending.quantity)) || 0
+        setPendingEdits(prev => ({
+          ...prev,
+          [existingPending.tempId]: { ...prev[existingPending.tempId], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        const tempId = ++tempIdRef.current
+        setPendingItems(prev => [...prev, {
+          tempId,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          productCategory: product.category?.name ?? null,
+          quantity: qty,
+          unitPrice: price,
+        }])
+        setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_price: String(price) } }))
+      }
+    } else {
+      const existingItem = items.find(i => i.product_id === product.id)
+      if (existingItem) {
+        const currentQty = parseFloat(itemEdits[existingItem.id]?.quantity ?? String(existingItem.quantity)) || 0
+        setItemEdits(prev => ({
+          ...prev,
+          [existingItem.id]: { ...prev[existingItem.id], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        try {
+          const item = await addSaleItem(id!, { product_id: product.id, quantity: qty, unit_price: price })
+          setItems(prev => [...prev, item])
+          setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_price: String(item.unit_price) } }))
+        } catch (err) { setError(getApiErrorMessage(err)) }
+      }
+    }
+  }, [selectedProductId, addQty, addPrice, allProducts, isEdit, id, items, pendingItems, itemEdits, pendingEdits])
 
   // ── Supprimer un article ───────────────────────────────────────────────────
   const handleRemoveItem = useCallback(async (itemId: number) => {
