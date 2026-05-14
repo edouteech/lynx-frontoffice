@@ -661,6 +661,12 @@ export default function SaleForm() {
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock dispo.</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Quantité</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock après</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                    Stock magasin <span className="block normal-case font-normal text-gray-400">(au moment de la vente)</span>
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                    Stock global <span className="block normal-case font-normal text-gray-400">(au moment de la vente)</span>
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prix unit.</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
                   {isDraft && <th className="w-10 px-4 py-3" />}
@@ -669,7 +675,7 @@ export default function SaleForm() {
               <tbody className="divide-y divide-gray-100">
                 {filteredDisplayItems.length === 0 ? (
                   <tr>
-                    <td colSpan={isDraft ? 8 : 7} className="px-4 py-12 text-center">
+                    <td colSpan={isDraft ? 10 : 9} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <ShoppingBag className="h-10 w-10" />
                         <span className="text-sm">Aucun article dans cette vente</span>
@@ -739,6 +745,28 @@ export default function SaleForm() {
                           {isEdit ? (
                             <span className={`font-medium ${stockAfter < 0 ? 'text-red-600' : 'text-blue-600'}`}>
                               {stockAfter.toLocaleString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Stock magasin au moment de la vente */}
+                        <td className="px-4 py-3 text-right">
+                          {isConfirmed && item.stock_store_at_sale != null ? (
+                            <span className="font-medium text-gray-700">
+                              {(item.stock_store_at_sale as number).toLocaleString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Stock global au moment de la vente */}
+                        <td className="px-4 py-3 text-right">
+                          {isConfirmed && item.stock_global_at_sale != null ? (
+                            <span className="font-medium text-gray-700">
+                              {(item.stock_global_at_sale as number).toLocaleString('fr-FR')}
                             </span>
                           ) : (
                             <span className="text-gray-400">—</span>

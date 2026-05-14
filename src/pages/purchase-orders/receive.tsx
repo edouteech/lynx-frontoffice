@@ -214,7 +214,7 @@ export default function PurchaseOrderReceive() {
                       <th className="px-4 py-3 text-right">Stock commandé</th>
                       <th className="px-4 py-3 text-right">Stock livré</th>
                       <th className="px-4 py-3 text-right">Stock restant</th>
-                      <th className="px-4 py-3 text-right">À recevoir</th>
+                      <th className="px-4 py-3 text-right">Quantité entrant</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
