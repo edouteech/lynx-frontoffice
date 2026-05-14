@@ -209,7 +209,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         product_name: pi.productName,
         product_sku: pi.productSku,
         product_category: pi.productCategory,
-        current_stock: 0,
+        current_stock: pi.currentStock,
         quantity: parseFloat(pendingEdits[pi.tempId]?.quantity ?? String(pi.quantity)),
         received_quantity: 0,
         remaining_quantity: parseFloat(pendingEdits[pi.tempId]?.quantity ?? String(pi.quantity)),
@@ -254,12 +254,16 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         }))
       } else {
         const tempId = ++tempIdRef.current
+        const currentStock = product.store_stock_quantity != null
+          ? product.store_stock_quantity
+          : Number(product.stock_quantity) || 0
         setPendingItems(prev => [...prev, {
           tempId,
           productId: product.id,
           productName: product.name,
           productSku: product.sku,
           productCategory: product.category?.name ?? null,
+          currentStock,
           quantity: qty,
           unitCost: cost,
         }])
@@ -631,7 +635,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
 
                         {/* Stock dispo */}
                         <td className="px-4 py-3 text-right">
-                          {isEdit
+                          {storeId
                             ? <span className="text-gray-700">{item.current_stock.toLocaleString('fr-FR')}</span>
                             : <span className="text-gray-400">—</span>}
                         </td>
