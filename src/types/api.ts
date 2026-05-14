@@ -454,6 +454,8 @@ export interface Inventory {
   type: 'full' | 'partial'
   status: 'draft' | 'applied'
   note: string | null
+  file_path?: string | null
+  file_name?: string | null
   applied_at: string | null
   items_count: number
   filled_count: number
