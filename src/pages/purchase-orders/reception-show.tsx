@@ -3,7 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Download, Loader2, Package } from 'lucide-react'
 import { fetchReception } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { API_BASE_URL } from '../../config/env'
 import type { PurchaseOrderReception } from '../../types/api'
+
+function resolveStorageUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
+}
 
 export default function PurchaseOrderReceptionShow() {
   const { id, receptionId } = useParams<{ id: string; receptionId: string }>()
@@ -115,7 +122,7 @@ export default function PurchaseOrderReceptionShow() {
                 Document joint
               </h2>
               <a
-                href={reception.file_path}
+                href={resolveStorageUrl(reception.file_path) ?? '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

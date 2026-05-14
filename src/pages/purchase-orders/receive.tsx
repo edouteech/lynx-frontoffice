@@ -166,10 +166,11 @@ export default function PurchaseOrderReceive() {
               ) : (
                 <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-3 hover:bg-gray-50">
                   <FileUp className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-500">Sélectionner un fichier</span>
+                  <span className="text-sm text-gray-500">Image ou PDF (max 10 Mo)</span>
                   <input
                     type="file"
                     className="hidden"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={e => setFile(e.target.files?.[0] ?? null)}
                   />
                 </label>
