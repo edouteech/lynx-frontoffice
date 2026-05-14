@@ -1,8 +1,21 @@
 import type { Paginated, Sale, SaleItem } from '../types/api'
 import { api } from './apiClient'
 
-export async function fetchSales(page = 1): Promise<Paginated<Sale>> {
-  const { data } = await api.get<Paginated<Sale>>('/sales', { params: { page } })
+export interface FetchSalesParams {
+  page?: number
+  store_id?: number | null
+  status?: string | null
+  from?: string | null
+  to?: string | null
+}
+
+export async function fetchSales(params: FetchSalesParams = {}): Promise<Paginated<Sale>> {
+  const p: Record<string, string | number> = { page: params.page ?? 1 }
+  if (params.store_id) p.store_id = params.store_id
+  if (params.status) p.status = params.status
+  if (params.from) p.from = params.from
+  if (params.to) p.to = params.to
+  const { data } = await api.get<Paginated<Sale>>('/sales', { params: p })
   return data
 }
 

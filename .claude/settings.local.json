@@ -12,7 +12,8 @@
       "PowerShell(head -50)",
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\database\\\\migrations\\\\\" | Select-Object -Last 5 | ForEach-Object { $_.Name })",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-frontoffice\\\\src\" -Recurse -Name)",
-      "Bash(Select-String \"App\\\\.tsx|router\\\\.tsx|routes\\\\.tsx|Sidebar\\\\.tsx|Nav\\\\.tsx|Layout\\\\.tsx|navigation\\\\.tsx\")"
+      "Bash(Select-String \"App\\\\.tsx|router\\\\.tsx|routes\\\\.tsx|Sidebar\\\\.tsx|Nav\\\\.tsx|Layout\\\\.tsx|navigation\\\\.tsx\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

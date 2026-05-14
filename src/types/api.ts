@@ -390,6 +390,12 @@ export interface Sale {
   discount_percentage: number
   extra_fees: number
   subtotal?: number
+  // Customer snapshot fields (captured at sale time)
+  customer_name?: string | null
+  customer_email?: string | null
+  customer_phone?: string | null
+  customer_tax_id?: string | null
+  customer_aib?: boolean | null
   store?: Store
   cash_register?: CashRegister
   payment_method?: PaymentMethod

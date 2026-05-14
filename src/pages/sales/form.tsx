@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronDown, Loader2,
+  AlertTriangle, ArrowLeft, Check, ChevronDown, FileText, Loader2,
   Plus, Receipt, Save, ShoppingBag, Trash2,
 } from 'lucide-react'
 import {
@@ -419,6 +419,16 @@ export default function SaleForm() {
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
+            {isEdit && isConfirmed && (
+              <button
+                type="button"
+                onClick={() => navigate(`/sales/${id}/invoice`)}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+              >
+                <FileText className="h-4 w-4" />
+                Voir la facture
+              </button>
+            )}
             {isEdit && isDraft && (
               <button
                 type="button"
