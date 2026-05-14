@@ -335,7 +335,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
           extra_fees: parseFloat(extraFees) || 0,
           items: itemsPayload,
         })
-        navigate(`/purchase-orders/${order.id}`, { replace: true })
+        navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${order.id}`, { replace: true })
       } else {
         await updatePurchaseOrder(id!, {
           supplier_id: orderIsCentral ? null : Number(supplierId),
@@ -410,7 +410,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
             {isEdit && canEdit && (
               <button
                 type="button"
-                onClick={() => navigate(`/purchase-orders/${id!}`)}
+                onClick={() => navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${id!}`)}
                 disabled={saving}
                 className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
               >

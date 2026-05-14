@@ -220,10 +220,42 @@ export default function App() {
           }
         />
         <Route
-          path="/purchase-orders/create-central"
+          path="/central-orders/create"
           element={
             <ProtectedRoute>
               {withLayout(<PurchaseOrderForm isCentral />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderShow />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderForm isCentral />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/receive"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceive />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/receptions/:receptionId"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceptionShow />)}
             </ProtectedRoute>
           }
         />

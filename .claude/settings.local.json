@@ -21,7 +21,8 @@
       "Bash(php artisan *)",
       "Bash(npm install *)",
       "Bash(node -e \"require\\('@react-pdf/renderer'\\); console.log\\('ok'\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }

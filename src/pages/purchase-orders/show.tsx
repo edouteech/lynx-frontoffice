@@ -4,6 +4,7 @@ import {
   ArrowLeft, CheckCircle2, ChevronRight, Edit, Loader2, Package,
   Printer, ShieldCheck, Truck,
 } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
 import {
   fetchPurchaseOrder,
   markPurchaseOrderCompleted,
@@ -13,6 +14,7 @@ import {
 import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder, PurchaseOrderReception } from '../../types/api'
+import PurchaseOrderPdf from './PurchaseOrderPdf'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ export default function PurchaseOrderShow() {
   const [completing, setCompleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [validating, setValidating] = useState(false)
+  const [printing, setPrinting] = useState(false)
 
   const [receptions, setReceptions] = useState<PurchaseOrderReception[]>([])
   const [receptionLoading, setReceptionLoading] = useState(false)
@@ -64,6 +67,19 @@ export default function PurchaseOrderShow() {
       .catch(console.error)
       .finally(() => setReceptionLoading(false))
   }, [id])
+
+  async function handlePrint() {
+    if (!order) return
+    setPrinting(true)
+    try {
+      const blob = await pdf(<PurchaseOrderPdf order={order} />).toBlob()
+      const url  = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } finally {
+      setPrinting(false)
+    }
+  }
 
   async function handleConfirm() {
     if (!order) return
@@ -146,18 +162,9 @@ export default function PurchaseOrderShow() {
   const statusCfg = STATUS[order.status] ?? STATUS.validated
 
   return (
-    <>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          #print-area { display: block !important; }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-
-      <div className="min-h-screen bg-[#EFF6FF] p-8 print:ml-0 print:p-6" id="print-area">
+    <div className="min-h-screen bg-[#EFF6FF] p-8">
         {/* Header */}
-        <header className="no-print mb-8 flex flex-wrap items-start justify-between gap-4">
+        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(isCentral ? '/central-orders' : '/purchase-orders')}
               className="rounded-lg border border-gray-300 p-2 hover:bg-white">
@@ -187,14 +194,17 @@ export default function PurchaseOrderShow() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <Printer className="h-4 w-4" />
-              Imprimer
+            <button
+              onClick={() => void handlePrint()}
+              disabled={printing}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              {printing ? 'Génération…' : 'Imprimer'}
             </button>
 
             {canEdit && (
-              <button onClick={() => navigate(`/purchase-orders/${order.id}/edit`)}
+              <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/edit`)}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 <Edit className="h-4 w-4" />
                 Modifier
@@ -218,7 +228,7 @@ export default function PurchaseOrderShow() {
             )}
 
             {canReceive && (
-              <button onClick={() => navigate(`/purchase-orders/${order.id}/receive`)}
+              <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receive`)}
                 className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
                 <Truck className="h-4 w-4" />
                 Réceptionner
@@ -235,21 +245,8 @@ export default function PurchaseOrderShow() {
           </div>
         </header>
 
-        {/* Print title */}
-        <div className="hidden print:block mb-6">
-          <h1 className="text-2xl font-bold">Bon de commande #{String(order.id).padStart(4, '0')}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Statut : {statusCfg.label} &mdash;{' '}
-            {isCentral
-              ? `Centrale : ${order.purchasing_center?.name}`
-              : `Fournisseur : ${order.supplier?.name}`
-            }{' '}
-            &mdash; Magasin : {order.store?.name}
-          </p>
-        </div>
-
         {error && (
-          <div className="no-print mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </div>
         )}
@@ -475,7 +472,7 @@ export default function PurchaseOrderShow() {
                     <tr
                       key={rec.id}
                       className="cursor-pointer bg-white hover:bg-gray-50/50"
-                      onClick={() => navigate(`/purchase-orders/${order.id}/receptions/${rec.id}`)}
+                      onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receptions/${rec.id}`)}
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">
                         #{String(rec.id).padStart(4, '0')}
@@ -509,6 +506,5 @@ export default function PurchaseOrderShow() {
           )}
         </div>
       </div>
-    </>
   )
 }

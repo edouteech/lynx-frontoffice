@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, FileUp, Loader2, Truck, X } from 'lucide-react'
 import { fetchPurchaseOrder } from '../../api/purchaseOrders'
 import { createReception } from '../../api/purchaseOrderReceptions'
@@ -9,6 +9,8 @@ import type { PurchaseOrder } from '../../types/api'
 export default function PurchaseOrderReceive() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const orderPrefix = location.pathname.startsWith('/central-orders') ? 'central-orders' : 'purchase-orders'
 
   const [order, setOrder] = useState<PurchaseOrder | null>(null)
   const [loading, setLoading] = useState(true)
@@ -72,7 +74,7 @@ export default function PurchaseOrderReceive() {
         fd.append(`items[${i}][quantity_received]`, String(entry.quantity_received))
       })
       await createReception(id, fd)
-      navigate(`/purchase-orders/${id}`)
+      navigate(`/${orderPrefix}/${id}`)
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
@@ -102,7 +104,7 @@ export default function PurchaseOrderReceive() {
     <div className="min-h-screen bg-[#EFF6FF] p-8">
       <header className="mb-8 flex items-start gap-4">
         <button
-          onClick={() => navigate(`/purchase-orders/${order.id}`)}
+          onClick={() => navigate(`/${orderPrefix}/${order.id}`)}
           className="mt-0.5 rounded-lg border border-gray-300 p-2 hover:bg-white"
         >
           <ArrowLeft className="h-4 w-4 text-gray-600" />
@@ -258,7 +260,7 @@ export default function PurchaseOrderReceive() {
             <div className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
               <button
                 type="button"
-                onClick={() => navigate(`/purchase-orders/${order.id}`)}
+                onClick={() => navigate(`/${orderPrefix}/${order.id}`)}
                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Annuler

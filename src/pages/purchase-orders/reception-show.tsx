@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Download, Loader2, Package } from 'lucide-react'
 import { fetchReception } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -15,6 +15,8 @@ function resolveStorageUrl(path: string | null | undefined): string | null {
 export default function PurchaseOrderReceptionShow() {
   const { id, receptionId } = useParams<{ id: string; receptionId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const orderPrefix = location.pathname.startsWith('/central-orders') ? 'central-orders' : 'purchase-orders'
 
   const [reception, setReception] = useState<PurchaseOrderReception | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,7 +60,7 @@ export default function PurchaseOrderReceptionShow() {
     <div className="min-h-screen bg-[#EFF6FF] p-8">
       <header className="mb-8 flex items-start gap-4">
         <button
-          onClick={() => navigate(`/purchase-orders/${reception.purchase_order_id}`)}
+          onClick={() => navigate(`/${orderPrefix}/${reception.purchase_order_id}`)}
           className="mt-0.5 rounded-lg border border-gray-300 p-2 hover:bg-white"
         >
           <ArrowLeft className="h-4 w-4 text-gray-600" />
