@@ -292,7 +292,7 @@ export default function CashRegistersIndex() {
           cashRegisterId={closeSessionFor.register.id}
           cashRegisterName={closeSessionFor.register.name}
           onClose={() => setCloseSessionFor(null)}
-          onClosed={updated => {
+          onClosed={_updated => {
             void refreshSessions(closeSessionFor.register.id)
             setCloseSessionFor(null)
           }}

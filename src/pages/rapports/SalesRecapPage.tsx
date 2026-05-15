@@ -414,7 +414,7 @@ export default function SalesRecapPage() {
               />
               <Tooltip 
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                formatter={(val: number) => [formatFcfa(val), "CA TTC"]}
+                formatter={(val) => [formatFcfa(typeof val === 'number' ? val : 0), "CA TTC"] as [string, string]}
               />
               <Area
                 type="monotone"

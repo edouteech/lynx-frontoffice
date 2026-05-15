@@ -1,4 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
+import type { Style } from '@react-pdf/types'
 import type { PurchaseOrder } from '../../types/api'
 
 const s = StyleSheet.create({
@@ -104,7 +105,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed:          'Terminée',
 }
 
-const STATUS_BADGE_STYLE: Record<string, object> = {
+const STATUS_BADGE_STYLE: Record<string, Style> = {
   submitted:          s.badgeSubmitted,
   confirmed:          s.badgeConfirmed,
   validated:          s.badgeValidated,

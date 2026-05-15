@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   fetchSale, createSale, updateSale,
-  addSaleItem, updateSaleItem, removeSaleItem,
+  addSaleItem, removeSaleItem,
 } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
 import { fetchCashRegisters } from '../../api/cashRegisters'
