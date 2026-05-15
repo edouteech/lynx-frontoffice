@@ -48,14 +48,15 @@ function Sel(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   )
 }
 
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 py-1">
+    <label className={`flex items-center justify-between gap-3 py-1 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
       <span className="text-sm text-gray-700">{label}</span>
       <button
         type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 rounded-full transition-colors ${checked ? 'bg-[#0F2E4A]' : 'bg-gray-200'}`}
+        onClick={() => !disabled && onChange(!checked)}
+        disabled={disabled}
+        className={`relative h-6 w-11 rounded-full transition-colors ${checked ? 'bg-[#0F2E4A]' : 'bg-gray-200'} ${disabled ? 'opacity-50' : ''}`}
       >
         <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
       </button>
@@ -131,7 +132,7 @@ export default function ItemFormPage() {
   const [trackInventory, setTrackInventory] = useState(false)
 
   // color
-  const [color, setColor] = useState<string>('#000000')
+  const [color, setColor] = useState<string>('')
 
   // images / upload
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -215,6 +216,13 @@ export default function ItemFormPage() {
       .catch(() => setError('Impossible de charger le produit.'))
       .finally(() => setLoadingProduct(false))
   }, [id, isEdit])
+
+  // ── Reset trackInventory when type becomes composite ────────────────────────
+  useEffect(() => {
+    if (type === 'composite' && trackInventory) {
+      setTrackInventory(false)
+    }
+  }, [type])
 
   // ── Load sub-resources when switching tabs ───────────────────────────────────
   useEffect(() => {
@@ -508,6 +516,7 @@ export default function ItemFormPage() {
     const preview = URL.createObjectURL(file)
     setImagePreview(preview)
     setImageFile(file)
+    setColor('') // Clear color when image is set
   }
 
   function handleImageDrop(e: React.DragEvent) {
@@ -608,6 +617,33 @@ export default function ItemFormPage() {
             Envoi de l'image…
           </div>
         )}
+
+        <Field label="Couleur de l'article" hint={imagePreview ? "Couleur désactivée car une image est définie" : "Code hexadécimal — utilisé pour l'identification visuelle"}>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={color}
+              onChange={e => setColor(e.target.value)}
+              disabled={!!imagePreview}
+              className="h-10 w-14 cursor-pointer rounded-lg border border-gray-300 p-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <Inp
+              value={color}
+              onChange={e => {
+                const v = e.target.value
+                if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setColor(v)
+              }}
+              placeholder=""
+              disabled={!!imagePreview}
+              className="w-36 font-mono uppercase disabled:opacity-50"
+              maxLength={7}
+            />
+            <span
+              className="h-8 w-8 rounded-full border border-gray-200 shadow-sm flex-shrink-0"
+              style={{ backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : 'transparent' }}
+            />
+          </div>
+        </Field>
       </Card>
     )
   }
@@ -747,31 +783,6 @@ export default function ItemFormPage() {
                   </Field>
                 </div>
 
-                <Field label="Couleur de l'article" hint="Code hexadécimal — utilisé pour l'identification visuelle">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={color}
-                      onChange={e => setColor(e.target.value)}
-                      className="h-10 w-14 cursor-pointer rounded-lg border border-gray-300 p-0.5"
-                    />
-                    <Inp
-                      value={color}
-                      onChange={e => {
-                        const v = e.target.value
-                        if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setColor(v)
-                      }}
-                      placeholder="#000000"
-                      className="w-36 font-mono uppercase"
-                      maxLength={7}
-                    />
-                    <span
-                      className="h-8 w-8 rounded-full border border-gray-200 shadow-sm flex-shrink-0"
-                      style={{ backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : 'transparent' }}
-                    />
-                  </div>
-                </Field>
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="TVA Achat">
                     <Sel value={purchaseVatId} onChange={e => setPurchaseVatId(e.target.value)}>
@@ -790,7 +801,7 @@ export default function ItemFormPage() {
                 <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50 px-4">
                   <Toggle checked={specificTax} onChange={setSpecificTax} label="Taxe spécifique (T.S)" />
                   <Toggle checked={taxInclusive} onChange={setTaxInclusive} label="Prix affiché TTC (taxes incluses)" />
-                  <Toggle checked={trackInventory} onChange={setTrackInventory} label="Gérer le stock de cet article" />
+                  <Toggle checked={trackInventory} onChange={setTrackInventory} label="Gérer le stock de cet article" disabled={type === 'composite'} />
                 </div>
               </div>
             </Card>
@@ -1051,19 +1062,6 @@ export default function ItemFormPage() {
                   Totale = {totalComposite.toLocaleString('fr-FR')} CFA
                 </div>
               </>
-            )}
-            {!isEdit && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Enregistrer l'article
-                </button>
-              </div>
             )}
           </Card>
         )}

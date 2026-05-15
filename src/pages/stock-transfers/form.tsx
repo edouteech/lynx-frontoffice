@@ -172,23 +172,37 @@ export default function StockTransferForm() {
     if (!product) return
     const qty = parseFloat(addQty) || 1
 
-    if (!isEdit) {
-      const tempId = ++tempIdRef.current
-      setPendingItems(prev => [...prev, {
-        tempId, productId: product.id,
-        productName: product.name, productSku: product.sku,
-        productCategory: product.category?.name ?? null, quantity: qty,
-      }])
-      setPendingQtyEdits(prev => ({ ...prev, [tempId]: String(qty) }))
-    } else {
-      try {
-        const item = await addStockTransferItem(id!, { product_id: product.id, quantity: qty })
-        setItems(prev => [...prev, item])
-        setQtyEdits(prev => ({ ...prev, [item.id]: String(item.quantity) }))
-      } catch (err) { setError(getApiErrorMessage(err)) }
-    }
+    // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
     setAddQty('1')
+
+    if (!isEdit) {
+      const existingPending = pendingItems.find(pi => pi.productId === product.id)
+      if (existingPending) {
+        const currentQty = parseFloat(pendingQtyEdits[existingPending.tempId] ?? String(existingPending.quantity)) || 0
+        setPendingQtyEdits(prev => ({ ...prev, [existingPending.tempId]: String(currentQty + qty) }))
+      } else {
+        const tempId = ++tempIdRef.current
+        setPendingItems(prev => [...prev, {
+          tempId, productId: product.id,
+          productName: product.name, productSku: product.sku,
+          productCategory: product.category?.name ?? null, quantity: qty,
+        }])
+        setPendingQtyEdits(prev => ({ ...prev, [tempId]: String(qty) }))
+      }
+    } else {
+      const existingItem = items.find(i => i.product_id === product.id)
+      if (existingItem) {
+        const currentQty = parseFloat(qtyEdits[existingItem.id] ?? String(existingItem.quantity)) || 0
+        setQtyEdits(prev => ({ ...prev, [existingItem.id]: String(currentQty + qty) }))
+      } else {
+        try {
+          const item = await addStockTransferItem(id!, { product_id: product.id, quantity: qty })
+          setItems(prev => [...prev, item])
+          setQtyEdits(prev => ({ ...prev, [item.id]: String(item.quantity) }))
+        } catch (err) { setError(getApiErrorMessage(err)) }
+      }
+    }
   }
 
   // ── Supprimer un article ───────────────────────────────────────────────────

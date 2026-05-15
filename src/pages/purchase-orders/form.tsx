@@ -57,6 +57,7 @@ interface PendingItem {
   productName: string
   productSku: string | null
   productCategory: string | null
+  currentStock: number
   quantity: number
   unitCost: number
 }
@@ -171,6 +172,14 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
       .finally(() => setLoadingOrder(false))
   }, [id, isEdit])
 
+  // ── Recharger les produits avec stock par magasin quand le magasin change ───
+  useEffect(() => {
+    if (!storeId) return
+    fetchProducts({ page: 1, store_id: Number(storeId) })
+      .then(prods => setAllProducts(prods.data))
+      .catch(console.error)
+  }, [storeId])
+
   // ── When product is selected in add form → prefill cost ──────────────────────
   useEffect(() => {
     if (!selectedProductId) { setAddCost(''); return }
@@ -179,9 +188,10 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   }, [selectedProductId, allProducts])
 
   // ── Filtered products by category ───────────────────────────────────────────
-  const filteredProducts = filterCategoryId
-    ? allProducts.filter(p => String(p.item_category_id) === filterCategoryId)
-    : allProducts
+  const filteredProducts = allProducts.filter(p => {
+    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
+    return true
+  })
 
   // ── Active display items ─────────────────────────────────────────────────────
   const displayItems: PurchaseOrderItem[] = isEdit
@@ -199,7 +209,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         product_name: pi.productName,
         product_sku: pi.productSku,
         product_category: pi.productCategory,
-        current_stock: 0,
+        current_stock: pi.currentStock,
         quantity: parseFloat(pendingEdits[pi.tempId]?.quantity ?? String(pi.quantity)),
         received_quantity: 0,
         remaining_quantity: parseFloat(pendingEdits[pi.tempId]?.quantity ?? String(pi.quantity)),
@@ -229,29 +239,52 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
     const qty = parseFloat(addQty) || 1
     const cost = parseFloat(addCost) || 0
 
-    if (!isEdit) {
-      const tempId = ++tempIdRef.current
-      setPendingItems(prev => [...prev, {
-        tempId,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        productCategory: product.category?.name ?? null,
-        quantity: qty,
-        unitCost: cost,
-      }])
-      setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_cost: String(cost) } }))
-    } else {
-      try {
-        const item = await addPurchaseOrderItem(id!, { product_id: product.id, quantity: qty, unit_cost: cost })
-        setItems(prev => [...prev, item])
-        setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_cost: String(item.unit_cost) } }))
-      } catch (err) { setError(getApiErrorMessage(err)) }
-    }
-
+    // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
     setAddQty('1')
     setAddCost('')
+
+    if (!isEdit) {
+      const existingPending = pendingItems.find(pi => pi.productId === product.id)
+      if (existingPending) {
+        const currentQty = parseFloat(pendingEdits[existingPending.tempId]?.quantity ?? String(existingPending.quantity)) || 0
+        setPendingEdits(prev => ({
+          ...prev,
+          [existingPending.tempId]: { ...prev[existingPending.tempId], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        const tempId = ++tempIdRef.current
+        const currentStock = product.store_stock_quantity != null
+          ? product.store_stock_quantity
+          : Number(product.stock_quantity) || 0
+        setPendingItems(prev => [...prev, {
+          tempId,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          productCategory: product.category?.name ?? null,
+          currentStock,
+          quantity: qty,
+          unitCost: cost,
+        }])
+        setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_cost: String(cost) } }))
+      }
+    } else {
+      const existingItem = items.find(i => i.product_id === product.id)
+      if (existingItem) {
+        const currentQty = parseFloat(itemEdits[existingItem.id]?.quantity ?? String(existingItem.quantity)) || 0
+        setItemEdits(prev => ({
+          ...prev,
+          [existingItem.id]: { ...prev[existingItem.id], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        try {
+          const item = await addPurchaseOrderItem(id!, { product_id: product.id, quantity: qty, unit_cost: cost })
+          setItems(prev => [...prev, item])
+          setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_cost: String(item.unit_cost) } }))
+        } catch (err) { setError(getApiErrorMessage(err)) }
+      }
+    }
   }
 
   // ── Remove item ──────────────────────────────────────────────────────────────
@@ -302,7 +335,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
           extra_fees: parseFloat(extraFees) || 0,
           items: itemsPayload,
         })
-        navigate(`/purchase-orders/${order.id}`, { replace: true })
+        navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${order.id}`, { replace: true })
       } else {
         await updatePurchaseOrder(id!, {
           supplier_id: orderIsCentral ? null : Number(supplierId),
@@ -377,7 +410,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
             {isEdit && canEdit && (
               <button
                 type="button"
-                onClick={() => navigate(`/purchase-orders/${id!}`)}
+                onClick={() => navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${id!}`)}
                 disabled={saving}
                 className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
               >
@@ -565,9 +598,10 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Noms</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Catégorie</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stocks</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Entrants</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté après</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock dispo</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock commandé</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock livré</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock restant</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
                   {canEdit && <th className="w-10 px-4 py-3" />}
@@ -576,7 +610,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
               <tbody className="divide-y divide-gray-100">
                 {filteredDisplayItems.length === 0 ? (
                   <tr>
-                    <td colSpan={canEdit ? 8 : 7} className="px-4 py-12 text-center">
+                    <td colSpan={canEdit ? 9 : 8} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <Package className="h-10 w-10" />
                         <span className="text-sm">aucune donnée disponible</span>
@@ -588,7 +622,6 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                     const edits = isEdit ? itemEdits[item.id] : pendingEdits[item.id]
                     const currentQty = edits?.quantity ?? String(item.quantity)
                     const currentCost = edits?.unit_cost ?? String(item.unit_cost)
-                    const stockAfter = item.current_stock + (parseFloat(currentQty) || 0)
 
                     return (
                       <tr key={item.id} className="hover:bg-gray-50">
@@ -599,11 +632,15 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         <td className="px-4 py-3 text-gray-600">
                           {item.product_category ?? <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock dispo */}
                         <td className="px-4 py-3 text-right">
-                          {isEdit
-                            ? <span className="text-gray-600">{item.current_stock.toLocaleString('fr-FR')}</span>
+                          {storeId
+                            ? <span className="text-gray-700">{item.current_stock.toLocaleString('fr-FR')}</span>
                             : <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock commandé — éditable */}
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
                             <input
@@ -619,14 +656,29 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                               className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
                             />
                           ) : (
-                            <span>{item.quantity.toLocaleString('fr-FR')}</span>
+                            <span className="font-medium text-gray-700">{item.quantity.toLocaleString('fr-FR')}</span>
                           )}
                         </td>
+
+                        {/* Stock livré */}
                         <td className="px-4 py-3 text-right">
-                          <span className={`font-medium ${isEdit ? 'text-blue-600' : 'text-gray-400'}`}>
-                            {isEdit ? stockAfter.toLocaleString('fr-FR') : '—'}
-                          </span>
+                          {isEdit
+                            ? <span className={`font-medium ${item.received_quantity > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                {item.received_quantity.toLocaleString('fr-FR')}
+                              </span>
+                            : <span className="text-gray-400">—</span>}
                         </td>
+
+                        {/* Stock restant */}
+                        <td className="px-4 py-3 text-right">
+                          {isEdit
+                            ? <span className={`font-medium ${item.remaining_quantity <= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                                {item.remaining_quantity <= 0 ? '✓' : item.remaining_quantity.toLocaleString('fr-FR')}
+                              </span>
+                            : <span className="text-gray-400">—</span>}
+                        </td>
+
+                        {/* Coût */}
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
                             <div className="flex items-center justify-end gap-1">

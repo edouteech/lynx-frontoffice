@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Package, TrendingUp } from 'lucide-react'
 import { fetchProducts } from '../../api/products'
 import { fetchStores } from '../../api/stores'
+import { fetchItemCategories } from '../../api/itemCategories'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { Product, Store } from '../../types/api'
+import type { ItemCategory, Product, Store } from '../../types/api'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ function marginColor(pct: number) {
   return 'text-red-500'
 }
 
-// ─── store selector ───────────────────────────────────────────────────────────
+// ─── selectors ────────────────────────────────────────────────────────────────
 
 function StoreSelector({
   stores,
@@ -43,6 +44,32 @@ function StoreSelector({
         <option value="">Tous les magasins</option>
         {stores.map(s => (
           <option key={s.id} value={String(s.id)}>{s.name}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    </div>
+  )
+}
+
+function CategorySelector({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: ItemCategory[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-10 appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+      >
+        <option value="">Toutes les catégories</option>
+        {categories.map(c => (
+          <option key={c.id} value={String(c.id)}>{c.name}</option>
         ))}
       </select>
       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -88,6 +115,7 @@ interface ProductRow {
   marginUnit: number | null   // selling - purchase
   marginPct: number | null    // (selling - purchase) / selling * 100
   valuation: number           // qty * selling
+  globalCost: number | null   // qty * purchase
   globalMargin: number | null // qty * marginUnit
 }
 
@@ -107,9 +135,10 @@ function deriveRow(p: Product, storeId: string): ProductRow {
     ? ((sellingPrice - purchase) / sellingPrice) * 100
     : null
   const valuation    = quantity * sellingPrice
+  const globalCost   = purchase != null ? quantity * purchase : null
   const globalMargin = marginUnit != null ? quantity * marginUnit : null
 
-  return { product: p, sellingPrice, quantity, marginUnit, marginPct, valuation, globalMargin }
+  return { product: p, sellingPrice, quantity, marginUnit, marginPct, valuation, globalCost, globalMargin }
 }
 
 // ─── page ─────────────────────────────────────────────────────────────────────
@@ -119,19 +148,26 @@ export default function StockEvaluationPage() {
   const type = searchParams.get('type')
 
   const [stores, setStores] = useState<Store[]>([])
+  const [categories, setCategories] = useState<ItemCategory[]>([])
   const [storeId, setStoreId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // load stores once
+  // load stores + categories once
   useEffect(() => {
-    fetchStores(1).then(r => setStores(r.data)).catch(console.error)
+    Promise.all([fetchStores(1), fetchItemCategories(1)])
+      .then(([s, c]) => {
+        setStores(s.data)
+        setCategories(c.data)
+      })
+      .catch(console.error)
   }, [])
 
-  // reset page when store changes
-  useEffect(() => { setPage(1) }, [storeId])
+  // reset page when filters change
+  useEffect(() => { setPage(1) }, [storeId, categoryId])
 
   const load = useCallback(async (p: number) => {
     setLoading(true)
@@ -140,6 +176,7 @@ export default function StockEvaluationPage() {
       const res = await fetchProducts({
         page: p,
         store_id: storeId ? Number(storeId) : null,
+        category_id: categoryId ? Number(categoryId) : null,
       })
       setPaginated(res)
     } catch (e) {
@@ -148,7 +185,7 @@ export default function StockEvaluationPage() {
     } finally {
       setLoading(false)
     }
-  }, [storeId])
+  }, [storeId, categoryId])
 
   useEffect(() => { void load(page) }, [page, load])
 
@@ -160,9 +197,11 @@ export default function StockEvaluationPage() {
 
   // page-level totals
   const totals = useMemo(() => ({
-    count:        rows.length,
-    valuation:    rows.reduce((s, r) => s + r.valuation, 0),
-    globalMargin: rows.reduce((s, r) => s + (r.globalMargin ?? 0), 0),
+    count:         rows.length,
+    totalQuantity: rows.filter(r => r.product.track_inventory).reduce((s, r) => s + r.quantity, 0),
+    globalCost:    rows.reduce((s, r) => s + (r.globalCost ?? 0), 0),
+    valuation:     rows.reduce((s, r) => s + r.valuation, 0),
+    globalMargin:  rows.reduce((s, r) => s + (r.globalMargin ?? 0), 0),
     avgMarginPct: (() => {
       const withMargin = rows.filter(r => r.marginPct != null)
       if (!withMargin.length) return null
@@ -197,7 +236,10 @@ export default function StockEvaluationPage() {
             </div>
           </div>
 
-          <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
+          <div className="flex flex-wrap items-center gap-3">
+            <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} />
+            <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
+          </div>
         </div>
       </div>
 
@@ -259,6 +301,7 @@ export default function StockEvaluationPage() {
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Marge %</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Marge unit. (CFA)</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté en stock</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût global (CFA)</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Valorisation (CFA)</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Marge globale (CFA)</th>
                     </tr>
@@ -333,6 +376,13 @@ export default function StockEvaluationPage() {
                             : <span className="text-xs text-gray-400">Non suivi</span>}
                         </td>
 
+                        {/* Coût global */}
+                        <td className="px-4 py-3 text-right">
+                          {r.product.track_inventory && r.globalCost != null
+                            ? <span className="text-gray-700">{fmt(r.globalCost)} <span className="text-xs text-gray-400">CFA</span></span>
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+
                         {/* Valorisation */}
                         <td className="px-4 py-3 text-right font-semibold text-[#0F2E4A]">
                           {r.product.track_inventory
@@ -359,7 +409,13 @@ export default function StockEvaluationPage() {
                       <td className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                         Totaux (page {page}/{totalPages})
                       </td>
-                      <td colSpan={5} />
+                      <td colSpan={4} />
+                      <td className="px-4 py-3 text-right font-bold text-gray-800">
+                        {fmt(totals.totalQuantity)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-700">
+                        {fmt(totals.globalCost)} <span className="text-xs font-normal text-gray-400">CFA</span>
+                      </td>
                       <td className="px-4 py-3 text-right font-bold text-[#0F2E4A]">
                         {fmt(totals.valuation)} <span className="text-xs font-normal text-gray-400">CFA</span>
                       </td>

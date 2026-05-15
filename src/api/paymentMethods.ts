@@ -47,3 +47,10 @@ export async function deletePaymentMethod(id: number | string): Promise<void> {
   await api.delete(`/payment-methods/${id}`)
 }
 
+export async function fetchStorePaymentMethods(
+  storeId: number | string
+): Promise<PaymentMethod[]> {
+  const { data } = await api.get<PaymentMethod[]>(`/stores/${storeId}/payment-methods`)
+  return data
+}
+

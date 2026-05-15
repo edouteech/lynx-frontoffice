@@ -232,6 +232,12 @@ export default function StockMovementsPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Raison</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
                       <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Ajustement</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                        Stock magasin<span className="block normal-case font-normal text-gray-400">(avant opération)</span>
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                        Stock global<span className="block normal-case font-normal text-gray-400">(avant opération)</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -269,6 +275,20 @@ export default function StockMovementsPage() {
                         {/* Ajustement */}
                         <td className="px-5 py-3 text-right">
                           <QtyCell value={Number(m.quantity_change)} />
+                        </td>
+
+                        {/* Stock magasin avant opération */}
+                        <td className="px-4 py-3 text-right text-sm tabular-nums text-gray-700">
+                          {m.stock_store_snapshot != null
+                            ? Number(m.stock_store_snapshot).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+
+                        {/* Stock global avant opération */}
+                        <td className="px-4 py-3 text-right text-sm tabular-nums text-gray-700">
+                          {m.stock_global_snapshot != null
+                            ? Number(m.stock_global_snapshot).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+                            : <span className="text-gray-300">—</span>}
                         </td>
 
                       </tr>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Plus, Trash2 } from 'lucide-react'
+import { Eye, FileText, Plus, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deleteSale, fetchSales } from '../../api/sales'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -28,7 +28,7 @@ export default function SalesIndex() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchSales(p)
+      const res = await fetchSales({ page: p })
       setPaginated({ data: res.data, current_page: res.current_page, last_page: res.last_page, total: res.total })
     } catch (e) {
       setError(getApiErrorMessage(e))
@@ -96,6 +96,12 @@ export default function SalesIndex() {
       icon: Eye,
       variant: 'primary',
       onClick: s => navigate(`/sales/${s.id}/edit`),
+    },
+    {
+      label: 'Facture',
+      icon: FileText,
+      onClick: s => navigate(`/sales/${s.id}/invoice`),
+      show: s => s.status === 'confirmed',
     },
     {
       label: 'Supprimer',

@@ -41,12 +41,15 @@ import SuppliersIndex from './pages/suppliers'
 import PurchaseOrdersIndex from './pages/purchase-orders'
 import PurchaseOrderForm from './pages/purchase-orders/form'
 import PurchaseOrderShow from './pages/purchase-orders/show'
+import PurchaseOrderReceive from './pages/purchase-orders/receive'
+import PurchaseOrderReceptionShow from './pages/purchase-orders/reception-show'
 import StockTransfersIndex from './pages/stock-transfers/index'
 import StockTransferForm from './pages/stock-transfers/form'
 import StockAdjustmentsIndex from './pages/stock-adjustments/index'
 import StockAdjustmentForm from './pages/stock-adjustments/form'
 import SalesIndex from './pages/sales/index'
 import SaleForm from './pages/sales/form'
+import InvoicePage from './pages/sales/InvoicePage'
 import SalesRecapPage from './pages/rapports/SalesRecapPage'
 import SalesByItemsPage from './pages/rapports/SalesByItemsPage'
 import SalesByEmployeePage from './pages/rapports/SalesByEmployeePage'
@@ -235,10 +238,42 @@ export default function App() {
           }
         />
         <Route
-          path="/purchase-orders/create-central"
+          path="/central-orders/create"
           element={
             <ProtectedRoute>
               {withLayout(<PurchaseOrderForm isCentral />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderShow />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderForm isCentral />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/receive"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceive />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/central-orders/:id/receptions/:receptionId"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceptionShow />)}
             </ProtectedRoute>
           }
         />
@@ -255,6 +290,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<PurchaseOrderForm />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id/receive"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceive />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id/receptions/:receptionId"
+          element={
+            <ProtectedRoute>
+              {withLayout(<PurchaseOrderReceptionShow />)}
             </ProtectedRoute>
           }
         />
@@ -327,6 +378,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<SaleForm />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/:id/invoice"
+          element={
+            <ProtectedRoute>
+              <InvoicePage />
             </ProtectedRoute>
           }
         />

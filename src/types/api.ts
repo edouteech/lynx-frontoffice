@@ -199,6 +199,8 @@ export interface CashRegister {
   store_id: number
   status: string
   organization_id: number
+  open_session?: CashRegisterSession | null
+  store?: Store
   created_at: string
   updated_at: string
 }
@@ -352,15 +354,37 @@ export interface SaleItem {
   product_sku: string | null
   product_category: string | null
   current_stock: number
+  stock_store_at_sale?: number | null
+  stock_global_at_sale?: number | null
   quantity: number
   unit_price: number
   total: number
+}
+
+export interface CashRegisterSession {
+  id: number
+  cash_register_id: number
+  organization_id: number
+  opening_balance: number
+  closing_balance: number | null
+  note: string | null
+  opened_at: string
+  closed_at: string | null
+  status: 'open' | 'closed'
+  sales_total?: number
+  expected_closing_balance?: number
+  difference?: number | null
+  cash_register?: CashRegister
+  created_at: string
+  updated_at: string
 }
 
 export interface Sale {
   id: number
   organization_id: number
   store_id: number
+  cash_register_id: number | null
+  payment_method_id: number | null
   customer_id: number | null
   sale_date: string | null
   note: string | null
@@ -368,7 +392,15 @@ export interface Sale {
   discount_percentage: number
   extra_fees: number
   subtotal?: number
+  // Customer snapshot fields (captured at sale time)
+  customer_name?: string | null
+  customer_email?: string | null
+  customer_phone?: string | null
+  customer_tax_id?: string | null
+  customer_aib?: boolean | null
   store?: Store
+  cash_register?: CashRegister
+  payment_method?: PaymentMethod
   customer?: Customer
   items?: SaleItem[]
   created_at: string
@@ -410,6 +442,8 @@ export interface InventoryItem {
   expected_quantity: number
   actual_quantity: number | null
   difference: number | null
+  purchase_price: number | null
+  selling_price: number | null
 }
 
 export interface Inventory {
@@ -420,12 +454,38 @@ export interface Inventory {
   type: 'full' | 'partial'
   status: 'draft' | 'applied'
   note: string | null
+  file_path?: string | null
+  file_name?: string | null
   applied_at: string | null
   items_count: number
   filled_count: number
   items?: InventoryItem[]
   created_at: string
   updated_at: string
+}
+
+export interface PurchaseOrderReceptionOrderItem {
+  order_item_id: number
+  product_id: number
+  product_name: string
+  product_sku: string | null
+  product_category: string | null
+  quantity_ordered: number
+  quantity_received: number | null
+  unit_cost: number
+}
+
+export interface PurchaseOrderReception {
+  id: number
+  purchase_order_id: number
+  note: string | null
+  file_path: string | null
+  file_name: string | null
+  received_at: string | null
+  items_count: number
+  total_received: number
+  created_at: string
+  order_items?: PurchaseOrderReceptionOrderItem[]
 }
 
 export interface Paginated<T> {

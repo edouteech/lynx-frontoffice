@@ -12,6 +12,8 @@ export interface StockMovement {
   raison: string
   movement_type: MovementType
   quantity_change: number
+  stock_store_snapshot: number | null
+  stock_global_snapshot: number | null
 }
 
 export interface StockMovementPaginated {

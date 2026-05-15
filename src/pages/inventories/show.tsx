@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, CheckCircle2, ClipboardCheck, Loader2, Save, Trash2,
+  ArrowLeft, CheckCircle2, ClipboardCheck, FileText, Loader2,
+  Printer, Save, Trash2, Upload,
 } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
 import {
   fetchInventoryById, updateInventoryItem,
-  applyInventory, deleteInventory,
+  applyInventory, deleteInventory, uploadInventoryFile,
 } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory, InventoryItem } from '../../types/api'
+import InventoryPdf from './InventoryPdf'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -42,6 +45,8 @@ export default function InventoryShowPage() {
   const [error,     setError]     = useState<string | null>(null)
   const [applying,  setApplying]  = useState(false)
   const [deleting,  setDeleting]  = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // per-item local state: edited value + save state
   const [actualQtys,  setActualQtys]  = useState<Record<number, string>>({})
@@ -157,6 +162,42 @@ export default function InventoryShowPage() {
     }
   }
 
+  // ── print (PDF) ───────────────────────────────────────────────────────────
+
+  const [printing, setPrinting] = useState(false)
+
+  async function handlePrint() {
+    if (!inventory) return
+    setPrinting(true)
+    try {
+      const blob = await pdf(<InventoryPdf inventory={inventory} />).toBlob()
+      const url  = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      // release after a delay so the new tab has time to load it
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } finally {
+      setPrinting(false)
+    }
+  }
+
+  // ── file upload ────────────────────────────────────────────────────────────
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const result = await uploadInventoryFile(id, file)
+      setInventory(prev => prev ? { ...prev, file_path: result.file_path, file_name: result.file_name } : prev)
+    } catch (err) {
+      setUploadError(getApiErrorMessage(err))
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
   // ── progress ──────────────────────────────────────────────────────────────
 
   const filledNow = inventory?.items?.filter(i => i.actual_quantity != null).length ?? 0
@@ -215,35 +256,47 @@ export default function InventoryShowPage() {
             </div>
           </div>
 
-          {isDraft && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleDelete()}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-              >
-                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                Supprimer
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleApply()}
-                disabled={applying}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Appliquer au stock
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePrint()}
+              disabled={printing}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              {printing ? 'Génération…' : 'Imprimer'}
+            </button>
 
-          {isApplied && (
-            <div className="flex items-center gap-1.5 text-sm text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
-              Appliqué le {new Date(inventory.applied_at!).toLocaleDateString('fr-FR')}
-            </div>
-          )}
+            {isDraft && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Supprimer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleApply()}
+                  disabled={applying}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Appliquer au stock
+                </button>
+              </>
+            )}
+
+            {isApplied && (
+              <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+                <CheckCircle2 className="h-4 w-4" />
+                Appliqué le {new Date(inventory.applied_at!).toLocaleDateString('fr-FR')}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -297,7 +350,9 @@ export default function InventoryShowPage() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté attendue</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté réelle</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût unitaire</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Différence</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Diff. coût</th>
                     <th className="w-8 px-3 py-3" />
                   </tr>
                 </thead>
@@ -308,6 +363,10 @@ export default function InventoryShowPage() {
                     const liveDiff = parsedActual !== null
                       ? Math.round((parsedActual - item.expected_quantity) * 1000) / 1000
                       : item.difference
+
+                    const diffCost = liveDiff != null && item.selling_price != null
+                      ? liveDiff * item.selling_price
+                      : null
 
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${
@@ -363,9 +422,29 @@ export default function InventoryShowPage() {
                           )}
                         </td>
 
+                        {/* Coût unitaire */}
+                        <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+                          {item.purchase_price != null
+                            ? <>{item.purchase_price.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs text-gray-400">CFA</span></>
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+
                         {/* Différence */}
                         <td className="px-4 py-3 text-right">
                           <DiffCell diff={liveDiff} />
+                        </td>
+
+                        {/* Diff. coût */}
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {diffCost == null ? (
+                            <span className="text-gray-300">—</span>
+                          ) : diffCost === 0 ? (
+                            <span className="font-medium text-gray-500">0 <span className="text-xs font-normal text-gray-400">CFA</span></span>
+                          ) : (
+                            <span className={`font-semibold ${diffCost > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {diffCost > 0 ? '+' : ''}{diffCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} <span className="text-xs font-normal">CFA</span>
+                            </span>
+                          )}
                         </td>
 
                         {/* Save indicator */}
@@ -377,6 +456,34 @@ export default function InventoryShowPage() {
                     )
                   })}
                 </tbody>
+                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                  <tr>
+                    <td className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Total diff. coût
+                    </td>
+                    <td colSpan={4} />
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {(() => {
+                        const total = items.reduce((sum, item) => {
+                          const raw = actualQtys[item.id] ?? ''
+                          const parsed = raw.trim() !== '' ? parseFloat(raw) : null
+                          const diff = parsed !== null
+                            ? parsed - item.expected_quantity
+                            : item.difference
+                          if (diff == null || item.selling_price == null) return sum
+                          return sum + diff * item.selling_price
+                        }, 0)
+                        if (total === 0) return <span className="font-bold text-gray-500">0 <span className="text-xs font-normal text-gray-400">CFA</span></span>
+                        return (
+                          <span className={`font-bold ${total > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {total > 0 ? '+' : ''}{total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} <span className="text-xs font-normal">CFA</span>
+                          </span>
+                        )
+                      })()}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
@@ -388,6 +495,48 @@ export default function InventoryShowPage() {
             <span className="font-medium text-gray-700">Note : </span>{inventory.note}
           </div>
         )}
+
+        {/* ─── document signé ───────────────────────────────────────── */}
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-4 space-y-3">
+          <p className="text-sm font-semibold text-gray-700">Document signé</p>
+
+          {inventory.file_path ? (
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-blue-500 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <a
+                  href={inventory.file_path}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-sm font-medium text-blue-600 hover:underline"
+                >
+                  {inventory.file_name ?? 'Document'}
+                </a>
+                <p className="text-xs text-gray-400">Cliquez pour ouvrir</p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                Remplacer
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => void handleFileUpload(e)} disabled={uploading} />
+              </label>
+            </div>
+          ) : (
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-8 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+              {uploading
+                ? <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                : <Upload className="h-6 w-6 text-gray-400" />}
+              <span className="text-sm text-gray-500">
+                {uploading ? 'Envoi en cours…' : 'Cliquez pour uploader le document signé'}
+              </span>
+              <span className="text-xs text-gray-400">JPG, PNG, WEBP ou PDF · max 10 Mo</span>
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => void handleFileUpload(e)} disabled={uploading} />
+            </label>
+          )}
+
+          {uploadError && (
+            <p className="text-xs text-red-600">{uploadError}</p>
+          )}
+        </div>
 
       </div>
     </div>

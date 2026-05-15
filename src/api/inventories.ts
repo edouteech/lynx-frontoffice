@@ -43,3 +43,17 @@ export async function applyInventory(id: number | string): Promise<Inventory> {
 export async function deleteInventory(id: number | string): Promise<void> {
   await api.delete(`/inventories/${id}`)
 }
+
+export async function uploadInventoryFile(
+  id: number | string,
+  file: File
+): Promise<{ file_path: string; file_name: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post<{ file_path: string; file_name: string }>(
+    `/inventories/${id}/upload`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return data
+}

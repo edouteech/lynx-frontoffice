@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(attach)",
+      "Bash(document)",
+      "Bash(receipt\")",
+      "Bash(dir \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Models\\\\\" | findstr /i \"file attach document receipt\")",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Models\\\\\" | Where-Object { $_.Name -match \"file|attach|document\" })",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(ls -R \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Http\\\\Controllers\\\\Api\" 2>$null)",
+      "PowerShell(head -50)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\database\\\\migrations\\\\\" | Select-Object -Last 5 | ForEach-Object { $_.Name })",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-frontoffice\\\\src\" -Recurse -Name)",
+      "Bash(Select-String \"App\\\\.tsx|router\\\\.tsx|routes\\\\.tsx|Sidebar\\\\.tsx|Nav\\\\.tsx|Layout\\\\.tsx|navigation\\\\.tsx\")",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-frontoffice\" -Recurse -Directory)",
+      "Bash(Select-Object -First 30)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\Edouard DJOSSA\\\\Desktop\\\\projects\\\\lynxrepo\\\\lynx-api\\\\app\\\\Http\\\\Controllers\" -Recurse -Name)",
+      "PowerShell(head -30)",
+      "Bash(php artisan *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('@react-pdf/renderer'\\); console.log\\('ok'\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(Select-Object -ExpandProperty FullName)"
+    ]
+  }
+}

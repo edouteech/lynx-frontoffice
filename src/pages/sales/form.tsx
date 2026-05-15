@@ -1,20 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronDown, Loader2,
+  AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
   Plus, Receipt, Save, ShoppingBag, Trash2,
 } from 'lucide-react'
 import {
   fetchSale, createSale, updateSale,
   addSaleItem, updateSaleItem, removeSaleItem,
-  confirmSale,
 } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
+import { fetchCashRegisters } from '../../api/cashRegisters'
 import { fetchProducts } from '../../api/products'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchCustomers } from '../../api/customer'
+import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { Customer, ItemCategory, Product, SaleItem, Store } from '../../types/api'
+import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, SaleItem, Store } from '../../types/api'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -69,12 +70,16 @@ export default function SaleForm() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<ItemCategory[]>([])
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
+  const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingSale, setLoadingSale] = useState(isEdit)
 
   // header
   const [storeId, setStoreId] = useState('')
   const [customerId, setCustomerId] = useState('')
+  const [cashRegisterId, setCashRegisterId] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState('')
   const [saleDate, setSaleDate] = useState('')
   const [note, setNote] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
@@ -102,13 +107,12 @@ export default function SaleForm() {
 
   // UI
   const [saving, setSaving] = useState(false)
-  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [confirmErrors, setConfirmErrors] = useState<string[]>([])
+  const [stockErrors, setStockErrors] = useState<string[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const isConfirmed = status === 'confirmed'
-  const isDraft = status === 'draft'
+  const isDraft     = status === 'draft'
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -130,6 +134,8 @@ export default function SaleForm() {
       .then(s => {
         setStoreId(String(s.store_id))
         setCustomerId(s.customer_id ? String(s.customer_id) : '')
+        setCashRegisterId(s.cash_register_id ? String(s.cash_register_id) : '')
+        setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
         setSaleDate(s.sale_date ?? '')
         setNote(s.note ?? '')
         setDiscountPct(String(s.discount_percentage))
@@ -145,6 +151,22 @@ export default function SaleForm() {
       .finally(() => setLoadingSale(false))
   }, [id, isEdit])
 
+  // ── Charger caisses + moyens de paiement quand le magasin change ──────────
+  useEffect(() => {
+    if (!storeId) {
+      setCashRegisters([])
+      setStorePaymentMethods([])
+      return
+    }
+    Promise.all([
+      fetchCashRegisters(1, undefined, storeId),
+      fetchStorePaymentMethods(storeId),
+    ]).then(([regs, methods]) => {
+      setCashRegisters(regs.data)
+      setStorePaymentMethods(methods)
+    }).catch(console.error)
+  }, [storeId])
+
   // ── Pré-remplir le prix de vente quand on sélectionne un produit ──────────
   useEffect(() => {
     if (!selectedProductId) { setAddPrice(''); return }
@@ -153,9 +175,10 @@ export default function SaleForm() {
   }, [selectedProductId, allProducts])
 
   // ── Produits filtrés ───────────────────────────────────────────────────────
-  const filteredProducts = filterCategoryId
-    ? allProducts.filter(p => String(p.item_category_id) === filterCategoryId)
-    : allProducts
+  const filteredProducts = allProducts.filter(p => {
+    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
+    return true
+  })
 
   // ── Items affichés ─────────────────────────────────────────────────────────
   const displayItems: SaleItem[] = isEdit
@@ -188,11 +211,6 @@ export default function SaleForm() {
       : (i.product_category ?? '').toLowerCase().includes(q)
   })
 
-  // Vérification des stocks insuffisants (mode édition uniquement)
-  const insufficientItems = isEdit
-    ? displayItems.filter(i => i.current_stock < i.quantity)
-    : []
-
   // ── Totaux ─────────────────────────────────────────────────────────────────
   const subtotal = displayItems.reduce((s, i) => s + i.total, 0)
   const discount = subtotal * (parseFloat(discountPct) || 0) / 100
@@ -203,32 +221,53 @@ export default function SaleForm() {
     if (!selectedProductId || !addQty || parseFloat(addQty) <= 0) return
     const product = allProducts.find(p => String(p.id) === selectedProductId)
     if (!product) return
+
     const qty   = parseFloat(addQty) || 1
     const price = parseFloat(addPrice) || 0
 
-    if (!isEdit) {
-      const tempId = ++tempIdRef.current
-      setPendingItems(prev => [...prev, {
-        tempId,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        productCategory: product.category?.name ?? null,
-        quantity: qty,
-        unitPrice: price,
-      }])
-      setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_price: String(price) } }))
-    } else {
-      try {
-        const item = await addSaleItem(id!, { product_id: product.id, quantity: qty, unit_price: price })
-        setItems(prev => [...prev, item])
-        setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_price: String(item.unit_price) } }))
-      } catch (err) { setError(getApiErrorMessage(err)) }
-    }
+    // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
     setAddQty('1')
     setAddPrice('')
-  }, [selectedProductId, addQty, addPrice, allProducts, isEdit, id])
+
+    if (!isEdit) {
+      const existingPending = pendingItems.find(pi => pi.productId === product.id)
+      if (existingPending) {
+        const currentQty = parseFloat(pendingEdits[existingPending.tempId]?.quantity ?? String(existingPending.quantity)) || 0
+        setPendingEdits(prev => ({
+          ...prev,
+          [existingPending.tempId]: { ...prev[existingPending.tempId], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        const tempId = ++tempIdRef.current
+        setPendingItems(prev => [...prev, {
+          tempId,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          productCategory: product.category?.name ?? null,
+          quantity: qty,
+          unitPrice: price,
+        }])
+        setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_price: String(price) } }))
+      }
+    } else {
+      const existingItem = items.find(i => i.product_id === product.id)
+      if (existingItem) {
+        const currentQty = parseFloat(itemEdits[existingItem.id]?.quantity ?? String(existingItem.quantity)) || 0
+        setItemEdits(prev => ({
+          ...prev,
+          [existingItem.id]: { ...prev[existingItem.id], quantity: String(currentQty + qty) },
+        }))
+      } else {
+        try {
+          const item = await addSaleItem(id!, { product_id: product.id, quantity: qty, unit_price: price })
+          setItems(prev => [...prev, item])
+          setItemEdits(prev => ({ ...prev, [item.id]: { quantity: String(item.quantity), unit_price: String(item.unit_price) } }))
+        } catch (err) { setError(getApiErrorMessage(err)) }
+      }
+    }
+  }, [selectedProductId, addQty, addPrice, allProducts, isEdit, id, items, pendingItems, itemEdits, pendingEdits])
 
   // ── Supprimer un article ───────────────────────────────────────────────────
   const handleRemoveItem = useCallback(async (itemId: number) => {
@@ -247,9 +286,11 @@ export default function SaleForm() {
   // ── Enregistrer ───────────────────────────────────────────────────────────
   async function handleSave() {
     if (!storeId) { setError('Veuillez sélectionner un magasin.'); return }
+    if (!isEdit && pendingItems.length === 0) { setError('Ajoutez au moins un article avant d\'enregistrer.'); return }
 
     setSaving(true)
     setError(null)
+    setStockErrors([])
     setSuccessMsg(null)
 
     try {
@@ -257,6 +298,8 @@ export default function SaleForm() {
         const sale = await createSale({
           store_id:             Number(storeId),
           customer_id:          customerId ? Number(customerId) : null,
+          cash_register_id:     cashRegisterId ? Number(cashRegisterId) : null,
+          payment_method_id:    paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:            saleDate || null,
           note:                 note.trim() || null,
           discount_percentage:  parseFloat(discountPct) || 0,
@@ -272,21 +315,13 @@ export default function SaleForm() {
         await updateSale(id!, {
           store_id:            Number(storeId),
           customer_id:         customerId ? Number(customerId) : null,
+          cash_register_id:    cashRegisterId ? Number(cashRegisterId) : null,
+          payment_method_id:   paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:           saleDate || null,
           note:                note.trim() || null,
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees:          parseFloat(extraFees) || 0,
         })
-        await Promise.all(
-          items
-            .filter(i => itemEdits[i.id])
-            .map(i =>
-              updateSaleItem(id!, i.id, {
-                quantity:   parseFloat(itemEdits[i.id].quantity)   || i.quantity,
-                unit_price: parseFloat(itemEdits[i.id].unit_price) || i.unit_price,
-              })
-            )
-        )
         const refreshed = await fetchSale(id!)
         setItems(refreshed.items ?? [])
         setItemEdits(prev => {
@@ -298,37 +333,17 @@ export default function SaleForm() {
         })
         setSuccessMsg('Vente enregistrée.')
       }
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // ── Confirmer la vente ─────────────────────────────────────────────────────
-  async function handleConfirm() {
-    if (!window.confirm('Confirmer cette vente ? Le stock du magasin sera mis à jour immédiatement.')) return
-    setConfirming(true)
-    setError(null)
-    setConfirmErrors([])
-    setSuccessMsg(null)
-    try {
-      const updated = await confirmSale(id!)
-      setStatus(updated.status)
-      const refreshed = await fetchSale(id!)
-      setItems(refreshed.items ?? [])
-      setSuccessMsg('Vente confirmée ! Le stock a été mis à jour.')
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string; errors?: string[] } } }
       const data = apiErr?.response?.data
       if (data?.errors?.length) {
-        setConfirmErrors(data.errors)
+        setStockErrors(data.errors)
         setError(data.message ?? 'Stock insuffisant.')
       } else {
         setError(getApiErrorMessage(err))
       }
     } finally {
-      setConfirming(false)
+      setSaving(false)
     }
   }
 
@@ -367,20 +382,19 @@ export default function SaleForm() {
           <div className="flex gap-2">
             <button type="button" onClick={() => navigate('/sales')}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Annuler
+              {isConfirmed ? 'Retour' : 'Annuler'}
             </button>
-            {isEdit && isDraft && (
+            {isEdit && isConfirmed && (
               <button
                 type="button"
-                onClick={() => void handleConfirm()}
-                disabled={confirming || saving || displayItems.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
+                onClick={() => navigate(`/sales/${id}/invoice`)}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
               >
-                {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Confirmer la vente
+                <FileText className="h-4 w-4" />
+                Voir la facture
               </button>
             )}
-            {isDraft && (
+            {!isConfirmed && (
               <button
                 type="button"
                 onClick={() => void handleSave()}
@@ -388,7 +402,7 @@ export default function SaleForm() {
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer
+                Enregistrer la vente
               </button>
             )}
           </div>
@@ -401,13 +415,13 @@ export default function SaleForm() {
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
         )}
-        {confirmErrors.length > 0 && (
+        {stockErrors.length > 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <p className="mb-2 flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4" /> Articles avec stock insuffisant :
             </p>
             <ul className="ml-4 list-disc space-y-1">
-              {confirmErrors.map((e, i) => <li key={i}>{e}</li>)}
+              {stockErrors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           </div>
         )}
@@ -440,6 +454,36 @@ export default function SaleForm() {
                 <Sel value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={isConfirmed}>
                   <option value="">— Anonyme —</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Sel>
+              </div>
+            </div>
+
+            {/* Caisse + Moyen de paiement */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Caisse</label>
+                <Sel
+                  value={cashRegisterId}
+                  onChange={e => setCashRegisterId(e.target.value)}
+                  disabled={isConfirmed || !storeId}
+                >
+                  <option value="">— Sans caisse —</option>
+                  {cashRegisters.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Sel>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Moyen de paiement</label>
+                <Sel
+                  value={paymentMethodId}
+                  onChange={e => setPaymentMethodId(e.target.value)}
+                  disabled={isConfirmed || !storeId}
+                >
+                  <option value="">— Non renseigné —</option>
+                  {storePaymentMethods.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
                 </Sel>
               </div>
             </div>
@@ -571,6 +615,12 @@ export default function SaleForm() {
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock dispo.</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Quantité</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Stock après</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                    Stock magasin <span className="block normal-case font-normal text-gray-400">(au moment de la vente)</span>
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                    Stock global <span className="block normal-case font-normal text-gray-400">(au moment de la vente)</span>
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prix unit.</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
                   {isDraft && <th className="w-10 px-4 py-3" />}
@@ -579,7 +629,7 @@ export default function SaleForm() {
               <tbody className="divide-y divide-gray-100">
                 {filteredDisplayItems.length === 0 ? (
                   <tr>
-                    <td colSpan={isDraft ? 8 : 7} className="px-4 py-12 text-center">
+                    <td colSpan={isDraft ? 10 : 9} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <ShoppingBag className="h-10 w-10" />
                         <span className="text-sm">Aucun article dans cette vente</span>
@@ -655,6 +705,28 @@ export default function SaleForm() {
                           )}
                         </td>
 
+                        {/* Stock magasin au moment de la vente */}
+                        <td className="px-4 py-3 text-right">
+                          {isConfirmed && item.stock_store_at_sale != null ? (
+                            <span className="font-medium text-gray-700">
+                              {(item.stock_store_at_sale as number).toLocaleString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Stock global au moment de la vente */}
+                        <td className="px-4 py-3 text-right">
+                          {isConfirmed && item.stock_global_at_sale != null ? (
+                            <span className="font-medium text-gray-700">
+                              {(item.stock_global_at_sale as number).toLocaleString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
                         {/* Prix unitaire — éditable si draft */}
                         <td className="px-4 py-3 text-right">
                           {isConfirmed ? (
@@ -703,15 +775,6 @@ export default function SaleForm() {
               </tbody>
             </table>
           </div>
-
-          {/* Avertissement stock insuffisant */}
-          {isEdit && insufficientItems.length > 0 && (
-            <div className="border-t border-amber-100 bg-amber-50 px-6 py-3 text-xs text-amber-700 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {insufficientItems.length} article{insufficientItems.length > 1 ? 's' : ''} avec un stock insuffisant —
-              la confirmation sera bloquée.
-            </div>
-          )}
 
           {/* Footer : remise + frais + totaux */}
           <div className="border-t border-gray-100 px-6 py-4">
