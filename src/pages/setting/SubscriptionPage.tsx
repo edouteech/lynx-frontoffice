@@ -52,6 +52,8 @@ export default function SubscriptionPage() {
         return <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800"><Clock className="h-3.5 w-3.5" /> En attente</span>
       case 'paid':
         return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800"><CheckCircle className="h-3.5 w-3.5" /> Payé</span>
+      case 'expired':
+        return <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800"><AlertTriangle className="h-3.5 w-3.5" /> Expiré</span>
       default:
         return <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800">{status}</span>
     }
@@ -101,6 +103,7 @@ export default function SubscriptionPage() {
   }
 
   const isTrial = subscription.status === 'trial'
+  const isExpired = subscription.status === 'expired'
 
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
@@ -126,6 +129,24 @@ export default function SubscriptionPage() {
             </p>
             <p className="mt-2 text-sm text-blue-600">
               Veuillez nous contacter pour choisir votre plan annuel avant l'expiration de votre essai afin d'éviter toute interruption de service.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Expired Banner */}
+      {isExpired && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 flex items-start gap-4">
+          <div className="rounded-full bg-red-100 p-2">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-900">Votre abonnement est expiré</h3>
+            <p className="mt-1 text-sm text-red-700">
+              Votre accès aux fonctionnalités est actuellement limité car votre abonnement a pris fin le <strong>{formatDate(subscription.end_date)}</strong>.
+            </p>
+            <p className="mt-2 text-sm text-red-600">
+              Veuillez contacter l'administrateur pour renouveler votre abonnement et retrouver un accès complet.
             </p>
           </div>
         </div>
