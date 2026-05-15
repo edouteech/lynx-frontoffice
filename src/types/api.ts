@@ -440,3 +440,44 @@ export interface LaravelValidationError {
   message: string
   errors?: Record<string, string[]>
 }
+
+export interface ApiPlan {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  annual_price: number
+  features: string[] | null
+  max_users: number | null
+  max_stores: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ApiSubscriptionCycle {
+  id: number
+  subscription_id: number
+  period_start: string
+  period_end: string
+  due_date: string
+  grace_end_date: string
+  amount: number
+  status: 'pending' | 'paid' | 'overdue'
+  created_at: string
+  updated_at: string
+}
+
+export interface ApiSubscription {
+  id: number
+  client_id: number
+  plan_id: number
+  start_date: string
+  end_date: string | null
+  custom_price: number
+  payment_frequency: 'monthly' | 'quarterly' | 'semiannual' | 'yearly'
+  status: 'trial' | 'active' | 'suspended' | 'cancelled' | 'expired' | 'pending'
+  created_at: string
+  updated_at: string
+  plan?: ApiPlan
+  cycles?: ApiSubscriptionCycle[]
+}

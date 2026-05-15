@@ -6,6 +6,7 @@ import {
   getStoredOrganizationId,
 } from '../lib/organizationStorage'
 import { notifyUnauthorized } from './authEvents'
+import { notifySuspended } from './subscriptionEvents'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -59,6 +60,11 @@ api.interceptors.response.use(
       clearStoredOrganizationId()
       notifyUnauthorized()
     }
+
+    if (status === 403 && error.response?.data?.message === 'Abonnement expiré, inactif ou suspendu') {
+      notifySuspended()
+    }
+
     return Promise.reject(error)
   }
 )

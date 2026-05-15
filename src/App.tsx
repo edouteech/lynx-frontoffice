@@ -1,11 +1,15 @@
 import type { ReactElement } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePermission from './components/RequirePermission'
 import Layout from './components/Layout'
 import { useAuth } from './contexts/useAuth'
 import { hasPermissionCode } from './lib/permissions'
+import { subscribeToSuspension } from './api/subscriptionEvents'
+
+import SuspendedPage from './pages/SuspendedPage'
 
 import ItemCategoriesIndex from './pages/item-categories'
 import StoresIndex from './pages/stores/index'
@@ -24,6 +28,7 @@ import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
 import GeneralSettingPage from './pages/setting/GeneralSettingPage'
 import ReceiptSettingPage from './pages/setting/ReceiptSettingPage'
+import SubscriptionPage from './pages/setting/SubscriptionPage'
 import PaymentMethodsIndex from './pages/payment-methods'
 import PaymentMethodShow from './pages/payment-methods/show'
 import VatRatesIndex from './pages/vat-rates'
@@ -76,10 +81,23 @@ function DashboardWrapper() {
   return <SalesRecapPage />
 }
 
+function SuspensionListener() {
+  const navigate = useNavigate()
+  
+  useEffect(() => {
+    return subscribeToSuspension(() => {
+      navigate('/suspended')
+    })
+  }, [navigate])
+
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SuspensionListener />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -539,6 +557,16 @@ export default function App() {
           }
         />
         <Route
+          path="/settings/subscription"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.settings.manage">
+                {withLayout(<SubscriptionPage />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/roles"
           element={
             <ProtectedRoute>
@@ -598,6 +626,14 @@ export default function App() {
                   </div>
                 </div>
               )}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/suspended"
+          element={
+            <ProtectedRoute>
+              <SuspendedPage />
             </ProtectedRoute>
           }
         />

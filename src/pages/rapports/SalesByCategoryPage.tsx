@@ -74,6 +74,117 @@ function KpiCard({
   );
 }
 
+/* ================= HISTOGRAM ================= */
+
+function CategoryHistogram({ data, title, subtitle, valueKey, yLabel, colorScale }: { data: Row[], title: string, subtitle: string, valueKey: keyof Row, yLabel: string, colorScale: string[] }) {
+  const sorted = [...data].sort((a, b) => Number(b[valueKey]) - Number(a[valueKey]));
+  if (!sorted.length) return null;
+
+  const CHART_H  = 260;
+  const BAR_W    = 56;
+  const BAR_GAP  = 24;
+  const PAD_LEFT = 52;
+  const PAD_RIGHT = 16;
+  const PAD_TOP  = 38;
+  const PAD_BOT  = 64;
+  const GRID     = 5;
+
+  const maxVal = Math.max(...sorted.map(s => Number(s[valueKey])), 1);
+  const totalW = PAD_LEFT + sorted.length * (BAR_W + BAR_GAP) - BAR_GAP + PAD_RIGHT;
+
+  const COLORS = colorScale;
+
+  function fmtK(v: number) {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} M`;
+    if (v >= 1_000)     return `${(v / 1_000).toFixed(0)} k`;
+    if (v % 1 !== 0)    return v.toFixed(1);
+    return String(v);
+  }
+
+  function abbr(name: string, max = 11) {
+    return name.length > max ? name.slice(0, max - 1) + "…" : name;
+  }
+
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col">
+      <h3 className="mb-1 text-sm font-bold text-gray-700">{title}</h3>
+      <p className="mb-4 text-xs text-gray-400">{subtitle}</p>
+      
+      <div className="overflow-x-auto">
+        <svg
+          width={Math.max(totalW, 400)}
+          height={CHART_H + PAD_TOP + PAD_BOT}
+          className="overflow-visible"
+        >
+          {/* Grille horizontale + étiquettes axe Y */}
+          {Array.from({ length: GRID + 1 }, (_, i) => {
+            const y   = PAD_TOP + (CHART_H / GRID) * i;
+            const val = maxVal * (1 - i / GRID);
+            return (
+              <g key={i}>
+                <line
+                  x1={PAD_LEFT}
+                  x2={totalW - PAD_RIGHT}
+                  y1={y} y2={y}
+                  stroke={i === GRID ? "#94A3B8" : "#E2E8F0"}
+                  strokeWidth={i === GRID ? 1.5 : 1}
+                  strokeDasharray={i === GRID ? undefined : "4 3"}
+                />
+                <text x={PAD_LEFT - 6} y={y + 4} textAnchor="end" fontSize={9} fill="#94A3B8">
+                  {fmtK(val)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Label axe Y */}
+          <text
+            x={10} y={PAD_TOP + CHART_H / 2}
+            textAnchor="middle" fontSize={9} fill="#94A3B8"
+            transform={`rotate(-90, 10, ${PAD_TOP + CHART_H / 2})`}
+          >
+            {yLabel}
+          </text>
+
+          {/* Barres + valeurs + labels X */}
+          {sorted.map((item, i) => {
+            const val = Number(item[valueKey]);
+            const barH  = maxVal > 0 ? (val / maxVal) * CHART_H : 0;
+            const x     = PAD_LEFT + i * (BAR_W + BAR_GAP);
+            const y     = PAD_TOP + CHART_H - barH;
+            const color = COLORS[i % COLORS.length];
+
+            return (
+              <g key={item.category}>
+                {/* Barre */}
+                <rect x={x} y={y} width={BAR_W} height={barH} fill={color} rx={6} opacity={0.85}>
+                  <title>{item.category} : {formatFcfa(val)}</title>
+                </rect>
+
+                {/* Valeur au-dessus */}
+                <text
+                  x={x + BAR_W / 2} y={y - 7}
+                  textAnchor="middle" fontSize={9} fontWeight="700" fill={color}
+                >
+                  {formatFcfa(val)}
+                </text>
+
+                {/* Nom catégorie */}
+                <text
+                  x={x + BAR_W / 2} y={PAD_TOP + CHART_H + 18}
+                  textAnchor="middle" fontSize={10} fontWeight="600" fill="#374151"
+                >
+                  {abbr(item.category)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 /* ================= PAGE ================= */
 
 export default function SalesByCategoryPage() {
@@ -387,6 +498,26 @@ export default function SalesByCategoryPage() {
           sub={<span className="text-xs text-gray-500">{rows[0] ? formatFcfa(rows[0].revenue_net) : ""}</span>}
           icon={Percent}
           accent="bg-amber-600"
+        />
+      </div>
+
+      {/* ================= CHARTS ================= */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <CategoryHistogram 
+          data={rows} 
+          title="CA TTC par catégorie" 
+          subtitle="Trié par CA TTC décroissant"
+          valueKey="revenue_net"
+          yLabel="CA TTC (FCFA)"
+          colorScale={["#3B82F6","#6366F1","#8B5CF6","#EC4899","#F59E0B","#10B981","#06B6D4","#F97316"]}
+        />
+        <CategoryHistogram 
+          data={rows} 
+          title="Marge HT par catégorie" 
+          subtitle="Trié par marge HT décroissante"
+          valueKey="profit_ht"
+          yLabel="Marge HT (FCFA)"
+          colorScale={["#10B981","#34D399","#059669","#065F46","#3B82F6","#6366F1","#8B5CF6","#F59E0B"]}
         />
       </div>
 
