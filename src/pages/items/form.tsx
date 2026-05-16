@@ -132,6 +132,7 @@ export default function ItemFormPage() {
   const [taxInclusive, setTaxInclusive] = useState(true)
   const [specificTax, setSpecificTax] = useState(false)
   const [trackInventory, setTrackInventory] = useState(false)
+  const [allowNegativeStock, setAllowNegativeStock] = useState(true)
 
   // color
   const [color, setColor] = useState<string>('')
@@ -209,6 +210,7 @@ export default function ItemFormPage() {
         setTaxInclusive(p.tax_inclusive)
         setSpecificTax(p.specific_tax)
         setTrackInventory(p.track_inventory)
+        setAllowNegativeStock(p.allow_negative_stock)
         if (p.color) setColor(p.color)
         if (p.image_url) {
           const { resolveBackendUrl } = await import('../../lib/url')
@@ -377,6 +379,7 @@ export default function ItemFormPage() {
       tax_inclusive: taxInclusive,
       specific_tax: specificTax,
       track_inventory: trackInventory,
+      allow_negative_stock: allowNegativeStock,
       color: color || null,
     }
 
@@ -845,6 +848,7 @@ export default function ItemFormPage() {
                   <Toggle checked={specificTax} onChange={setSpecificTax} label="Taxe spécifique (T.S)" />
                   <Toggle checked={taxInclusive} onChange={setTaxInclusive} label="Prix affiché TTC (taxes incluses)" />
                   <Toggle checked={trackInventory} onChange={setTrackInventory} label="Gérer le stock de cet article" disabled={type === 'composite'} />
+                  <Toggle checked={allowNegativeStock} onChange={setAllowNegativeStock} label="Autoriser le stock négatif (vente sans stock)" />
                 </div>
               </div>
             </Card>

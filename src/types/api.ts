@@ -291,6 +291,7 @@ export interface Product {
   specific_tax: boolean
   is_composite: boolean
   track_inventory: boolean
+  allow_negative_stock: boolean
   tax_inclusive: boolean
   margin: string | number | null
   stock_quantity: string | number

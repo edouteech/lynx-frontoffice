@@ -91,10 +91,10 @@ const s = StyleSheet.create({
   // footer
   footer: {
     position: 'absolute', bottom: 24, left: 36, right: 36,
-    flexDirection: 'row', justifyContent: 'space-between',
     borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 6,
+    alignItems: 'center',
   },
-  footerText: { fontSize: 7, color: '#9CA3AF' },
+  footerText: { fontSize: 7, color: '#9CA3AF', textAlign: 'center' },
 })
 
 const STATUS_LABELS: Record<string, string> = {
@@ -291,9 +291,9 @@ export default function PurchaseOrderPdf({ order }: Props) {
         {/* ── footer ── */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>
-            Lynx — {isCentral ? 'Commande centrale' : 'Bon de commande'} #{String(order.id).padStart(4, '0')}
+            Commande générée par Lynx, solutions de gestion de caisse, facturation et stock.
           </Text>
-          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
+          <Text style={s.footerText}>Plus de détails sur lynx-solution.com</Text>
         </View>
 
       </Page>

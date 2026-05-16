@@ -4,6 +4,7 @@ import {
   AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
   Plus, Receipt, Save, ShoppingBag, Trash2,
 } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
 import {
   fetchSale, createSale, updateSale,
   addSaleItem, removeSaleItem,
@@ -15,7 +16,9 @@ import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchCustomers } from '../../api/customer'
 import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, SaleItem, Store } from '../../types/api'
+import { useAuth } from '../../contexts/useAuth'
+import SalePdf from './SalePdf'
+import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, Sale, SaleItem, Store } from '../../types/api'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -64,6 +67,7 @@ export default function SaleForm() {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
   const isEdit = !!id
+  const { currentOrganization } = useAuth()
 
   // meta
   const [stores, setStores] = useState<Store[]>([])
@@ -80,7 +84,11 @@ export default function SaleForm() {
   const [customerId, setCustomerId] = useState('')
   const [cashRegisterId, setCashRegisterId] = useState('')
   const [paymentMethodId, setPaymentMethodId] = useState('')
-  const [saleDate, setSaleDate] = useState('')
+  const [saleDate, setSaleDate] = useState(() => {
+    const now = new Date()
+    now.setSeconds(0, 0)
+    return now.toISOString().slice(0, 16)
+  })
   const [note, setNote] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
   const [extraFees, setExtraFees] = useState('0')
@@ -105,8 +113,12 @@ export default function SaleForm() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchBy, setSearchBy] = useState<'name' | 'category'>('name')
 
+  // current sale (pour le PDF post-confirmation)
+  const [currentSale, setCurrentSale] = useState<Sale | null>(null)
+
   // UI
   const [saving, setSaving] = useState(false)
+  const [printing, setPrinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockErrors, setStockErrors] = useState<string[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -136,11 +148,12 @@ export default function SaleForm() {
         setCustomerId(s.customer_id ? String(s.customer_id) : '')
         setCashRegisterId(s.cash_register_id ? String(s.cash_register_id) : '')
         setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
-        setSaleDate(s.sale_date ?? '')
+        setSaleDate(s.sale_date ? s.sale_date.slice(0, 16).replace(' ', 'T') : '')
         setNote(s.note ?? '')
         setDiscountPct(String(s.discount_percentage))
         setExtraFees(String(s.extra_fees))
         setStatus(s.status)
+        setCurrentSale(s)
         const its = s.items ?? []
         setItems(its)
         const edits: Record<number, { quantity: string; unit_price: string }> = {}
@@ -323,6 +336,7 @@ export default function SaleForm() {
           extra_fees:          parseFloat(extraFees) || 0,
         })
         const refreshed = await fetchSale(id!)
+        setCurrentSale(refreshed)
         setItems(refreshed.items ?? [])
         setItemEdits(prev => {
           const edits: Record<number, { quantity: string; unit_price: string }> = {}
@@ -344,6 +358,20 @@ export default function SaleForm() {
       }
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handlePdf() {
+    const sale = currentSale
+    if (!sale) return
+    setPrinting(true)
+    try {
+      const blob = await pdf(<SalePdf sale={sale} organization={currentOrganization} />).toBlob()
+      const url  = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } finally {
+      setPrinting(false)
     }
   }
 
@@ -380,30 +408,43 @@ export default function SaleForm() {
           </div>
 
           <div className="flex gap-2">
-            <button type="button" onClick={() => navigate('/sales')}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              {isConfirmed ? 'Retour' : 'Annuler'}
-            </button>
-            {isEdit && isConfirmed && (
-              <button
-                type="button"
-                onClick={() => navigate(`/sales/${id}/invoice`)}
-                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
-              >
-                <FileText className="h-4 w-4" />
-                Voir la facture
-              </button>
-            )}
-            {!isConfirmed && (
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer la vente
-              </button>
+            {isConfirmed ? (
+              <>
+                <button type="button" onClick={() => navigate('/sales')}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Liste des ventes
+                </button>
+                <button type="button" onClick={() => navigate('/sales/new')}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Plus className="h-4 w-4" />
+                  Nouvelle vente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handlePdf()}
+                  disabled={printing || !currentSale}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50"
+                >
+                  {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  Facture
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => navigate('/sales')}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Enregistrer la vente
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -491,8 +532,8 @@ export default function SaleForm() {
             {/* Date + Note */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Date de la vente</label>
-                <Inp type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} disabled={isConfirmed} />
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Date et heure de la vente</label>
+                <Inp type="datetime-local" value={saleDate} onChange={e => setSaleDate(e.target.value)} disabled={isConfirmed} />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Note</label>

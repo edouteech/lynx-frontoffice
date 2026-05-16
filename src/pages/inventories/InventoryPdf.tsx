@@ -86,9 +86,10 @@ const s = StyleSheet.create({
   // footer
   footer: {
     position: 'absolute', bottom: 24, left: 36, right: 36,
-    flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 6,
+    borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 6,
+    alignItems: 'center',
   },
-  footerText: { fontSize: 7, color: '#9CA3AF' },
+  footerText: { fontSize: 7, color: '#9CA3AF', textAlign: 'center' },
 })
 
 function fmt(n: number, decimals = 3) {
@@ -252,8 +253,10 @@ export default function InventoryPdf({ inventory }: Props) {
 
         {/* ── footer ── */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>Lynx — Inventaire {inventory.id}</Text>
-          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
+          <Text style={s.footerText}>
+            Inventaire généré par Lynx, solutions de gestion de caisse, facturation et stock.
+          </Text>
+          <Text style={s.footerText}>Plus de détails sur lynx-solution.com</Text>
         </View>
 
       </Page>
