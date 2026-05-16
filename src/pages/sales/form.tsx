@@ -414,7 +414,7 @@ export default function SaleForm() {
                   className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                   Liste des ventes
                 </button>
-                <button type="button" onClick={() => navigate('/sales/new')}
+                <button type="button" onClick={() => navigate('/sales/create')}
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                   <Plus className="h-4 w-4" />
                   Nouvelle vente
@@ -683,8 +683,9 @@ export default function SaleForm() {
                     const edits = isEditItem ? itemEdits[item.id] : pendingEdits[item.id]
                     const currentQty   = edits?.quantity   ?? String(item.quantity)
                     const currentPrice = edits?.unit_price ?? String(item.unit_price)
-                    const stockAfter   = item.current_stock - (parseFloat(currentQty) || 0)
-                    const isInsufficient = isEdit && item.current_stock < item.quantity
+                    const tracksStock  = item.track_inventory ?? true
+                    const stockAfter   = tracksStock ? (item.current_stock ?? 0) - (parseFloat(currentQty) || 0) : null
+                    const isInsufficient = isEdit && tracksStock && (item.current_stock ?? 0) < item.quantity
 
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 ${isInsufficient ? 'bg-red-50/40' : ''}`}>
@@ -706,7 +707,7 @@ export default function SaleForm() {
 
                         {/* Stock disponible */}
                         <td className="px-4 py-3 text-right">
-                          {isEdit
+                          {isEdit && tracksStock && item.current_stock != null
                             ? <span className={`font-medium ${isInsufficient ? 'text-red-600' : 'text-gray-700'}`}>
                                 {item.current_stock.toLocaleString('fr-FR')}
                               </span>
@@ -737,7 +738,7 @@ export default function SaleForm() {
 
                         {/* Stock après vente */}
                         <td className="px-4 py-3 text-right">
-                          {isEdit ? (
+                          {isEdit && tracksStock && stockAfter != null ? (
                             <span className={`font-medium ${stockAfter < 0 ? 'text-red-600' : 'text-blue-600'}`}>
                               {stockAfter.toLocaleString('fr-FR')}
                             </span>
@@ -748,7 +749,7 @@ export default function SaleForm() {
 
                         {/* Stock magasin au moment de la vente */}
                         <td className="px-4 py-3 text-right">
-                          {isConfirmed && item.stock_store_at_sale != null ? (
+                          {isConfirmed && tracksStock && item.stock_store_at_sale != null ? (
                             <span className="font-medium text-gray-700">
                               {(item.stock_store_at_sale as number).toLocaleString('fr-FR')}
                             </span>
@@ -759,7 +760,7 @@ export default function SaleForm() {
 
                         {/* Stock global au moment de la vente */}
                         <td className="px-4 py-3 text-right">
-                          {isConfirmed && item.stock_global_at_sale != null ? (
+                          {isConfirmed && tracksStock && item.stock_global_at_sale != null ? (
                             <span className="font-medium text-gray-700">
                               {(item.stock_global_at_sale as number).toLocaleString('fr-FR')}
                             </span>

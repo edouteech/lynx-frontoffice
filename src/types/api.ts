@@ -356,7 +356,9 @@ export interface SaleItem {
   product_name: string
   product_sku: string | null
   product_category: string | null
-  current_stock: number
+  track_inventory?: boolean
+  product_type?: string
+  current_stock: number | null
   stock_store_at_sale?: number | null
   stock_global_at_sale?: number | null
   quantity: number
@@ -401,6 +403,7 @@ export interface Sale {
   customer_phone?: string | null
   customer_tax_id?: string | null
   customer_aib?: boolean | null
+  seller_name?: string | null
   store?: Store
   cash_register?: CashRegister
   payment_method?: PaymentMethod

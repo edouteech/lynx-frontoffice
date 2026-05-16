@@ -126,14 +126,6 @@ export default function SalePdf({ sale, organization }: Props) {
               <Text style={[s.invoiceDate, { marginTop: 2 }]}>Magasin : {sale.store.name}</Text>
             )}
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 7, color: '#9CA3AF', fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', marginBottom: 4 }}>
-              Confirmée
-            </Text>
-            <View style={{ backgroundColor: '#D1FAE5', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#065F46' }}>✓ Payée</Text>
-            </View>
-          </View>
         </View>
 
         {/* ── parties entreprise / client ── */}
@@ -153,6 +145,9 @@ export default function SalePdf({ sale, organization }: Props) {
             )}
             {organization?.address && (
               <Text style={s.partyMuted}>{organization.address}</Text>
+            )}
+            {sale.seller_name && (
+              <Text style={[s.partyMuted, { marginTop: 4 }]}>Vendeur : {sale.seller_name}</Text>
             )}
           </View>
 
