@@ -410,13 +410,11 @@ export default function ItemFormPage() {
             tax_inclusive: taxInclusive,
           }))
 
-        const store_availability = stores
-          .filter(s => !(storeAvailability[s.id] ?? true) || !(storeForSale[s.id] ?? true))
-          .map(s => ({
-            store_id: s.id,
-            available: storeAvailability[s.id] ?? true,
-            for_sale: storeForSale[s.id] ?? true,
-          }))
+        const store_availability = stores.map(s => ({
+          store_id: s.id,
+          available: storeAvailability[s.id] ?? true,
+          for_sale: storeForSale[s.id] ?? true,
+        }))
 
         const componentsPayload = pendingComponents.map(c => ({
           child_product_id: c.childProductId,
