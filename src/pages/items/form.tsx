@@ -95,6 +95,8 @@ interface PendingComponent {
   quantity: number
   unitPrice: number
   total: number
+  unitPurchasePrice: number
+  purchaseTotal: number
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -336,6 +338,8 @@ export default function ItemFormPage() {
         quantity: pc.quantity,
         unit_price: pc.unitPrice,
         total: pc.total,
+        unit_purchase_price: pc.unitPurchasePrice,
+        purchase_total: pc.purchaseTotal,
       }))
 
   // ── Save principal ──────────────────────────────────────────────────────────
@@ -478,6 +482,7 @@ export default function ItemFormPage() {
       if (!product) return
       const qty = parseFloat(newChildQty) || 1
       const unitPrice = parseFloat(String(product.selling_price)) || 0
+      const unitPurchasePrice = parseFloat(String(product.purchase_price ?? 0)) || 0
       setPendingComponents(prev => [...prev, {
         tempId: ++tempIdRef.current,
         childProductId: product.id,
@@ -486,6 +491,8 @@ export default function ItemFormPage() {
         quantity: qty,
         unitPrice,
         total: unitPrice * qty,
+        unitPurchasePrice,
+        purchaseTotal: unitPurchasePrice * qty,
       }])
       setNewChildId('')
       setNewChildQty('1')
@@ -541,8 +548,35 @@ export default function ItemFormPage() {
     }
   }
 
-  const totalComposite = activeComponents.reduce((s, c) => s + c.total, 0)
+  const totalCompositeSelling = activeComponents.reduce((s, c) => s + c.total, 0)
+  const totalCompositePurchase = activeComponents.reduce((s, c) => s + (c.purchase_total ?? 0), 0)
   const unitLabel = soldBy === 'weight' ? 'kg' : soldBy === 'surface' ? 'm²' : 'unité(s)'
+
+  // Refs pour lire les valeurs courantes sans les mettre dans les dépendances de l'effet
+  const purchasePriceRef = useRef(purchasePrice)
+  const sellingPriceRef = useRef(sellingPrice)
+  useEffect(() => { purchasePriceRef.current = purchasePrice }, [purchasePrice])
+  useEffect(() => { sellingPriceRef.current = sellingPrice }, [sellingPrice])
+
+  // Auto-remplissage des champs Coûts et Prix si vides, à partir des totaux composants
+  useEffect(() => {
+    if (type !== 'composite') return
+    const comps = isEdit ? components : pendingComponents
+    if (comps.length === 0) return
+
+    if (!purchasePriceRef.current) {
+      const total = isEdit
+        ? components.reduce((s, c) => s + (c.purchase_total ?? 0), 0)
+        : pendingComponents.reduce((s, c) => s + c.purchaseTotal, 0)
+      if (total > 0) setPurchasePrice(total.toFixed(2))
+    }
+    if (!sellingPriceRef.current) {
+      const total = isEdit
+        ? components.reduce((s, c) => s + c.total, 0)
+        : pendingComponents.reduce((s, c) => s + c.total, 0)
+      if (total > 0) setSellingPrice(total.toFixed(2))
+    }
+  }, [pendingComponents, components, type, isEdit])
 
   // ── image section JSX helper ────────────────────────────────────────────────
   function renderImageZone() {
@@ -652,7 +686,7 @@ export default function ItemFormPage() {
     return <div className="flex min-h-screen items-center justify-center bg-[#EFF6FF]"><Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" /></div>
   }
 
-  const childOptions = allProducts.filter(p => String(p.id) !== id)
+  const childOptions = allProducts.filter(p => String(p.id) !== id && p.type !== 'composite')
 
   return (
     <div className=" space-y-6">
@@ -760,13 +794,24 @@ export default function ItemFormPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Coûts" hint="Prix d'achat fournisseur TTC">
+                  <Field
+                    label="Coûts"
+                    hint={type === 'composite' && activeComponents.length > 0
+                      ? `Calculé depuis les composants : ${totalCompositePurchase.toLocaleString('fr-FR')} CFA`
+                      : 'Prix d\'achat fournisseur TTC'}
+                  >
                     <div className="relative">
                       <Inp type="number" step="0.01" min="0" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0.00" className="pr-12" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
                     </div>
                   </Field>
-                  <Field label="Prix" required hint={taxInclusive ? 'Prix de vente TTC' : 'Prix de vente HT'}>
+                  <Field
+                    label="Prix"
+                    required
+                    hint={type === 'composite' && activeComponents.length > 0
+                      ? `Calculé depuis les composants : ${totalCompositeSelling.toLocaleString('fr-FR')} CFA`
+                      : taxInclusive ? 'Prix de vente TTC' : 'Prix de vente HT'}
+                  >
                     <div className="relative">
                       <Inp type="number" step="0.01" min="0" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} required placeholder="0.00" className="pr-12" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
@@ -1058,9 +1103,19 @@ export default function ItemFormPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-3 text-right text-sm font-semibold text-gray-700">
-                  Totale = {totalComposite.toLocaleString('fr-FR')} CFA
+                <div className="mt-3 flex justify-end gap-6 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Prix d'achat total</p>
+                    <p className="text-sm font-semibold text-gray-700">{totalCompositePurchase.toLocaleString('fr-FR')} CFA</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Prix de vente total</p>
+                    <p className="text-sm font-semibold text-[#0F2E4A]">{totalCompositeSelling.toLocaleString('fr-FR')} CFA</p>
+                  </div>
                 </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  Ces totaux sont reportés automatiquement dans les champs Coûts et Prix de l'onglet Article si ceux-ci sont vides.
+                </p>
               </>
             )}
           </Card>

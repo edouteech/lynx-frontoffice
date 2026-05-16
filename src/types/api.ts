@@ -344,6 +344,8 @@ export interface ProductComponent {
   quantity: number
   unit_price: number
   total: number
+  unit_purchase_price?: number
+  purchase_total?: number
 }
 
 export interface SaleItem {
