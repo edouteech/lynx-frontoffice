@@ -93,7 +93,8 @@ export interface StockTransfer {
   to_store_id: number
   transfer_date: string | null
   note: string | null
-  status: 'draft' | 'confirmed' | 'cancelled'
+  status: 'draft' | 'submitted' | 'confirmed' | 'cancelled'
+  can_validate?: boolean
   items_count?: number
   from_store?: Store
   to_store?: Store

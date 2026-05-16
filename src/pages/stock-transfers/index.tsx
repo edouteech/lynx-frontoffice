@@ -7,9 +7,10 @@ import { getApiErrorMessage } from '../../lib/apiError'
 import type { StockTransfer } from '../../types/api'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
-  confirmed: { label: 'Confirmé',  className: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulé',   className: 'bg-red-100 text-red-600' },
+  draft:     { label: 'Brouillon', className: 'bg-gray-100 text-gray-600' },
+  submitted: { label: 'Soumis',    className: 'bg-blue-100 text-blue-700' },
+  confirmed: { label: 'Validé',    className: 'bg-green-100 text-green-700' },
+  cancelled: { label: 'Annulé',    className: 'bg-red-100 text-red-600' },
 }
 
 export default function StockTransfersIndex() {

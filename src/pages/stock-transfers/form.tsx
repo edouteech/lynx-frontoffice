@@ -44,9 +44,10 @@ interface PendingItem {
 // ── Statuts ───────────────────────────────────────────────────────────────────
 
 const STATUS_META = {
-  draft:     { label: 'Brouillon', className: 'bg-gray-100 text-gray-600' },
-  confirmed: { label: 'Confirmé', className: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulé',   className: 'bg-red-100 text-red-600' },
+  draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
+  submitted: { label: 'Soumis',     className: 'bg-blue-100 text-blue-700' },
+  confirmed: { label: 'Validé',     className: 'bg-green-100 text-green-700' },
+  cancelled: { label: 'Annulé',     className: 'bg-red-100 text-red-600' },
 } as const
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -68,7 +69,8 @@ export default function StockTransferForm() {
   const [toStoreId, setToStoreId] = useState('')
   const [transferDate, setTransferDate] = useState('')
   const [note, setNote] = useState('')
-  const [status, setStatus] = useState<'draft' | 'confirmed' | 'cancelled'>('draft')
+  const [status, setStatus] = useState<'draft' | 'submitted' | 'confirmed' | 'cancelled'>('submitted')
+  const [canValidate, setCanValidate] = useState(false)
 
   // items (edit mode : depuis l'API)
   const [items, setItems] = useState<StockTransferItem[]>([])
@@ -94,7 +96,7 @@ export default function StockTransferForm() {
   const [confirmErrors, setConfirmErrors] = useState<string[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  const isDraft = status === 'draft'
+  const isDraft = status === 'draft' || status === 'submitted'
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,6 +120,7 @@ export default function StockTransferForm() {
         setTransferDate(t.transfer_date ?? '')
         setNote(t.note ?? '')
         setStatus(t.status)
+        setCanValidate(t.can_validate ?? false)
         const its = t.items ?? []
         setItems(its)
         const edits: Record<number, string> = {}
@@ -276,7 +279,7 @@ export default function StockTransferForm() {
 
   // ── Confirmer le transfert ─────────────────────────────────────────────────
   async function handleConfirm() {
-    if (!window.confirm('Confirmer ce transfert ? Les stocks des deux magasins seront mis à jour.')) return
+    if (!window.confirm('Valider ce transfert ? Les stocks des deux magasins seront mis à jour.')) return
     setConfirming(true)
     setError(null)
     setConfirmErrors([])
@@ -287,7 +290,7 @@ export default function StockTransferForm() {
       // Rafraîchir les items avec les nouveaux stocks
       const refreshed = await fetchStockTransfer(id!)
       setItems(refreshed.items ?? [])
-      setSuccessMsg('Transfert confirmé ! Les stocks ont été mis à jour.')
+      setSuccessMsg('Transfert validé ! Les stocks ont été mis à jour.')
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string; errors?: string[] } } }
       const data = apiErr?.response?.data
@@ -340,8 +343,8 @@ export default function StockTransferForm() {
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
-            {/* Confirmer (seulement edit + draft) */}
-            {isEdit && isDraft && (
+            {/* Valider (seulement edit + soumis + droits de validation) */}
+            {isEdit && status === 'submitted' && canValidate && (
               <button
                 type="button"
                 onClick={() => void handleConfirm()}
@@ -349,7 +352,7 @@ export default function StockTransferForm() {
                 className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
               >
                 {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Confirmer le transfert
+                Valider le transfert
               </button>
             )}
             {isDraft && (
