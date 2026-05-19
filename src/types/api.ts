@@ -38,6 +38,7 @@ export interface User {
   email: string
   email_verified_at?: string | null
   phone?: string | null
+  pin_code?: string | null
   note?: string | null
   organization_memberships?: UserOrganizationMembership[]
   stores?: Array<Store & { pivot?: UserStorePivot }>

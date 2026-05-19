@@ -226,13 +226,6 @@ export default function GeneralSettingPage() {
         icon: <Wallet className="h-5 w-5" />,
         checked: data.customer_account_payment,
       },
-      {
-        key: 'commission' as const,
-        title: 'Commission',
-        description: "Gérer les commissions sur les ventes.",
-        icon: <Wallet className="h-5 w-5" />,
-        checked: data.commission,
-      },
     ]
   }, [data])
 

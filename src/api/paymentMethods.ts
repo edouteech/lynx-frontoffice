@@ -2,12 +2,19 @@ import type { Paginated, PaymentMethod } from '../types/api'
 import { api } from './apiClient'
 
 export async function fetchPaymentMethods(
-  page = 1
+  page = 1,
+  only_trashed?: boolean
 ): Promise<Paginated<PaymentMethod>> {
-  const params: Record<string, string | number> = { page }
+  const params: Record<string, string | number | boolean> = { page }
+  if (only_trashed) params.only_trashed = true
   const { data } = await api.get<Paginated<PaymentMethod>>('/payment-methods', {
     params,
   })
+  return data
+}
+
+export async function restorePaymentMethod(id: number | string): Promise<PaymentMethod> {
+  const { data } = await api.post<PaymentMethod>(`/payment-methods/${id}/restore`)
   return data
 }
 

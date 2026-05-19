@@ -69,6 +69,14 @@ import InventoriesIndex from './pages/inventories/index'
 import InventoryCreatePage from './pages/inventories/create'
 import InventoryShowPage from './pages/inventories/show'
 
+import TrashStores from './pages/trash/stores'
+import TrashItems from './pages/trash/items'
+import TrashItemCategories from './pages/trash/item-categories'
+import TrashCashRegisters from './pages/trash/cash-registers'
+import TrashPaymentMethods from './pages/trash/payment-methods'
+import TrashCustomers from './pages/trash/customers'
+import TrashVatRates from './pages/trash/vat-rates'
+
 function withLayout(page: ReactElement) {
   return <Layout>{page}</Layout>
 }
@@ -586,6 +594,62 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<PaymentMethodShow />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/stores"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashStores />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/items"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashItems />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/item-categories"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashItemCategories />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/cash-registers"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashCashRegisters />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/payment-methods"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashPaymentMethods />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/customers"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashCustomers />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trash/vat-rates"
+          element={
+            <ProtectedRoute>
+              {withLayout(<TrashVatRates />)}
             </ProtectedRoute>
           }
         />

@@ -84,11 +84,6 @@ function fmt(n: number) {
   return n.toLocaleString('fr-FR', { maximumFractionDigits: 0, useGrouping: true })
 }
 
-function fmtDate(d: string | null | undefined) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-
 function fmtDateTime(d: string | null | undefined) {
   if (!d) return '—'
   const date = new Date(d)

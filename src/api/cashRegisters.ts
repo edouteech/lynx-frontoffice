@@ -4,14 +4,21 @@ import { api } from './apiClient'
 export async function fetchCashRegisters(
   page = 1,
   statusFilter?: string,
-  storeId?: number | string
+  storeId?: number | string,
+  only_trashed?: boolean
 ): Promise<Paginated<CashRegister>> {
-  const params: Record<string, string | number> = { page }
+  const params: Record<string, string | number | boolean> = { page }
   if (statusFilter) params.status = statusFilter
   if (storeId != null && String(storeId) !== '') params.store_id = storeId
+  if (only_trashed) params.only_trashed = true
   const { data } = await api.get<Paginated<CashRegister>>('/cash-registers', {
     params,
   })
+  return data
+}
+
+export async function restoreCashRegister(id: number | string): Promise<CashRegister> {
+  const { data } = await api.post<CashRegister>(`/cash-registers/${id}/restore`)
   return data
 }
 

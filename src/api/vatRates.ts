@@ -1,10 +1,18 @@
 import type { Paginated, VatRate } from '../types/api'
 import { api } from './apiClient'
 
-export async function fetchVatRates(page = 1): Promise<Paginated<VatRate>> {
-  const { data } = await api.get<Paginated<VatRate>>('/vat-rates', {
-    params: { page },
-  })
+export async function fetchVatRates(
+  page = 1,
+  only_trashed?: boolean
+): Promise<Paginated<VatRate>> {
+  const params: Record<string, string | number | boolean> = { page }
+  if (only_trashed) params.only_trashed = true
+  const { data } = await api.get<Paginated<VatRate>>('/vat-rates', { params })
+  return data
+}
+
+export async function restoreVatRate(id: number | string): Promise<VatRate> {
+  const { data } = await api.post<VatRate>(`/vat-rates/${id}/restore`)
   return data
 }
 

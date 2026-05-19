@@ -476,6 +476,14 @@ export default function UserShow() {
             </div>
             <div className="border-b border-gray-100 pb-4 sm:border-0 sm:pb-0">
               <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Code PIN
+              </dt>
+              <dd className="mt-1 text-sm font-medium text-gray-900">
+                {user.pin_code?.trim() ? user.pin_code : '—'}
+              </dd>
+            </div>
+            <div className="border-b border-gray-100 pb-4 sm:border-0 sm:pb-0">
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
                 Remarque
               </dt>
               <dd className="mt-1 whitespace-pre-wrap text-sm font-medium text-gray-900">

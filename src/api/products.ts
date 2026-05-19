@@ -12,6 +12,7 @@ export interface FetchProductsParams {
   store_id?: number | null
   category_id?: number | null
   stock_alert?: 'low' | 'out' | null
+  only_trashed?: boolean
 }
 
 export async function fetchProducts(params: FetchProductsParams | number = 1): Promise<Paginated<Product>> {
@@ -22,8 +23,14 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
       ...(p.store_id    ? { store_id: p.store_id }       : {}),
       ...(p.category_id ? { category_id: p.category_id } : {}),
       ...(p.stock_alert ? { stock_alert: p.stock_alert }  : {}),
+      ...(p.only_trashed ? { only_trashed: true } : {}),
     }
   })
+  return res.data
+}
+
+export async function restoreProduct(id: string | number): Promise<Product> {
+  const res = await api.post<Product>(`/items/${id}/restore`)
   return res.data
 }
 

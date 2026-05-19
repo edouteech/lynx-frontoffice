@@ -70,7 +70,7 @@ export function UserCreateModal({
     setEmail(user.email)
     setPassword('')
     setPhone(user.phone ?? '')
-    setPinCode('')
+    setPinCode(user.pin_code ?? '')
     setNote(user.note ?? '')
   }, [open, user])
 
@@ -385,12 +385,12 @@ export function UserCreateModal({
             htmlFor="user-pin"
             className="mb-1 block text-sm font-medium text-gray-700"
           >
-            Code PIN {isEdit ? '(laisser vide pour ne pas changer)' : ''}
+            Code PIN
           </label>
           <input
             id="user-pin"
-            type="password"
-            autoComplete="new-password"
+            type="text"
+            placeholder="ex. 1234"
             value={pinCode}
             onChange={(e) => setPinCode(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"

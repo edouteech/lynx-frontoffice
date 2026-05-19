@@ -2,11 +2,17 @@ import type { ItemCategory, Paginated } from '../types/api'
 import { api } from './apiClient'
 
 export async function fetchItemCategories(
-  page = 1
+  page = 1,
+  only_trashed?: boolean
 ): Promise<Paginated<ItemCategory>> {
-  const { data } = await api.get<Paginated<ItemCategory>>('/item-categories', {
-    params: { page },
-  })
+  const params: Record<string, string | number | boolean> = { page }
+  if (only_trashed) params.only_trashed = true
+  const { data } = await api.get<Paginated<ItemCategory>>('/item-categories', { params })
+  return data
+}
+
+export async function restoreItemCategory(id: number | string): Promise<ItemCategory> {
+  const { data } = await api.post<ItemCategory>(`/item-categories/${id}/restore`)
   return data
 }
 

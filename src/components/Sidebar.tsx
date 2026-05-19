@@ -36,6 +36,7 @@ import {
   History,
   PieChart,
   Printer,
+  Trash2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { resolveBackendUrl } from '../lib/url'
@@ -190,6 +191,20 @@ const navItems: NavItem[] = [
         label: 'Licences',
         icon: Crown,
       },
+    ],
+  },
+  {
+    id: 'trash-menu',
+    label: 'Corbeille',
+    icon: Trash2,
+    children: [
+      { id: 'trash/stores', label: 'Magasins', icon: Store },
+      { id: 'trash/items', label: 'Articles', icon: Package },
+      { id: 'trash/item-categories', label: 'Catégories', icon: FolderTree },
+      { id: 'trash/cash-registers', label: 'Caisses', icon: Wallet },
+      { id: 'trash/payment-methods', label: 'Moyens de paiement', icon: Banknote },
+      { id: 'trash/customers', label: 'Clients', icon: UserRoundPlus },
+      { id: 'trash/vat-rates', label: 'TVA', icon: Percent },
     ],
   },
 ]

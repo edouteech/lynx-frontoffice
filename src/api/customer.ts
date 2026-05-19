@@ -3,11 +3,18 @@ import { api } from './apiClient'
 
 export async function fetchCustomers(
   page = 1,
-  q?: string
+  q?: string,
+  only_trashed?: boolean
 ): Promise<Paginated<Customer>> {
-  const params: Record<string, string | number> = { page }
+  const params: Record<string, string | number | boolean> = { page }
   if (q) params.q = q
+  if (only_trashed) params.only_trashed = true
   const { data } = await api.get<Paginated<Customer>>('/customers', { params })
+  return data
+}
+
+export async function restoreCustomer(id: number | string): Promise<Customer> {
+  const { data } = await api.post<Customer>(`/customers/${id}/restore`)
   return data
 }
 

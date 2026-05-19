@@ -3,11 +3,18 @@ import { api } from './apiClient'
 
 export async function fetchStores(
   page = 1,
-  statusFilter?: string
+  statusFilter?: string,
+  only_trashed?: boolean
 ): Promise<Paginated<Store>> {
-  const params: Record<string, string | number> = { page }
+  const params: Record<string, string | number | boolean> = { page }
   if (statusFilter) params.status = statusFilter
+  if (only_trashed) params.only_trashed = true
   const { data } = await api.get<Paginated<Store>>('/stores', { params })
+  return data
+}
+
+export async function restoreStore(id: number | string): Promise<Store> {
+  const { data } = await api.post<Store>(`/stores/${id}/restore`)
   return data
 }
 
