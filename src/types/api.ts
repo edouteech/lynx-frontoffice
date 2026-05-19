@@ -194,6 +194,27 @@ export interface PaymentMethod {
   updated_at: string
 }
 
+export interface RestaurantOption {
+  id: number
+  organization_id: number
+  name: string
+  description: string | null
+  status: 'active' | 'inactive'
+  stores?: Array<Pick<Store, 'id' | 'name'>>
+  created_at: string
+  updated_at: string
+}
+
+export interface KitchenPrinter {
+  id: number
+  organization_id: number
+  name: string
+  status: 'active' | 'inactive'
+  item_categories?: Array<Pick<ItemCategory, 'id' | 'name' | 'color'>>
+  created_at: string
+  updated_at: string
+}
+
 export interface CashRegister {
   id: number
   name: string

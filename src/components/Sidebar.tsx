@@ -35,6 +35,7 @@ import {
   TrendingUp,
   History,
   PieChart,
+  Printer,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { resolveBackendUrl } from '../lib/url'
@@ -173,6 +174,16 @@ const navItems: NavItem[] = [
         id: 'settings/receipts',
         label: 'Reçus',
         icon: ReceiptText,
+      },
+      {
+        id: 'settings/restaurant-options',
+        label: 'Options restauration',
+        icon: ClipboardList,
+      },
+      {
+        id: 'settings/kitchen-printers',
+        label: 'Imprimantes cuisine',
+        icon: Printer,
       },
       {
         id: 'settings/subscription',

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell,
-  ClipboardList,
   Clock,
-  CookingPot,
   Monitor,
   Receipt,
   ShoppingCart,
@@ -179,7 +177,7 @@ export default function GeneralSettingPage() {
         title: 'Imprimantes cuisine',
         description:
           "Envoyer des commandes à l'imprimante cuisine ou à son affichage.",
-        icon: <CookingPot className="h-5 w-5" />,
+        icon: <Receipt className="h-5 w-5" />,
         checked: data.kitchen_printers,
       },
       {
@@ -189,14 +187,6 @@ export default function GeneralSettingPage() {
           "Afficher les informations de commande clients au moment de l'achat.",
         icon: <Monitor className="h-5 w-5" />,
         checked: data.customer_display,
-      },
-      {
-        key: 'restaurant_options' as const,
-        title: 'Options de restauration',
-        description:
-          'Marquer les commandes comme dîner, à emporter ou pour livraison.',
-        icon: <ClipboardList className="h-5 w-5" />,
-        checked: data.restaurant_options,
       },
       {
         key: 'low_stock_notifications' as const,
@@ -265,7 +255,6 @@ export default function GeneralSettingPage() {
           | 'open_tickets'
           | 'kitchen_printers'
           | 'customer_display'
-          | 'restaurant_options'
           | 'low_stock_notifications'
           | 'negative_stock_alerts'
           | 'item_buyback'

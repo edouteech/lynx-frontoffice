@@ -29,6 +29,8 @@ import ResetPassword from './pages/auth/ResetPassword'
 import GeneralSettingPage from './pages/setting/GeneralSettingPage'
 import ReceiptSettingPage from './pages/setting/ReceiptSettingPage'
 import SubscriptionPage from './pages/setting/SubscriptionPage'
+import RestaurantOptionPage from './pages/setting/RestaurantOptionPage'
+import KitchenPrinterPage from './pages/setting/KitchenPrinterPage'
 import PaymentMethodsIndex from './pages/payment-methods'
 import PaymentMethodShow from './pages/payment-methods/show'
 import VatRatesIndex from './pages/vat-rates'
@@ -621,6 +623,26 @@ export default function App() {
             <ProtectedRoute>
               <RequirePermission code="admin_panel.settings.manage">
                 {withLayout(<SubscriptionPage />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/restaurant-options"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.settings.manage">
+                {withLayout(<RestaurantOptionPage />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/kitchen-printers"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.settings.manage">
+                {withLayout(<KitchenPrinterPage />)}
               </RequirePermission>
             </ProtectedRoute>
           }
