@@ -20,6 +20,7 @@ import { PhoneInput } from '../../components/PhoneInput'
 import { telephoneForApi } from '../../lib/phoneValue'
 import { TimeZoneSelect } from '../../components/TimeZoneSelect'
 import { timezoneForApi } from '../../lib/timezone'
+import Swal from 'sweetalert2'
 
 function FieldRow({ label, value }: { label: string; value: string }) {
   return (
@@ -234,9 +235,36 @@ export default function GeneralSettingPage() {
     const prev = data[key] as unknown
     if (typeof prev !== 'boolean') return
 
+    const feature = features.find((f) => f.key === key)
+    const featureTitle = feature ? feature.title : key
+    const actionText = next ? 'activer' : 'désactiver'
+
+    const result = await Swal.fire({
+      title: `${next ? 'Activer' : 'Désactiver'} la fonctionnalité ?`,
+      text: `Voulez-vous vraiment ${actionText} la fonctionnalité "${featureTitle}" ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, confirmer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#3B82F6',
+      cancelButtonColor: '#EF4444',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+
     setError(null)
     setSavingKey(key)
     setData({ ...data, [key]: next } as GeneralSetting)
+
+    Swal.fire({
+      title: 'Enregistrement...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
       const updated = await updateGeneralSetting({
         [key]: next,
@@ -257,9 +285,24 @@ export default function GeneralSettingPage() {
         >
       >)
       setData(updated)
+      Swal.fire({
+        title: 'Paramètre mis à jour !',
+        text: `La fonctionnalité "${featureTitle}" a été ${next ? 'activée' : 'désactivée'} avec succès.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      })
     } catch {
       setData({ ...data, [key]: prev } as GeneralSetting)
       setError("Échec de l'enregistrement. Réessayez.")
+      Swal.fire({
+        title: 'Erreur',
+        text: "Échec de l'enregistrement. Veuillez réessayer.",
+        icon: 'error',
+        confirmButtonColor: '#3B82F6',
+      })
     } finally {
       setSavingKey(null)
     }
@@ -548,13 +591,42 @@ export default function GeneralSettingPage() {
               type="button"
               disabled={savingOrganization}
               onClick={async () => {
+                if (!isValidTaxId(organizationDraft.tax_id)) {
+                  Swal.fire({
+                    title: 'IFU invalide',
+                    text: 'L’IFU est obligatoire et doit contenir exactement 13 chiffres.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3B82F6',
+                  })
+                  return
+                }
+
+                const result = await Swal.fire({
+                  title: 'Modifier les informations ?',
+                  text: 'Voulez-vous vraiment enregistrer ces informations ?',
+                  icon: 'question',
+                  showCancelButton: true,
+                  confirmButtonText: 'Oui, enregistrer',
+                  cancelButtonText: 'Annuler',
+                  confirmButtonColor: '#3B82F6',
+                  cancelButtonColor: '#EF4444',
+                  reverseButtons: true,
+                })
+
+                if (!result.isConfirmed) return
+
                 setSavingOrganization(true)
                 setError(null)
+
+                Swal.fire({
+                  title: 'Enregistrement en cours...',
+                  allowOutsideClick: false,
+                  didOpen: () => {
+                    Swal.showLoading()
+                  },
+                })
+
                 try {
-                  if (!isValidTaxId(organizationDraft.tax_id)) {
-                    setError("L’IFU est obligatoire et doit contenir exactement 13 chiffres.")
-                    return
-                  }
                   const patch = {
                     ...organizationDraft,
                     phone: telephoneForApi(
@@ -571,10 +643,25 @@ export default function GeneralSettingPage() {
                   }
                   await refreshUser()
                   setEditingOrganization(false)
+                  Swal.fire({
+                    title: 'Enregistré !',
+                    text: 'Les informations de l’entreprise ont été mises à jour.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                  })
                 } catch {
                   setError(
                     "Impossible d’enregistrer les informations de l’entreprise."
                   )
+                  Swal.fire({
+                    title: 'Erreur',
+                    text: "Impossible d’enregistrer les informations de l’entreprise.",
+                    icon: 'error',
+                    confirmButtonColor: '#3B82F6',
+                  })
                 } finally {
                   setSavingOrganization(false)
                 }

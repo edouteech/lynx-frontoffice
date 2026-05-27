@@ -17,12 +17,13 @@ import StoreShow from './pages/stores/show'
 import CashRegistersIndex from './pages/cash-registers/index'
 import CashRegisterShow from './pages/cash-registers/show'
 import CustomersIndex from './pages/customers'
+import CustomerShowPage from './pages/customers/show'
 import PlaceholderPage from './pages/PlaceholderPage'
 import ItemsIndex from './pages/items/index'
 import ItemFormPage from './pages/items/form'
 import ItemShowPage from './pages/items/show'
 import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
+//import Register from './pages/auth/Register'
 import RegisterRequest from './pages/auth/RegisterRequest'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
@@ -113,7 +114,7 @@ export default function App() {
         <SuspensionListener />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* <Route path="/register" element={<Register />} /> */}
         <Route path="/register-request" element={<RegisterRequest />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -536,6 +537,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<CustomersIndex />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:id"
+          element={
+            <ProtectedRoute>
+              {withLayout(<CustomerShowPage />)}
             </ProtectedRoute>
           }
         />

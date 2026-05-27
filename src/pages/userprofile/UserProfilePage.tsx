@@ -9,6 +9,7 @@ import { CURRENCY_OPTIONS } from '../../lib/registerFormOptions'
 import { isOwnerRole } from '../../lib/ownerRole'
 import { useAuth } from '../../contexts/useAuth'
 import { displayRoleName } from '../../lib/ownerRole'
+import Swal from 'sweetalert2'
 
 export default function UserProfilePage() {
   const {
@@ -50,7 +51,32 @@ export default function UserProfilePage() {
       setError('Veuillez sélectionner un pays.')
       return
     }
+
+    const result = await Swal.fire({
+      title: 'Créer l’entreprise ?',
+      text: `Voulez-vous vraiment créer l'entreprise "${n}" ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, créer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#3B82F6',
+      cancelButtonColor: '#EF4444',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+
     setSubmitting(true)
+
+    Swal.fire({
+      title: 'Création en cours...',
+      text: 'Veuillez patienter pendant la création de l’entreprise.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
       const data = await createOrganization({
         name: n,
@@ -60,10 +86,54 @@ export default function UserProfilePage() {
       })
       applyUserAndOrganization(data.user, data.organization.id)
       resetForm()
+
+      await Swal.fire({
+        title: 'Entreprise créée !',
+        text: `L'entreprise "${n}" a été créée avec succès et est désormais l'entreprise active.`,
+        icon: 'success',
+        confirmButtonColor: '#3B82F6',
+      })
+
+      window.location.reload()
     } catch (err) {
-      setError(getApiErrorMessage(err))
+      const errMsg = getApiErrorMessage(err)
+      setError(errMsg)
+
+      await Swal.fire({
+        title: 'Erreur de création',
+        text: errMsg,
+        icon: 'error',
+        confirmButtonColor: '#3B82F6',
+      })
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleSwitchOrganization(orgId: number, orgName: string) {
+    const result = await Swal.fire({
+      title: 'Changer d’entreprise ?',
+      text: `Voulez-vous utiliser "${orgName}" comme entreprise active ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, changer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#3B82F6',
+      cancelButtonColor: '#EF4444',
+      reverseButtons: true,
+    })
+
+    if (result.isConfirmed) {
+      setActiveOrganizationId(orgId)
+      Swal.fire({
+        title: 'Entreprise activée !',
+        text: `Vous êtes maintenant sur l'entreprise "${orgName}".`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      })
     }
   }
 
@@ -158,7 +228,12 @@ export default function UserProfilePage() {
                     {!isActive ? (
                       <button
                         type="button"
-                        onClick={() => setActiveOrganizationId(m.organization_id)}
+                        onClick={() =>
+                          void handleSwitchOrganization(
+                            m.organization_id,
+                            e?.name ?? `Entreprise #${m.organization_id}`
+                          )
+                        }
                         className="shrink-0 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
                       >
                         Utiliser cette entreprise

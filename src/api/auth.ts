@@ -30,8 +30,8 @@ export async function logoutRequest(): Promise<void> {
 }
 
 /** Demande un e-mail de réinitialisation (réponse générique côté API). */
-export async function requestPasswordReset(email: string): Promise<void> {
-  await api.post('/auth/forgot-password', { email: email.trim() })
+export async function requestPasswordReset(email: string, recaptchaToken: string): Promise<void> {
+  await api.post('/auth/forgot-password', { email: email.trim(), recaptcha_token: recaptchaToken })
 }
 
 export async function resetPasswordWithToken(payload: {

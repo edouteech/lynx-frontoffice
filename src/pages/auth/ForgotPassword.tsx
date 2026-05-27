@@ -1,23 +1,34 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../../api/auth'
 import { getApiErrorMessage } from '../../lib/apiError'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (!recaptchaToken) {
+      setError('Veuillez cocher la case "Je ne suis pas un robot".')
+      return
+    }
+
     setSubmitting(true)
     try {
-      await requestPasswordReset(email)
+      await requestPasswordReset(email, recaptchaToken)
       setSent(true)
     } catch (err) {
       setError(getApiErrorMessage(err, 'Une erreur est survenue.'))
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     } finally {
       setSubmitting(false)
     }
@@ -83,13 +94,21 @@ export default function ForgotPassword() {
                 placeholder="vous@exemple.com"
               />
             </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
-            >
-              {submitting ? 'Envoi…' : 'Envoyer le lien'}
-            </button>
+            <div className="flex flex-col items-center gap-4 pt-2">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
+                onChange={(token) => setRecaptchaToken(token)}
+                onExpired={() => setRecaptchaToken(null)}
+              />
+              <button
+                type="submit"
+                disabled={submitting || !recaptchaToken}
+                className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
+              >
+                {submitting ? 'Envoi…' : 'Envoyer le lien'}
+              </button>
+            </div>
           </form>
         )}
 

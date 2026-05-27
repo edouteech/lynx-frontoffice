@@ -12,6 +12,7 @@ import {
 } from '../../api/itemCategories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { ItemCategory } from '../../types/api'
+import Swal from 'sweetalert2'
 
 /**
  * Gris médian : le nuancier natif positionne souvent le curseur de luminosité au milieu
@@ -99,12 +100,22 @@ export default function ItemCategoriesIndex() {
       name: name.trim(),
       color: color.trim() || null,
     }
+
+    Swal.fire({
+      title: editing ? 'Modification...' : 'Création...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
       if (editing) {
         await updateItemCategory(editing.id, payload)
       } else {
         await createItemCategory(payload)
       }
+      const actionText = editing ? 'modifiée' : 'créée'
       resetForm()
       const res = await fetchItemCategories(page)
       setPaginated({
@@ -113,8 +124,23 @@ export default function ItemCategoriesIndex() {
         last_page: res.last_page,
         total: res.total,
       })
+      Swal.fire({
+        title: editing ? 'Modifiée !' : 'Créée !',
+        text: `La catégorie "${payload.name}" a été ${actionText} avec succès.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      })
     } catch (err) {
       setError(getApiErrorMessage(err))
+      Swal.fire({
+        title: 'Erreur',
+        text: getApiErrorMessage(err),
+        icon: 'error',
+        confirmButtonColor: '#3B82F6',
+      })
     } finally {
       setSaving(false)
     }
@@ -122,8 +148,30 @@ export default function ItemCategoriesIndex() {
 
   const handleDelete = useCallback(
     async (c: ItemCategory) => {
-      if (!window.confirm(`Supprimer la catégorie « ${c.name} » ?`)) return
+      const result = await Swal.fire({
+        title: 'Supprimer la catégorie ?',
+        text: `Voulez-vous vraiment supprimer la catégorie "${c.name}" ? Cette action est irréversible.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+      })
+
+      if (!result.isConfirmed) return
+
       setError(null)
+
+      Swal.fire({
+        title: 'Suppression...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading()
+        },
+      })
+
       try {
         await deleteItemCategory(c.id)
         if (editing?.id === c.id) resetForm()
@@ -134,8 +182,23 @@ export default function ItemCategoriesIndex() {
           last_page: res.last_page,
           total: res.total,
         })
+        Swal.fire({
+          title: 'Supprimée !',
+          text: `La catégorie "${c.name}" a été supprimée avec succès.`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        })
       } catch (err) {
         setError(getApiErrorMessage(err))
+        Swal.fire({
+          title: 'Erreur',
+          text: "Impossible de supprimer cette catégorie.",
+          icon: 'error',
+          confirmButtonColor: '#3B82F6',
+        })
       }
     },
     [page, editing?.id]

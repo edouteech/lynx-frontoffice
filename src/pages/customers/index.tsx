@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Pencil, Plus, Trash2, Eye } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deleteCustomer, fetchCustomers } from '../../api/customer'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Customer } from '../../types/api'
 import { CustomerCreateModal } from './create'
+import Swal from 'sweetalert2'
 
 export default function CustomersIndex() {
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<{
     data: Customer[]
@@ -66,8 +69,30 @@ export default function CustomersIndex() {
 
   const handleDelete = useCallback(
     async (c: Customer) => {
-      if (!window.confirm(`Supprimer le client « ${c.name} » ?`)) return
+      const result = await Swal.fire({
+        title: 'Supprimer le client ?',
+        text: `Voulez-vous vraiment supprimer le client "${c.name}" ? Cette action est irréversible.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+      })
+
+      if (!result.isConfirmed) return
+
       setError(null)
+
+      Swal.fire({
+        title: 'Suppression en cours...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading()
+        },
+      })
+
       try {
         await deleteCustomer(c.id)
         const res = await fetchCustomers(page)
@@ -77,8 +102,23 @@ export default function CustomersIndex() {
           last_page: res.last_page,
           total: res.total,
         })
+        Swal.fire({
+          title: 'Supprimé !',
+          text: `Le client "${c.name}" a été supprimé avec succès.`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        })
       } catch (err) {
         setError(getApiErrorMessage(err))
+        Swal.fire({
+          title: 'Erreur',
+          text: 'Impossible de supprimer ce client.',
+          icon: 'error',
+          confirmButtonColor: '#3B82F6',
+        })
       }
     },
     [page]
@@ -124,9 +164,14 @@ export default function CustomersIndex() {
   const actions: Action<Customer>[] = useMemo(
     () => [
       {
+        label: 'Voir',
+        icon: Eye,
+        variant: 'primary',
+        onClick: (c) => navigate(`/customers/${c.id}`),
+      },
+      {
         label: 'Modifier',
         icon: Pencil,
-        variant: 'primary',
         onClick: (c) => {
           setModalCustomer(c)
           setModalOpen(true)
@@ -139,7 +184,7 @@ export default function CustomersIndex() {
         onClick: (c) => void handleDelete(c),
       },
     ],
-    [handleDelete]
+    [navigate, handleDelete]
   )
 
   return (
@@ -204,4 +249,3 @@ export default function CustomersIndex() {
     </div>
   )
 }
-

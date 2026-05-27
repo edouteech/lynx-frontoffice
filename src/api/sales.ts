@@ -7,6 +7,7 @@ export interface FetchSalesParams {
   status?: string | null
   from?: string | null
   to?: string | null
+  customer_id?: number | null
 }
 
 export async function fetchSales(params: FetchSalesParams = {}): Promise<Paginated<Sale>> {
@@ -15,6 +16,7 @@ export async function fetchSales(params: FetchSalesParams = {}): Promise<Paginat
   if (params.status) p.status = params.status
   if (params.from) p.from = params.from
   if (params.to) p.to = params.to
+  if (params.customer_id) p.customer_id = params.customer_id
   const { data } = await api.get<Paginated<Sale>>('/sales', { params: p })
   return data
 }

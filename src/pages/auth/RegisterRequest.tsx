@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
 import { submitOrganizationRegistrationRequest } from '../../api/register'
@@ -8,6 +8,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import { CountrySelect } from '../../components/CountrySelect'
 import { PhoneInput } from '../../components/PhoneInput'
 import { telephoneForApi } from '../../lib/phoneValue'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 /**
  * Inscription « sur demande » : aucun compte tant que Lynx n’a pas approuvé.
@@ -26,6 +27,8 @@ export default function RegisterRequest() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   useEffect(() => {
     if (!bootstrapping && user) {
@@ -49,6 +52,10 @@ export default function RegisterRequest() {
       setError('Veuillez sélectionner un pays.')
       return
     }
+    if (!recaptchaToken) {
+      setError('Veuillez cocher la case "Je ne suis pas un robot".')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -59,6 +66,7 @@ export default function RegisterRequest() {
         email,
         phone: telephoneForApi(phone),
         owner_name: ownerDisplayName.trim() || null,
+        recaptcha_token: recaptchaToken,
       })
       setSuccessMessage(
         data.message ||
@@ -66,6 +74,8 @@ export default function RegisterRequest() {
       )
     } catch (err) {
       setError(getApiErrorMessage(err))
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     } finally {
       setSubmitting(false)
     }
@@ -85,6 +95,7 @@ export default function RegisterRequest() {
             Après validation par Lynx, vous recevrez un e-mail pour définir votre
             mot de passe et vous connecter.
           </p>
+          {/* Création immédiate ?  
           <p className="mt-3 text-sm text-gray-500">
             Création immédiate ?{' '}
             <Link
@@ -93,7 +104,7 @@ export default function RegisterRequest() {
             >
               Inscription classique
             </Link>
-          </p>
+          </p>*/}
         </div>
 
         {successMessage ? (
@@ -263,13 +274,21 @@ export default function RegisterRequest() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
-            >
-              {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
-            </button>
+            <div className="flex flex-col items-center gap-4 pt-2">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
+                onChange={(token) => setRecaptchaToken(token)}
+                onExpired={() => setRecaptchaToken(null)}
+              />
+              <button
+                type="submit"
+                disabled={submitting || !recaptchaToken}
+                className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
+              >
+                {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
+              </button>
+            </div>
           </form>
         )}
 

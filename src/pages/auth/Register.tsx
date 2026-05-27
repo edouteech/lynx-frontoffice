@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
 import { registerOrganization } from '../../api/register'
@@ -8,6 +8,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import { CountrySelect } from '../../components/CountrySelect'
 import { PhoneInput } from '../../components/PhoneInput'
 import { telephoneForApi } from '../../lib/phoneValue'
+import ReCAPTCHA from 'react-google-recaptcha'
 
 export default function Register() {
   const { applyAuthResponse, user, bootstrapping } = useAuth()
@@ -24,6 +25,8 @@ export default function Register() {
 
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   useEffect(() => {
     if (!bootstrapping && user) {
@@ -55,6 +58,10 @@ export default function Register() {
       setError('Veuillez sélectionner un pays.')
       return
     }
+    if (!recaptchaToken) {
+      setError('Veuillez cocher la case "Je ne suis pas un robot".')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -66,11 +73,14 @@ export default function Register() {
         password,
         phone: telephoneForApi(phone),
         owner_name: ownerDisplayName.trim() || null,
+        recaptcha_token: recaptchaToken,
       })
       applyAuthResponse({ token: data.token, user: data.user })
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err))
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     } finally {
       setSubmitting(false)
     }
@@ -284,13 +294,21 @@ export default function Register() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
-          >
-            {submitting ? 'Création en cours…' : 'Créer mon entreprise'}
-          </button>
+          <div className="flex flex-col items-center gap-4 pt-2">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
+              onChange={(token) => setRecaptchaToken(token)}
+              onExpired={() => setRecaptchaToken(null)}
+            />
+            <button
+              type="submit"
+              disabled={submitting || !recaptchaToken}
+              className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
+            >
+              {submitting ? 'Création en cours…' : 'Créer mon entreprise'}
+            </button>
+          </div>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">

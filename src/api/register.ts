@@ -11,6 +11,7 @@ export interface RegisterOrganizationPayload {
   phone?: string | null
   /** If empty, organization name is used for account name. */
   owner_name?: string | null
+  recaptcha_token: string
 }
 
 export async function registerOrganization(
@@ -27,6 +28,7 @@ export async function registerOrganization(
       password: payload.password,
       phone: payload.phone?.trim() || null,
       owner_name: payload.owner_name?.trim() || null,
+      recaptcha_token: payload.recaptcha_token,
     }
   )
   return data
@@ -41,6 +43,7 @@ export interface OrganizationRegistrationRequestPayload {
   phone?: string | null
   legal_name?: string | null
   owner_name?: string | null
+  recaptcha_token: string
 }
 
 export type OrganizationRegistrationRequestRow = {
@@ -76,6 +79,7 @@ export async function submitOrganizationRegistrationRequest(
         phone: payload.phone?.trim() || null,
         legal_name: payload.legal_name?.trim() || null,
         owner_name: payload.owner_name?.trim() || null,
+        recaptcha_token: payload.recaptcha_token,
       }
     )
   return data

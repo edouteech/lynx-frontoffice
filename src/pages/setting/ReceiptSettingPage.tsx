@@ -5,6 +5,7 @@ import { fetchReceiptSetting, updateReceiptSetting } from '../../api/receiptSett
 import type { Store } from '../../types/api'
 import type { ReceiptSetting } from '../../types/receiptSetting'
 import { resolveBackendUrl } from '../../lib/url'
+import Swal from 'sweetalert2'
 
 function Card({
   title,
@@ -168,8 +169,33 @@ export default function ReceiptSettingPage() {
 
   async function save() {
     if (!storeId) return
+
+    const result = await Swal.fire({
+      title: 'Enregistrer les modifications ?',
+      text: 'Voulez-vous enregistrer les paramètres de reçu pour ce magasin ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, enregistrer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#3B82F6',
+      cancelButtonColor: '#EF4444',
+      reverseButtons: true,
+    })
+
+    if (!result.isConfirmed) return
+
     setSaving(true)
     setError(null)
+
+    Swal.fire({
+      title: 'Enregistrement en cours...',
+      text: 'Veuillez patienter pendant la mise à jour.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
       const updated = await updateReceiptSetting(storeId, {
         header_text: headerText,
@@ -180,8 +206,23 @@ export default function ReceiptSettingPage() {
       setData(updated)
       setSentLogoFile(null)
       setPrintedLogoFile(null)
+      Swal.fire({
+        title: 'Enregistré !',
+        text: 'Les paramètres de reçu ont été mis à jour avec succès.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      })
     } catch {
       setError("Impossible d’enregistrer les paramètres reçus.")
+      Swal.fire({
+        title: 'Erreur',
+        text: "Impossible d’enregistrer les paramètres de reçu.",
+        icon: 'error',
+        confirmButtonColor: '#3B82F6',
+      })
     } finally {
       setSaving(false)
     }
