@@ -471,8 +471,8 @@ export interface InventoryItem {
   expected_quantity: number
   actual_quantity: number | null
   difference: number | null
-  purchase_price: number | null
-  selling_price: number | null
+  unit_price: number | null
+  price_difference: number | null
 }
 
 export interface Inventory {

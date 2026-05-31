@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Eye, Loader2, Lock, LockOpen, Pencil, Plus, Trash2, Wallet,
+  Eye, Loader2, Lock, LockOpen, Pencil, Plus, Power, PowerOff, Wallet,
 } from 'lucide-react'
-import { deleteCashRegister, fetchCashRegisters } from '../../api/cashRegisters'
+import { fetchCashRegisters, toggleCashRegisterStatus } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { CashRegister, CashRegisterSession } from '../../types/api'
@@ -30,7 +30,7 @@ function RegisterCard({
   register,
   openSession,
   onEdit,
-  onDelete,
+  onToggleStatus,
   onOpenSession,
   onCloseSession,
   onView,
@@ -38,7 +38,7 @@ function RegisterCard({
   register: CashRegister
   openSession: CashRegisterSession | null
   onEdit: () => void
-  onDelete: () => void
+  onToggleStatus: () => void
   onOpenSession: () => void
   onCloseSession: (s: CashRegisterSession) => void
   onView: () => void
@@ -133,11 +133,15 @@ function RegisterCard({
         </div>
         <button
           type="button"
-          onClick={onDelete}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+          onClick={onToggleStatus}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+            ${isActive
+              ? 'text-amber-600 hover:bg-amber-50'
+              : 'text-emerald-600 hover:bg-emerald-50'}`}
         >
-          <Trash2 className="h-3.5 w-3.5" />
-          Supprimer
+          {isActive
+            ? <><PowerOff className="h-3.5 w-3.5" />Désactiver</>
+            : <><Power className="h-3.5 w-3.5" />Activer</>}
         </button>
       </div>
     </div>
@@ -182,11 +186,12 @@ export default function CashRegistersIndex() {
 
   useEffect(() => { void load() }, [load])
 
-  async function handleDelete(r: CashRegister) {
-    if (!window.confirm(`Supprimer la caisse « ${r.name} » ?`)) return
+  async function handleToggleStatus(r: CashRegister) {
+    const action = r.status === 'active' ? 'désactiver' : 'activer'
+    if (!window.confirm(`Voulez-vous ${action} la caisse « ${r.name} » ?`)) return
     try {
-      await deleteCashRegister(r.id)
-      setRegisters(prev => prev.filter(x => x.id !== r.id))
+      const updated = await toggleCashRegisterStatus(r.id, r.status)
+      setRegisters(prev => prev.map(x => x.id === updated.id ? updated : x))
     } catch (e) {
       setError(getApiErrorMessage(e))
     }
@@ -256,7 +261,7 @@ export default function CashRegistersIndex() {
               openSession={openSessions[register.id] ?? null}
               onView={() => navigate(`/cash-registers/${register.id}`)}
               onEdit={() => setEditModal(register)}
-              onDelete={() => void handleDelete(register)}
+              onToggleStatus={() => void handleToggleStatus(register)}
               onOpenSession={() => setOpenSessionFor(register)}
               onCloseSession={session => setCloseSessionFor({ register, session })}
             />

@@ -350,9 +350,9 @@ export default function InventoryShowPage() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté attendue</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Qté réelle</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Coût unitaire</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prix unitaire</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Différence</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Diff. coût</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Diff. de prix</th>
                     <th className="w-8 px-3 py-3" />
                   </tr>
                 </thead>
@@ -364,8 +364,8 @@ export default function InventoryShowPage() {
                       ? Math.round((parsedActual - item.expected_quantity) * 1000) / 1000
                       : item.difference
 
-                    const diffCost = liveDiff != null && item.selling_price != null
-                      ? liveDiff * item.selling_price
+                    const diffCost = liveDiff != null && item.unit_price != null
+                      ? liveDiff * item.unit_price
                       : null
 
                     return (
@@ -422,10 +422,10 @@ export default function InventoryShowPage() {
                           )}
                         </td>
 
-                        {/* Coût unitaire */}
+                        {/* Prix unitaire */}
                         <td className="px-4 py-3 text-right tabular-nums text-gray-700">
-                          {item.purchase_price != null
-                            ? <>{item.purchase_price.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs text-gray-400">CFA</span></>
+                          {item.unit_price != null
+                            ? <>{item.unit_price.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs text-gray-400">CFA</span></>
                             : <span className="text-gray-300">—</span>}
                         </td>
 
@@ -434,7 +434,7 @@ export default function InventoryShowPage() {
                           <DiffCell diff={liveDiff} />
                         </td>
 
-                        {/* Diff. coût */}
+                        {/* Diff. de prix */}
                         <td className="px-4 py-3 text-right tabular-nums">
                           {diffCost == null ? (
                             <span className="text-gray-300">—</span>
@@ -459,7 +459,7 @@ export default function InventoryShowPage() {
                 <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                   <tr>
                     <td className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Total diff. coût
+                      Total diff. de prix
                     </td>
                     <td colSpan={4} />
                     <td className="px-4 py-3 text-right tabular-nums">
@@ -470,8 +470,8 @@ export default function InventoryShowPage() {
                           const diff = parsed !== null
                             ? parsed - item.expected_quantity
                             : item.difference
-                          if (diff == null || item.selling_price == null) return sum
-                          return sum + diff * item.selling_price
+                          if (diff == null || item.unit_price == null) return sum
+                          return sum + diff * item.unit_price
                         }, 0)
                         if (total === 0) return <span className="font-bold text-gray-500">0 <span className="text-xs font-normal text-gray-400">CFA</span></span>
                         return (

@@ -52,3 +52,11 @@ export async function deleteCashRegister(id: number | string): Promise<void> {
   await api.delete(`/cash-registers/${id}`)
 }
 
+export async function toggleCashRegisterStatus(
+  id: number | string,
+  currentStatus: string
+): Promise<CashRegister> {
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+  return updateCashRegister(id, { status: newStatus })
+}
+

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronDown, ChevronUp, Loader2,
-  Lock, LockOpen, Pencil, Plus, Trash2,
+  Lock, LockOpen, Pencil, Plus, Power, PowerOff,
 } from 'lucide-react'
-import { deleteCashRegister, fetchCashRegister } from '../../api/cashRegisters'
+import { fetchCashRegister, toggleCashRegisterStatus } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { fetchStore } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -139,14 +139,13 @@ function SessionRow({
 
 export default function CashRegisterShow() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
 
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null)
   const [sessions, setSessions] = useState<CashRegisterSession[]>([])
   const [loading, setLoading] = useState(true)
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [openModalVisible, setOpenModalVisible] = useState(false)
   const [closeModalSession, setCloseModalSession] = useState<CashRegisterSession | null>(null)
@@ -187,18 +186,19 @@ export default function CashRegisterShow() {
   useEffect(() => { void load() }, [load])
   useEffect(() => { void loadSessions() }, [loadSessions])
 
-  async function handleDelete() {
+  async function handleToggleStatus() {
     if (!cashRegister) return
-    if (!window.confirm(`Supprimer la caisse « ${cashRegister.name} » ?`)) return
-    setDeleting(true)
+    const action = cashRegister.status === 'active' ? 'désactiver' : 'activer'
+    if (!window.confirm(`Voulez-vous ${action} la caisse « ${cashRegister.name} » ?`)) return
+    setToggling(true)
     setError(null)
     try {
-      await deleteCashRegister(cashRegister.id)
-      navigate('/cash-registers', { replace: true })
+      const updated = await toggleCashRegisterStatus(cashRegister.id, cashRegister.status)
+      setCashRegister(updated)
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
-      setDeleting(false)
+      setToggling(false)
     }
   }
 
@@ -242,10 +242,18 @@ export default function CashRegisterShow() {
               <Pencil className="h-4 w-4" />
               Modifier
             </button>
-            <button type="button" disabled={deleting} onClick={() => void handleDelete()}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">
-              <Trash2 className="h-4 w-4" />
-              {deleting ? 'Suppression…' : 'Supprimer'}
+            <button
+              type="button"
+              disabled={toggling}
+              onClick={() => void handleToggleStatus()}
+              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors
+                ${cashRegister.status === 'active'
+                  ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+            >
+              {cashRegister.status === 'active'
+                ? <><PowerOff className="h-4 w-4" />{toggling ? 'Désactivation…' : 'Désactiver'}</>
+                : <><Power className="h-4 w-4" />{toggling ? 'Activation…' : 'Activer'}</>}
             </button>
           </div>
         </div>
