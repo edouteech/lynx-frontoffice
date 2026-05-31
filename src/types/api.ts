@@ -120,6 +120,7 @@ export interface PurchaseOrderItem {
 }
 
 export type PurchaseOrderStatus =
+  | 'draft'
   | 'submitted'
   | 'confirmed'
   | 'validated'

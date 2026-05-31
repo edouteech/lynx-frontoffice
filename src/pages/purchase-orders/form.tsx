@@ -7,7 +7,7 @@ import {
 import {
   fetchPurchaseOrder, createPurchaseOrder, updatePurchaseOrder,
   addPurchaseOrderItem, updatePurchaseOrderItem, removePurchaseOrderItem,
-  fetchPurchasingCenters,
+  fetchPurchasingCenters, submitPurchaseOrder,
 } from '../../api/purchaseOrders'
 import { fetchSuppliers } from '../../api/suppliers'
 import { fetchStores } from '../../api/stores'
@@ -42,6 +42,7 @@ function Inp(props: React.InputHTMLAttributes<HTMLInputElement>) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  draft:              { label: 'Brouillon',             className: 'bg-gray-100 text-gray-600' },
   submitted:          { label: 'Soumise',               className: 'bg-purple-100 text-purple-700' },
   confirmed:          { label: 'Confirmée (centrale)',   className: 'bg-indigo-100 text-indigo-700' },
   validated:          { label: 'Validée',               className: 'bg-blue-100 text-blue-700' },
@@ -123,7 +124,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   const canEdit = !isEdit
     ? true
     : orderIsCentral
-      ? status === 'submitted' || status === 'confirmed'
+      ? status === 'draft' || status === 'submitted' || status === 'confirmed'
       : status !== 'completed'
 
   // ── Load meta ───────────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   }
 
   // ── Main save ────────────────────────────────────────────────────────────────
-  async function handleSave() {
+  async function handleSave(action: 'draft' | 'submit' = 'submit') {
     if (orderIsCentral && !purchasingCenterId) {
       setError('Veuillez sélectionner une centrale d\'achat.')
       return
@@ -333,6 +334,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
           note: note.trim() || null,
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees: parseFloat(extraFees) || 0,
+          action: orderIsCentral ? action : undefined,
           items: itemsPayload,
         })
         navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${order.id}`, { replace: true })
@@ -418,7 +420,28 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                 Réceptionner
               </button>
             )}
-            {canEdit && (
+            {canEdit && !isEdit && orderIsCentral ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void handleSave('draft')}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Créer (brouillon)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSave('submit')}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Soumettre
+                </button>
+              </>
+            ) : canEdit && (
               <button
                 type="button"
                 onClick={() => void handleSave()}

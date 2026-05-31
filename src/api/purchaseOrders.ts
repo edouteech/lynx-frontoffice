@@ -30,6 +30,7 @@ export interface CreatePurchaseOrderPayload {
   note?: string | null
   discount_percentage?: number
   extra_fees?: number
+  action?: 'draft' | 'submit'
   items?: { product_id: number; quantity: number; unit_cost: number }[]
 }
 
@@ -79,6 +80,11 @@ export async function receivePurchaseOrder(
   items: { item_id: number; quantity_received: number }[]
 ): Promise<PurchaseOrder> {
   const { data } = await api.post<PurchaseOrder>(`/purchase-orders/${id}/receive`, { items })
+  return data
+}
+
+export async function submitPurchaseOrder(id: number | string): Promise<PurchaseOrder> {
+  const { data } = await api.post<PurchaseOrder>(`/purchase-orders/${id}/submit`)
   return data
 }
 
