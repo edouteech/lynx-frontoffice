@@ -6,7 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import RequirePermission from './components/RequirePermission'
 import Layout from './components/Layout'
 import { useAuth } from './contexts/useAuth'
-import { hasPermissionCode } from './lib/permissions'
+import { hasPermissionCode, getDefaultLandingPage } from './lib/permissions'
 import { subscribeToSuspension } from './api/subscriptionEvents'
 
 import SuspendedPage from './pages/SuspendedPage'
@@ -77,6 +77,7 @@ import TrashCashRegisters from './pages/trash/cash-registers'
 import TrashPaymentMethods from './pages/trash/payment-methods'
 import TrashCustomers from './pages/trash/customers'
 import TrashVatRates from './pages/trash/vat-rates'
+import AccueilPage from './pages/accueil'
 
 function withLayout(page: ReactElement) {
   return <Layout>{page}</Layout>
@@ -107,6 +108,19 @@ function SuspensionListener() {
   return null
 }
 
+function RequireAnyPermission({ codes, children }) {
+  const { user, activeOrganizationId } = useAuth()
+  const hasAny = codes.some(code =>
+    hasPermissionCode(user, activeOrganizationId, code)
+  )
+  return hasAny ? children : null
+}
+
+function SmartRedirect() {
+  const { user, activeOrganizationId } = useAuth()
+  return <Navigate to={getDefaultLandingPage(user, activeOrganizationId)} replace />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -122,7 +136,7 @@ export default function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Navigate to="/dashboard" replace />
+              <SmartRedirect />
             </ProtectedRoute>
           }
         />
@@ -130,10 +144,20 @@ export default function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              {withLayout(<DashboardWrapper />)}
+              <RequirePermission code="admin_panel.dashboard.view">
+                {withLayout(<DashboardWrapper />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/accueil"
+          element={
+            <ProtectedRoute>
+              {withLayout(<AccueilPage />)}
+            </ProtectedRoute>
+          }
+        />  
         <Route
           path="/userprofile"
           element={
@@ -154,7 +178,9 @@ export default function App() {
           path="/stores"
           element={
             <ProtectedRoute>
-              {withLayout(<StoresIndex />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<StoresIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -162,7 +188,9 @@ export default function App() {
           path="/stores/:id"
           element={
             <ProtectedRoute>
-              {withLayout(<StoreShow />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<StoreShow />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -404,7 +432,9 @@ export default function App() {
           path="/rapports/ventes"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesRecapPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesRecapPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -412,7 +442,9 @@ export default function App() {
           path="/rapports/ventes-par-articles"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByItemsPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesByItemsPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -420,7 +452,9 @@ export default function App() {
           path="/rapports/ventes-par-employe"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByEmployeePage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesByEmployeePage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -428,7 +462,9 @@ export default function App() {
           path="/rapports/ventes-par-categorie"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByCategoryPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesByCategoryPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -436,7 +472,9 @@ export default function App() {
           path="/rapports/ventes-par-moyen-de-paiement"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByPaymentMethodPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesByPaymentMethodPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -444,7 +482,9 @@ export default function App() {
           path="/rapports/ventes-par-taxe"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByTaxPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesByTaxPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -452,7 +492,9 @@ export default function App() {
           path="/rapports/factures-des-ventes"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesInvoicesPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<SalesInvoicesPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -460,7 +502,9 @@ export default function App() {
           path="/rapports/rachats-d-article"
           element={
             <ProtectedRoute>
-              {withLayout(<ItemBuybacksPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<ItemBuybacksPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -468,7 +512,9 @@ export default function App() {
           path="/rapports/periode-de-travail"
           element={
             <ProtectedRoute>
-              {withLayout(<WorkPeriodsPage />)}
+              <RequirePermission code="admin_panel.reports.view">
+                {withLayout(<WorkPeriodsPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -476,7 +522,9 @@ export default function App() {
           path="/rapports/synthese-globale"
           element={
             <ProtectedRoute>
-              {withLayout(<SalesByStorePage />)}
+              <RequirePermission code="admin_panel.dashboard.view">
+                {withLayout(<SalesByStorePage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -484,7 +532,9 @@ export default function App() {
           path="/rapports/resume-detaille"
           element={
             <ProtectedRoute>
-              {withLayout(<DetailedSummaryPage />)}
+              <RequirePermission code="admin_panel.dashboard.view">
+                {withLayout(<DetailedSummaryPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -536,7 +586,9 @@ export default function App() {
           path="/customers"
           element={
             <ProtectedRoute>
-              {withLayout(<CustomersIndex />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<CustomersIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -544,7 +596,9 @@ export default function App() {
           path="/customers/:id"
           element={
             <ProtectedRoute>
-              {withLayout(<CustomerShowPage />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<CustomerShowPage />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -552,7 +606,9 @@ export default function App() {
           path="/favorites"
           element={
             <ProtectedRoute>
-              {withLayout(<FavoritesIndex />)}
+              <RequirePermission code="admin_panel.items.manage">
+                {withLayout(<FavoritesIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -560,7 +616,9 @@ export default function App() {
           path="/cash-registers"
           element={
             <ProtectedRoute>
-              {withLayout(<CashRegistersIndex />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<CashRegistersIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -568,7 +626,9 @@ export default function App() {
           path="/cash-registers/:id"
           element={
             <ProtectedRoute>
-              {withLayout(<CashRegisterShow />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<CashRegisterShow />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -576,7 +636,9 @@ export default function App() {
           path="/vat-rates"
           element={
             <ProtectedRoute>
-              {withLayout(<VatRatesIndex />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<VatRatesIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -584,9 +646,11 @@ export default function App() {
           path="/payment-method-categories"
           element={
             <ProtectedRoute>
-              {withLayout(
-                <PlaceholderPage title="Payment method categories" />
-              )}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(
+                  <PlaceholderPage title="Payment method categories" />
+                )}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -594,7 +658,9 @@ export default function App() {
           path="/payment-methods"
           element={
             <ProtectedRoute>
-              {withLayout(<PaymentMethodsIndex />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<PaymentMethodsIndex />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -602,7 +668,9 @@ export default function App() {
           path="/payment-methods/:id"
           element={
             <ProtectedRoute>
-              {withLayout(<PaymentMethodShow />)}
+              <RequirePermission code="admin_panel.stores.manage">
+                {withLayout(<PaymentMethodShow />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -610,7 +678,9 @@ export default function App() {
           path="/trash/stores"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashStores />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashStores />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -618,7 +688,9 @@ export default function App() {
           path="/trash/items"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashItems />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashItems />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -626,7 +698,9 @@ export default function App() {
           path="/trash/item-categories"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashItemCategories />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashItemCategories />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -634,7 +708,9 @@ export default function App() {
           path="/trash/cash-registers"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashCashRegisters />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashCashRegisters />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -642,7 +718,9 @@ export default function App() {
           path="/trash/payment-methods"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashPaymentMethods />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashPaymentMethods />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -650,7 +728,9 @@ export default function App() {
           path="/trash/customers"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashCustomers />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashCustomers />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -658,7 +738,9 @@ export default function App() {
           path="/trash/vat-rates"
           element={
             <ProtectedRoute>
-              {withLayout(<TrashVatRates />)}
+              <RequirePermission code="admin_panel.trash.access">
+                {withLayout(<TrashVatRates />)}
+              </RequirePermission>
             </ProtectedRoute>
           }
         />
@@ -674,7 +756,7 @@ export default function App() {
           path="/settings/general"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.settings.manage">
+              <RequirePermission code="admin_panel.settings.general">
                 {withLayout(<GeneralSettingPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -684,7 +766,7 @@ export default function App() {
           path="/settings/receipts"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.settings.manage">
+              <RequirePermission code="admin_panel.settings.receipt">
                 {withLayout(<ReceiptSettingPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -694,7 +776,7 @@ export default function App() {
           path="/settings/subscription"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.settings.manage">
+              <RequirePermission code="admin_panel.settings.licenses">
                 {withLayout(<SubscriptionPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -704,7 +786,7 @@ export default function App() {
           path="/settings/restaurant-options"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.settings.manage">
+              <RequirePermission code="admin_panel.settings.restoration">
                 {withLayout(<RestaurantOptionPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -714,7 +796,7 @@ export default function App() {
           path="/settings/kitchen-printers"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.settings.manage">
+              <RequirePermission code="admin_panel.settings.kitchen_printer">
                 {withLayout(<KitchenPrinterPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -724,7 +806,7 @@ export default function App() {
           path="/roles"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.employees.manage">
+              <RequirePermission code="admin_panel.employees.profile.edit">
                 {withLayout(<RolesIndex />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -742,9 +824,12 @@ export default function App() {
           path="/users"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.employees.manage">
+              <RequireAnyPermission codes={[
+                'admin_panel.employees.manage',
+                'admin_panel.employees.profile.edit'
+              ]}>
                 {withLayout(<UsersIndex />)}
-              </RequirePermission>
+              </RequireAnyPermission>
             </ProtectedRoute>
           }
         />
@@ -752,9 +837,12 @@ export default function App() {
           path="/users/:id"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.employees.manage">
+              <RequireAnyPermission codes={[
+                'admin_panel.employees.manage',
+                'admin_panel.employees.profile.edit'
+              ]}>
                 {withLayout(<UserShow />)}
-              </RequirePermission>
+              </RequireAnyPermission>
             </ProtectedRoute>
           }
         />

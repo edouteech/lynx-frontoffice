@@ -319,6 +319,12 @@ export default function GeneralSettingPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <div className="self-start rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-4">
@@ -591,15 +597,16 @@ export default function GeneralSettingPage() {
               type="button"
               disabled={savingOrganization}
               onClick={async () => {
-                if (!isValidTaxId(organizationDraft.tax_id)) {
+                if (organizationDraft.tax_id && !isValidTaxId(organizationDraft.tax_id)) {
                   Swal.fire({
                     title: 'IFU invalide',
-                    text: 'L’IFU est obligatoire et doit contenir exactement 13 chiffres.',
+                    text: 'L’IFU doit contenir exactement 13 chiffres.',
                     icon: 'warning',
                     confirmButtonColor: '#3B82F6',
                   })
                   return
                 }
+
 
                 const result = await Swal.fire({
                   title: 'Modifier les informations ?',
@@ -695,12 +702,6 @@ export default function GeneralSettingPage() {
             Activez ou désactivez les modules disponibles.
           </p>
         </div>
-
-        {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
 
         {loading || !data ? (
           <div className="rounded-xl border border-gray-100 bg-[#EFF6FF] px-4 py-6 text-sm text-gray-600">
