@@ -10,6 +10,7 @@ import {
 import { getApiErrorMessage } from '../../lib/apiError'
 import { useAuth } from '../../contexts/useAuth'
 import type { VatRate } from '../../types/api'
+import Swal from 'sweetalert2'
 
 function normalizeRateForInput(value: unknown): string {
   const raw = String(value ?? '').trim()
@@ -61,17 +62,6 @@ export default function VatRatesIndex() {
   const [rate, setRate] = useState('')
   const [editing, setEditing] = useState<VatRate | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const refreshList = useCallback(async () => {
-    setError(null)
-    const res = await fetchVatRates(page)
-    setPaginated({
-      data: res.data,
-      current_page: res.current_page,
-      last_page: res.last_page,
-      total: res.total,
-    })
-  }, [page])
 
   useEffect(() => {
     let cancelled = false
@@ -125,6 +115,14 @@ export default function VatRatesIndex() {
       rate: rate.trim(),
     }
 
+    Swal.fire({
+      title: editing ? 'Modification...' : 'Création...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
     try {
       if (editing) {
         await updateVatRate(editing.id, payload)
@@ -135,10 +133,32 @@ export default function VatRatesIndex() {
           organization_id: organizationId,
         })
       }
+      const actionText = editing ? 'modifiée' : 'créée'
       resetForm()
-      await refreshList()
+      const res = await fetchVatRates(page)
+      setPaginated({
+        data: res.data,
+        current_page: res.current_page,
+        last_page: res.last_page,
+        total: res.total,
+      })
+      Swal.fire({
+        title: editing ? 'Modifiée !' : 'Créée !',
+        text: `La TVA "${payload.name}" a été ${actionText} avec succès.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      })
     } catch (err) {
       setError(getApiErrorMessage(err))
+      Swal.fire({
+        title: 'Erreur',
+        text: getApiErrorMessage(err),
+        icon: 'error',
+        confirmButtonColor: '#3B82F6',
+      })
     } finally {
       setSaving(false)
     }
@@ -154,17 +174,60 @@ export default function VatRatesIndex() {
 
   const handleDelete = useCallback(
     async (t: VatRate) => {
-      if (!window.confirm(`Supprimer la TVA « ${t.name} » ?`)) return
+      const result = await Swal.fire({
+        title: 'Supprimer la TVA ?',
+        text: `Voulez-vous vraiment supprimer la TVA "${t.name}" ? Cette action est irréversible.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+      })
+
+      if (!result.isConfirmed) return
+
       setError(null)
+
+      Swal.fire({
+        title: 'Suppression...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading()
+        },
+      })
+
       try {
         await deleteVatRate(t.id)
         if (editing?.id === t.id) resetForm()
-        await refreshList()
+        const res = await fetchVatRates(page)
+        setPaginated({
+          data: res.data,
+          current_page: res.current_page,
+          last_page: res.last_page,
+          total: res.total,
+        })
+        Swal.fire({
+          title: 'Supprimée !',
+          text: `La TVA "${t.name}" a été supprimée avec succès.`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        })
       } catch (err) {
         setError(getApiErrorMessage(err))
+        Swal.fire({
+          title: 'Erreur',
+          text: "Impossible de supprimer cette TVA.",
+          icon: 'error',
+          confirmButtonColor: '#3B82F6',
+        })
       }
     },
-    [editing?.id, refreshList]
+    [page, editing?.id]
   )
 
   const columns: Column<VatRate>[] = useMemo(
