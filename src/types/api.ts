@@ -400,6 +400,8 @@ export interface CashRegisterSession {
   opened_at: string
   closed_at: string | null
   status: 'open' | 'closed'
+  invoice_count: number
+  last_sale_id: number | null
   sales_total?: number
   expected_closing_balance?: number
   difference?: number | null
@@ -417,6 +419,7 @@ export interface Sale {
   customer_id: number | null
   sale_date: string | null
   note: string | null
+  order_type: string | null
   status: 'draft' | 'confirmed' | 'cancelled'
   discount_percentage: number
   extra_fees: number

@@ -98,6 +98,18 @@ function SessionRow({
               </p>
             </div>
             <div>
+              <p className="text-xs text-gray-500">Nb. de factures</p>
+              <p className="mt-0.5 font-semibold text-gray-900">{session.invoice_count}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Dernière facture</p>
+              <p className="mt-0.5 font-semibold text-gray-900">
+                {session.last_sale_id != null
+                  ? <Link to={`/sales/${session.last_sale_id}/edit`} className="text-blue-600 hover:underline">#{String(session.last_sale_id).padStart(4, '0')}</Link>
+                  : <span className="text-gray-400">—</span>}
+              </p>
+            </div>
+            <div>
               <p className="text-xs text-gray-500">Solde attendu</p>
               <p className="mt-0.5 font-semibold text-gray-900">
                 {session.expected_closing_balance != null ? fmtMoney(session.expected_closing_balance) : '—'}

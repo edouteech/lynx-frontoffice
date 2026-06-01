@@ -33,6 +33,7 @@ export interface CreateSalePayload {
   payment_method_id?: number | null
   sale_date?: string | null
   note?: string | null
+  order_type?: string | null
   discount_percentage?: number
   extra_fees?: number
   items?: { product_id: number; quantity: number; unit_price: number }[]

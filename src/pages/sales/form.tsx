@@ -90,6 +90,7 @@ export default function SaleForm() {
     return now.toISOString().slice(0, 16)
   })
   const [note, setNote] = useState('')
+  const [orderType, setOrderType] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
   const [extraFees, setExtraFees] = useState('0')
   const [status, setStatus] = useState<'draft' | 'confirmed' | 'cancelled'>('draft')
@@ -150,6 +151,7 @@ export default function SaleForm() {
         setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
         setSaleDate(s.sale_date ? s.sale_date.slice(0, 16).replace(' ', 'T') : '')
         setNote(s.note ?? '')
+        setOrderType(s.order_type ?? '')
         setDiscountPct(String(s.discount_percentage))
         setExtraFees(String(s.extra_fees))
         setStatus(s.status)
@@ -315,6 +317,7 @@ export default function SaleForm() {
           payment_method_id:    paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:            saleDate || null,
           note:                 note.trim() || null,
+          order_type:           orderType || null,
           discount_percentage:  parseFloat(discountPct) || 0,
           extra_fees:           parseFloat(extraFees) || 0,
           items: pendingItems.map(pi => ({
@@ -332,6 +335,7 @@ export default function SaleForm() {
           payment_method_id:   paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:           saleDate || null,
           note:                note.trim() || null,
+          order_type:          orderType || null,
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees:          parseFloat(extraFees) || 0,
         })
@@ -544,6 +548,34 @@ export default function SaleForm() {
                   disabled={isConfirmed}
                   placeholder="Remarques, conditions…"
                 />
+              </div>
+            </div>
+
+            {/* Type de commande */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Type de commande <span className="text-xs font-normal text-gray-400">(facultatif)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: '',          label: 'Non précisé' },
+                  { value: 'sur_place', label: 'Sur place'   },
+                  { value: 'emporter',  label: 'À emporter'  },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={isConfirmed}
+                    onClick={() => setOrderType(opt.value)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                      orderType === opt.value
+                        ? 'border-[#3B82F6] bg-[#3B82F6] text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
