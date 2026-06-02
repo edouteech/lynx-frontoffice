@@ -32,6 +32,7 @@ export async function createCashRegister(body: {
   reference?: string | null
   store_id: number | string
   status?: string
+  is_available?: boolean
 }): Promise<CashRegister> {
   const { data } = await api.post<CashRegister>('/cash-registers', body)
   return data

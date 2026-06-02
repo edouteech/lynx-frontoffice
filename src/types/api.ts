@@ -223,6 +223,7 @@ export interface CashRegister {
   reference: string | null
   store_id: number
   status: string
+  is_available: boolean
   organization_id: number
   open_session?: CashRegisterSession | null
   store?: Store

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Eye, Loader2, Lock, LockOpen, Pencil, Plus, Power, PowerOff, Wallet,
+  CircleSlash, Eye, Loader2, Lock, LockOpen, Pencil, Plus, Power, PowerOff, Wallet,
 } from 'lucide-react'
-import { fetchCashRegisters, toggleCashRegisterStatus } from '../../api/cashRegisters'
+import {
+  fetchCashRegisters, toggleCashRegisterStatus, updateCashRegister,
+} from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { CashRegister, CashRegisterSession } from '../../types/api'
@@ -31,6 +33,7 @@ function RegisterCard({
   openSession,
   onEdit,
   onToggleStatus,
+  onToggleAvailability,
   onOpenSession,
   onCloseSession,
   onView,
@@ -39,12 +42,14 @@ function RegisterCard({
   openSession: CashRegisterSession | null
   onEdit: () => void
   onToggleStatus: () => void
+  onToggleAvailability: () => void
   onOpenSession: () => void
   onCloseSession: (s: CashRegisterSession) => void
   onView: () => void
 }) {
   const isActive = register.status === 'active'
   const isOpen = openSession !== null
+  const isAvailable = register.is_available
 
   return (
     <div className={`flex flex-col rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md
@@ -64,6 +69,10 @@ function RegisterCard({
                 Session ouverte
               </span>
             )}
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold
+              ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+              {isAvailable ? 'Disponible' : 'Occupée'}
+            </span>
           </div>
           <h3 className="text-base font-bold text-gray-900 truncate">{register.name}</h3>
           <p className="text-xs text-gray-500 mt-0.5">{register.store?.name ?? '—'}</p>
@@ -131,18 +140,31 @@ function RegisterCard({
             Modifier
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onToggleStatus}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
-            ${isActive
-              ? 'text-amber-600 hover:bg-amber-50'
-              : 'text-emerald-600 hover:bg-emerald-50'}`}
-        >
-          {isActive
-            ? <><PowerOff className="h-3.5 w-3.5" />Désactiver</>
-            : <><Power className="h-3.5 w-3.5" />Activer</>}
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={onToggleAvailability}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+              ${isAvailable
+                ? 'text-orange-600 hover:bg-orange-50'
+                : 'text-green-600 hover:bg-green-50'}`}
+          >
+            <CircleSlash className="h-3.5 w-3.5" />
+            {isAvailable ? 'Occuper' : 'Libérer'}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleStatus}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+              ${isActive
+                ? 'text-amber-600 hover:bg-amber-50'
+                : 'text-emerald-600 hover:bg-emerald-50'}`}
+          >
+            {isActive
+              ? <><PowerOff className="h-3.5 w-3.5" />Désactiver</>
+              : <><Power className="h-3.5 w-3.5" />Activer</>}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -191,6 +213,15 @@ export default function CashRegistersIndex() {
     if (!window.confirm(`Voulez-vous ${action} la caisse « ${r.name} » ?`)) return
     try {
       const updated = await toggleCashRegisterStatus(r.id, r.status)
+      setRegisters(prev => prev.map(x => x.id === updated.id ? updated : x))
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
+  async function handleToggleAvailability(r: CashRegister) {
+    try {
+      const updated = await updateCashRegister(r.id, { is_available: !r.is_available })
       setRegisters(prev => prev.map(x => x.id === updated.id ? updated : x))
     } catch (e) {
       setError(getApiErrorMessage(e))
@@ -262,6 +293,7 @@ export default function CashRegistersIndex() {
               onView={() => navigate(`/cash-registers/${register.id}`)}
               onEdit={() => setEditModal(register)}
               onToggleStatus={() => void handleToggleStatus(register)}
+              onToggleAvailability={() => void handleToggleAvailability(register)}
               onOpenSession={() => setOpenSessionFor(register)}
               onCloseSession={session => setCloseSessionFor({ register, session })}
             />
