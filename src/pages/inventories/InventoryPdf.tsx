@@ -92,12 +92,12 @@ const s = StyleSheet.create({
   footerText: { fontSize: 7, color: '#9CA3AF', textAlign: 'center' },
 })
 
-function fmt(n: number, decimals = 3) {
-  return n.toLocaleString('fr-FR', {
-    maximumFractionDigits: decimals,
-    minimumFractionDigits: 0,
-    useGrouping: false,
-  })
+function fmt(n: number, decimals = 3): string {
+  const sign = n < 0 ? '-' : ''
+  const [intPart, decPart] = Math.abs(n).toFixed(decimals).split('.')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const trimmed = decPart ? decPart.replace(/0+$/, '') : ''
+  return sign + grouped + (trimmed ? ',' + trimmed : '')
 }
 function DiffText({ diff }: { diff: number | null }) {
   if (diff === null) return <Text style={s.dimText}>—</Text>

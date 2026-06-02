@@ -9,8 +9,10 @@ import { resolveBackendUrl } from '../../lib/url'
 import type { Sale } from '../../types/api'
 import type { ReceiptSetting } from '../../types/receiptSetting'
 
-function fmtMoney(v: number) {
-  return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' CFA'
+function fmtMoney(v: number): string {
+  const [intPart] = Math.abs(v).toFixed(0).split('.')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  return (v < 0 ? '-' : '') + grouped + ' XOF'
 }
 
 function fmtDate(d: string | null | undefined) {
@@ -65,7 +67,7 @@ export default function InvoicePage() {
   const discount = sale.discount_percentage ? subtotal * (sale.discount_percentage / 100) : 0
   const extraFees = sale.extra_fees ?? 0
   const total = subtotal - discount + extraFees
-  const invoiceNumber = `FAC-${String(sale.id).padStart(6, '0')}`
+  const invoiceNumber = sale.invoice_number ?? `FAC-${String(sale.id).padStart(6, '0')}`
 
   const logoUrl = receiptSetting?.printed_receipt_logo
     ? resolveBackendUrl(receiptSetting.printed_receipt_logo)

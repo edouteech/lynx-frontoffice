@@ -80,8 +80,12 @@ const s = StyleSheet.create({
   footerText: { fontSize: 7, color: '#9CA3AF', textAlign: 'center' },
 })
 
-function fmt(n: number) {
-  return n.toLocaleString('fr-FR', { maximumFractionDigits: 0, useGrouping: true })
+function fmt(n: number, decimals = 0): string {
+  const sign = n < 0 ? '-' : ''
+  const [intPart, decPart] = Math.abs(n).toFixed(decimals).split('.')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const trimmed = decPart ? decPart.replace(/0+$/, '') : ''
+  return sign + grouped + (trimmed ? ',' + trimmed : '')
 }
 
 function fmtDateTime(d: string | null | undefined) {
@@ -98,7 +102,7 @@ interface Props {
 
 export default function SalePdf({ sale, organization }: Props) {
   const items = sale.items ?? []
-  const invoiceNumber = `FAC-${String(sale.id).padStart(6, '0')}`
+  const invoiceNumber = sale.invoice_number ?? `FAC-${String(sale.id).padStart(6, '0')}`
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
   const discountAmount = subtotal * ((sale.discount_percentage ?? 0) / 100)
