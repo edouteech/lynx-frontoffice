@@ -29,6 +29,7 @@ export async function fetchCashRegister(id: number | string): Promise<CashRegist
 
 export async function createCashRegister(body: {
   name: string
+  reference?: string | null
   store_id: number | string
   status?: string
 }): Promise<CashRegister> {
@@ -40,6 +41,7 @@ export async function updateCashRegister(
   id: number | string,
   body: {
     name?: string
+    reference?: string | null
     store_id?: number | string
     status?: string
   }

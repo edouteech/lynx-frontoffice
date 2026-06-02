@@ -220,6 +220,7 @@ export interface KitchenPrinter {
 export interface CashRegister {
   id: number
   name: string
+  reference: string | null
   store_id: number
   status: string
   organization_id: number
@@ -402,6 +403,7 @@ export interface CashRegisterSession {
   status: 'open' | 'closed'
   invoice_count: number
   last_sale_id: number | null
+  last_invoice_number: string | null
   sales_total?: number
   expected_closing_balance?: number
   difference?: number | null
@@ -412,6 +414,7 @@ export interface CashRegisterSession {
 
 export interface Sale {
   id: number
+  invoice_number: string | null
   organization_id: number
   store_id: number
   cash_register_id: number | null

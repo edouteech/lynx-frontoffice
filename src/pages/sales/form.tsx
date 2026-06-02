@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
@@ -126,6 +126,20 @@ export default function SaleForm() {
 
   const isConfirmed = status === 'confirmed'
   const isDraft     = status === 'draft'
+
+  // ── Numéro de facture (généré côté front) ──────────────────────────────────
+  const selectedCashRegister = useMemo(
+    () => cashRegisters.find(r => String(r.id) === cashRegisterId) ?? null,
+    [cashRegisters, cashRegisterId]
+  )
+
+  const nextInvoiceNumber = useMemo(() => {
+    if (!selectedCashRegister) return null
+    const ref     = selectedCashRegister.reference || String(selectedCashRegister.id)
+    const nextSeq = (selectedCashRegister.open_session?.invoice_count ?? 0) + 1
+    const seq     = String(nextSeq).padStart(5, '0')
+    return `${ref}W-${seq}`
+  }, [selectedCashRegister])
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -318,6 +332,7 @@ export default function SaleForm() {
           sale_date:            saleDate || null,
           note:                 note.trim() || null,
           order_type:           orderType || null,
+          invoice_number:       nextInvoiceNumber,
           discount_percentage:  parseFloat(discountPct) || 0,
           extra_fees:           parseFloat(extraFees) || 0,
           items: pendingItems.map(pi => ({
@@ -502,6 +517,22 @@ export default function SaleForm() {
                 </Sel>
               </div>
             </div>
+
+            {/* Numéro de facture prévu */}
+            {nextInvoiceNumber && isDraft && (
+              <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-blue-500" />
+                <span className="text-blue-700">N° de facture prévu :</span>
+                <span className="font-mono font-semibold text-blue-900">{nextInvoiceNumber}</span>
+              </div>
+            )}
+            {currentSale?.invoice_number && isConfirmed && (
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                <span className="text-gray-600">N° de facture :</span>
+                <span className="font-mono font-semibold text-gray-900">{currentSale.invoice_number}</span>
+              </div>
+            )}
 
             {/* Caisse + Moyen de paiement */}
             <div className="grid gap-4 sm:grid-cols-2">

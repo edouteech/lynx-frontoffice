@@ -24,6 +24,7 @@ export function CashRegisterCreateModal({
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [name, setName] = useState('')
+  const [reference, setReference] = useState('')
   const [storeId, setStoreId] = useState<string>('')
   const [status, setStatus] = useState<string>('active')
   const [stores, setStores] = useState<Store[]>([])
@@ -69,11 +70,13 @@ export function CashRegisterCreateModal({
     if (!open) return
     if (!cashRegister) {
       setName('')
+      setReference('')
       setStoreId('')
       setStatus('active')
       return
     }
     setName(cashRegister.name)
+    setReference(cashRegister.reference ?? '')
     setStoreId(String(cashRegister.store_id))
     setStatus(cashRegister.status || 'active')
   }, [open, cashRegister])
@@ -85,6 +88,7 @@ export function CashRegisterCreateModal({
     try {
       const payload = {
         name: name.trim(),
+        reference: reference.trim() || null,
         store_id: storeId.trim(),
         status,
       }
@@ -136,6 +140,26 @@ export function CashRegisterCreateModal({
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
             placeholder="Ex. Caisse principale"
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor="cash-register-reference"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            Référence <span className="text-xs font-normal text-gray-400">(facultatif — utilisée dans le n° de facture)</span>
+          </label>
+          <input
+            id="cash-register-reference"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            maxLength={20}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+            placeholder="Ex. CAISSE1, A, 01…"
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Sans référence, le numéro de caisse ({isEdit ? `#${cashRegister?.id}` : '#ID'}) sera utilisé.
+          </p>
         </div>
 
         <div>

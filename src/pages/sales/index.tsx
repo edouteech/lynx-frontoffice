@@ -40,7 +40,8 @@ export default function SalesIndex() {
   useEffect(() => { void load(page) }, [page, load])
 
   const handleDelete = useCallback(async (s: Sale) => {
-    if (!window.confirm(`Supprimer la vente #${String(s.id).padStart(4, '0')} ?`)) return
+    const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
+    if (!window.confirm(`Supprimer la vente ${label} ?`)) return
     try {
       await deleteSale(s.id)
       void load(page)
@@ -49,9 +50,13 @@ export default function SalesIndex() {
 
   const columns: Column<Sale>[] = useMemo(() => [
     {
-      key: 'id',
+      key: 'invoice_number',
       label: 'N° vente',
-      render: v => <span className="font-mono font-semibold text-gray-700">#{String(v).padStart(4, '0')}</span>,
+      render: (v, row) => (
+        <span className="font-mono font-semibold text-gray-700">
+          {v ?? `#${String(row.id).padStart(4, '0')}`}
+        </span>
+      ),
     },
     {
       key: 'store',

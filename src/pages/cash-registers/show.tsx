@@ -105,7 +105,9 @@ function SessionRow({
               <p className="text-xs text-gray-500">Dernière facture</p>
               <p className="mt-0.5 font-semibold text-gray-900">
                 {session.last_sale_id != null
-                  ? <Link to={`/sales/${session.last_sale_id}/edit`} className="text-blue-600 hover:underline">#{String(session.last_sale_id).padStart(4, '0')}</Link>
+                  ? <Link to={`/sales/${session.last_sale_id}/edit`} className="font-mono text-blue-600 hover:underline">
+                      {session.last_invoice_number ?? `#${String(session.last_sale_id).padStart(4, '0')}`}
+                    </Link>
                   : <span className="text-gray-400">—</span>}
               </p>
             </div>
