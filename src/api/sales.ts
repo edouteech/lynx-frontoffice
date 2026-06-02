@@ -35,6 +35,8 @@ export interface CreateSalePayload {
   note?: string | null
   order_type?: string | null
   invoice_number?: string | null
+  server_id?: number | null
+  server_name?: string | null
   discount_percentage?: number
   extra_fees?: number
   items?: { product_id: number; quantity: number; unit_price: number }[]

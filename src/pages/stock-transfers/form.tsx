@@ -602,7 +602,6 @@ export default function StockTransferForm() {
                           {isDraft ? (
                             <input
                               type="number"
-                              step="0.001"
                               min="0.001"
                               value={isEdit ? (qtyEdits[item.id] ?? String(item.quantity)) : (pendingQtyEdits[item.id] ?? String(item.quantity))}
                               onChange={e => {

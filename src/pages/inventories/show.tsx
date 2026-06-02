@@ -405,7 +405,6 @@ export default function InventoryShowPage() {
                           {isDraft ? (
                             <input
                               type="number"
-                              step="0.001"
                               min="0"
                               value={rawVal}
                               onChange={e => handleQtyChange(item.id, e.target.value)}

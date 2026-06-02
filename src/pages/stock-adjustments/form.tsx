@@ -601,7 +601,6 @@ export default function StockAdjustmentForm() {
                           {isDraft ? (
                             <input
                               type="number"
-                              step="0.001"
                               min="0.001"
                               value={
                                 isEdit

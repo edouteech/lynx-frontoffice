@@ -415,6 +415,8 @@ export interface CashRegisterSession {
 export interface Sale {
   id: number
   invoice_number: string | null
+  server_id: number | null
+  server_name: string | null
   organization_id: number
   store_id: number
   cash_register_id: number | null
