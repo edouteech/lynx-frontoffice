@@ -564,11 +564,11 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                 </div>
                 <div className="w-28">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
-                  <Inp type="number" step="0.001" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
+                  <Inp type="number" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
                 </div>
                 <div className="w-36">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Coût unitaire (CFA)</label>
-                  <Inp type="number" step="0.01" min="0" value={addCost} onChange={e => setAddCost(e.target.value)} placeholder="0.00" />
+                  <Inp type="number" min="0" value={addCost} onChange={e => setAddCost(e.target.value)} placeholder="0.00" />
                 </div>
                 <button
                   type="button"
@@ -667,7 +667,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
                             <input
-                              type="number" step="0.001" min="0.001"
+                              type="number" min="0.001"
                               value={currentQty}
                               onChange={e => {
                                 if (isEdit) {
@@ -706,7 +706,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                           {canEdit ? (
                             <div className="flex items-center justify-end gap-1">
                               <input
-                                type="number" step="0.01" min="0"
+                                type="number" min="0"
                                 value={currentCost}
                                 onChange={e => {
                                   if (isEdit) {
@@ -750,12 +750,12 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
               <div className="flex flex-wrap gap-4">
                 <div className="w-52">
                   <label className="mb-1 block text-xs font-medium text-gray-600">Réduction (%)</label>
-                  <Inp type="number" step="0.01" min="0" max="100" value={discountPct}
+                  <Inp type="number" min="0" max="100" value={discountPct}
                     onChange={e => setDiscountPct(e.target.value)} disabled={!canEdit} placeholder="0" />
                 </div>
                 <div className="w-52">
                   <label className="mb-1 block text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
-                  <Inp type="number" step="0.01" min="0" value={extraFees}
+                  <Inp type="number" min="0" value={extraFees}
                     onChange={e => setExtraFees(e.target.value)} disabled={!canEdit} placeholder="0" />
                 </div>
               </div>

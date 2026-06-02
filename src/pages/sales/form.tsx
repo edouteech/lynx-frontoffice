@@ -11,7 +11,6 @@ import {
 } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
 import { fetchCashRegisters } from '../../api/cashRegisters'
-import { fetchUsers } from '../../api/users'
 import { fetchProducts } from '../../api/products'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchCustomers } from '../../api/customer'
@@ -19,7 +18,7 @@ import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { useAuth } from '../../contexts/useAuth'
 import SalePdf from './SalePdf'
-import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, Sale, SaleItem, Store, User } from '../../types/api'
+import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, Sale, SaleItem, Store } from '../../types/api'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -77,15 +76,12 @@ export default function SaleForm() {
   const [categories, setCategories] = useState<ItemCategory[]>([])
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
   const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingSale, setLoadingSale] = useState(isEdit)
 
   // header
   const [storeId, setStoreId] = useState('')
   const [customerId, setCustomerId] = useState('')
-  const [serverId, setServerId] = useState('')
-  const [serverName, setServerName] = useState('')
   const [cashRegisterId, setCashRegisterId] = useState('')
   const [paymentMethodId, setPaymentMethodId] = useState('')
   const [saleDate, setSaleDate] = useState(() => {
@@ -147,13 +143,12 @@ export default function SaleForm() {
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1), fetchUsers(1)])
-      .then(([strs, prods, cats, custs, usrs]) => {
+    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1)])
+      .then(([strs, prods, cats, custs]) => {
         setStores(strs.data)
         setAllProducts(prods.data)
         setCategories(cats.data)
         setCustomers(custs.data)
-        setUsers(usrs.data)
       })
       .catch(console.error)
       .finally(() => setLoadingMeta(false))
@@ -171,8 +166,6 @@ export default function SaleForm() {
         setSaleDate(s.sale_date ? s.sale_date.slice(0, 16).replace(' ', 'T') : '')
         setNote(s.note ?? '')
         setOrderType(s.order_type ?? '')
-        setServerId(s.server_id ? String(s.server_id) : '')
-        setServerName(s.server_name ?? '')
         setDiscountPct(String(s.discount_percentage))
         setExtraFees(String(s.extra_fees))
         setStatus(s.status)
@@ -340,8 +333,6 @@ export default function SaleForm() {
           note:                 note.trim() || null,
           order_type:           orderType || null,
           invoice_number:       nextInvoiceNumber,
-          server_id:            serverId ? Number(serverId) : null,
-          server_name:          serverName.trim() || null,
           discount_percentage:  parseFloat(discountPct) || 0,
           extra_fees:           parseFloat(extraFees) || 0,
           items: pendingItems.map(pi => ({
@@ -360,8 +351,6 @@ export default function SaleForm() {
           sale_date:           saleDate || null,
           note:                note.trim() || null,
           order_type:          orderType || null,
-          server_id:           serverId ? Number(serverId) : null,
-          server_name:         serverName.trim() || null,
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees:          parseFloat(extraFees) || 0,
         })
@@ -526,44 +515,6 @@ export default function SaleForm() {
                   <option value="">— Anonyme —</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </Sel>
-              </div>
-            </div>
-
-            {/* Serveur */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Serveur <span className="text-xs font-normal text-gray-400">(facultatif)</span>
-                </label>
-                <Sel
-                  value={serverId}
-                  onChange={e => {
-                    const uid = e.target.value
-                    setServerId(uid)
-                    if (uid) {
-                      const u = users.find(u => String(u.id) === uid)
-                      if (u) setServerName(u.name)
-                    } else {
-                      setServerName('')
-                    }
-                  }}
-                  disabled={isConfirmed}
-                >
-                  <option value="">— Aucun —</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </Sel>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Nom du serveur <span className="text-xs font-normal text-gray-400">(ou saisie libre)</span>
-                </label>
-                <Inp
-                  type="text"
-                  value={serverName}
-                  onChange={e => setServerName(e.target.value)}
-                  disabled={isConfirmed}
-                  placeholder="Ex. Jean, Marie…"
-                />
               </div>
             </div>
 
@@ -888,7 +839,6 @@ export default function SaleForm() {
                             <div className="flex items-center justify-end gap-1">
                               <input
                                 type="number"
-                                step="0.01"
                                 min="0"
                                 value={currentPrice}
                                 onChange={e => {
@@ -938,7 +888,6 @@ export default function SaleForm() {
                   <label className="mb-1 block text-xs font-medium text-gray-600">Remise globale (%)</label>
                   <Inp
                     type="number"
-                    step="0.01"
                     min="0"
                     max="100"
                     value={discountPct}
@@ -951,7 +900,6 @@ export default function SaleForm() {
                   <label className="mb-1 block text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
                   <Inp
                     type="number"
-                    step="0.01"
                     min="0"
                     value={extraFees}
                     onChange={e => setExtraFees(e.target.value)}
