@@ -142,9 +142,9 @@ export default function SalesInvoicesPage() {
 
   /* KPIs */
   const totals = useMemo(() => sales.reduce((acc, s) => ({
-    total: acc.total + (s.subtotal ?? 0),
+    total: acc.total + (Number(s.subtotal) ?? 0),
     count: acc.count + 1,
-    discount: acc.discount + ((s.subtotal ?? 0) * ((s.discount_percentage ?? 0) / 100)),
+    discount: acc.discount + ((Number(s.subtotal) ?? 0) * ((Number(s.discount_percentage) ?? 0) / 100)),
   }), { total: 0, count: 0, discount: 0 }), [sales])
 
   /* columns */
@@ -197,9 +197,9 @@ export default function SalesInvoicesPage() {
       sortable: true,
       align: 'right',
       render: (v, row) => {
-        const sub = (v as number | undefined) ?? 0
-        const disc = sub * ((row.discount_percentage ?? 0) / 100)
-        const fees = row.extra_fees ?? 0
+        const sub = Number(v as number | undefined) ?? 0
+        const disc = sub * ((Number(row.discount_percentage) ?? 0) / 100)
+        const fees = Number(row.extra_fees) ?? 0
         return <span className="font-bold text-blue-700">{fmtMoney(sub - disc + fees)}</span>
       },
     },

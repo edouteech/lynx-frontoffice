@@ -3,13 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
 import { getApiErrorMessage } from '../../lib/apiError'
 import LoadingScreen from '../../components/LoadingScreen'
+import { getDefaultLandingPage } from '../../lib/permissions'
 
 export default function Login() {
-  const { login, user, bootstrapping } = useAuth()
+  const { login, user, activeOrganizationId, bootstrapping } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from =
-    (location.state as { from?: string } | null)?.from ?? '/dashboard'
+    (location.state as { from?: string } | null)?.from ?? null
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,9 +19,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!bootstrapping && user) {
-      navigate(from, { replace: true })
+      navigate(from ?? getDefaultLandingPage(user, activeOrganizationId), { replace: true })
     }
-  }, [bootstrapping, user, navigate, from])
+  }, [bootstrapping, user, navigate, from, activeOrganizationId])
 
   if (bootstrapping) {
     return <LoadingScreen />
@@ -35,8 +36,9 @@ export default function Login() {
     setError(null)
     setSubmitting(true)
     try {
-      await login(email.trim(), password)
-      navigate(from, { replace: true })
+      const result = await login(email.trim(), password)
+      const dest = from ?? getDefaultLandingPage(result.user, result.activeOrganizationId)
+      navigate(dest, { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err, 'Identifiants incorrects.'))
     } finally {

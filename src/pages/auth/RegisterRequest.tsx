@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
 import { submitOrganizationRegistrationRequest } from '../../api/register'
@@ -8,14 +8,15 @@ import LoadingScreen from '../../components/LoadingScreen'
 import { CountrySelect } from '../../components/CountrySelect'
 import { PhoneInput } from '../../components/PhoneInput'
 import { telephoneForApi } from '../../lib/phoneValue'
-import ReCAPTCHA from 'react-google-recaptcha'
+import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
 /**
- * Inscription « sur demande » : aucun compte tant que Lynx n’a pas approuvé.
+ * Inscription « sur demande » : aucun compte tant que Lynx n'a pas approuvé.
  */
-export default function RegisterRequest() {
+function RegisterRequestForm() {
   const { user, bootstrapping } = useAuth()
   const navigate = useNavigate()
+  const { executeRecaptcha } = useGoogleReCaptcha()
 
   const [organizationName, setOrganizationName] = useState('')
   const [country, setCountry] = useState('')
@@ -27,8 +28,6 @@ export default function RegisterRequest() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   useEffect(() => {
     if (!bootstrapping && user) {
@@ -52,13 +51,10 @@ export default function RegisterRequest() {
       setError('Veuillez sélectionner un pays.')
       return
     }
-    if (!recaptchaToken) {
-      setError('Veuillez cocher la case "Je ne suis pas un robot".')
-      return
-    }
 
     setSubmitting(true)
     try {
+      const recaptchaToken = await executeRecaptcha('register_request')
       const data = await submitOrganizationRegistrationRequest({
         name: organizationName,
         country,
@@ -70,12 +66,10 @@ export default function RegisterRequest() {
       })
       setSuccessMessage(
         data.message ||
-          'Votre demande a bien été enregistrée. Vous recevrez l’accès après validation par notre équipe.',
+          'Votre demande a bien été enregistrée. Vous recevrez l\'accès après validation par notre équipe.',
       )
     } catch (err) {
       setError(getApiErrorMessage(err))
-      recaptchaRef.current?.reset()
-      setRecaptchaToken(null)
     } finally {
       setSubmitting(false)
     }
@@ -275,15 +269,9 @@ export default function RegisterRequest() {
             </div>
 
             <div className="flex flex-col items-center gap-4 pt-2">
-              <ReCAPTCHA
-                ref={recaptchaRef}
-                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
-                onChange={(token) => setRecaptchaToken(token)}
-                onExpired={() => setRecaptchaToken(null)}
-              />
               <button
                 type="submit"
-                disabled={submitting || !recaptchaToken}
+                disabled={submitting}
                 className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
               >
                 {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
@@ -303,5 +291,15 @@ export default function RegisterRequest() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function RegisterRequest() {
+  return (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
+    >
+      <RegisterRequestForm />
+    </GoogleReCaptchaProvider>
   )
 }

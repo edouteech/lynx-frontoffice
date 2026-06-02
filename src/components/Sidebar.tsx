@@ -144,14 +144,14 @@ const navItems: NavItem[] = [
     label: 'Point de vente',
     icon: ShoppingBag,
     children: [
+      { id: 'stores', label: 'Magasins', icon: Store },
       { id: 'cash-registers', label: 'Caisses', icon: Wallet },
       { id: 'sales', label: 'Ventes', icon: ReceiptText },
+      { id: 'vat-rates', label: 'TVA', icon: Percent },
       { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
       { id: 'customers', label: 'Clients', icon: UserRoundPlus },
     ],
   },
-  { id: 'stores', label: 'Magasins', icon: Store },
-  { id: 'vat-rates', label: 'TVA', icon: Percent },
   {
     id: 'equipe',
     label: 'Équipe',
@@ -250,19 +250,45 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
       return hasPermissionCode(user, activeOrganizationId, 'admin_panel.dashboard.view')
     }
 
+    // Rapport
+    if (item.id === 'rapports-menu') {
+      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.reports.view')
+    }
+
     // Articles
     if (item.id === 'articles-menu') {
       return hasPermissionCode(user, activeOrganizationId, 'admin_panel.items.manage')
     }
 
+    // Stock
+    if (item.id === 'stock-menu') {
+      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stock.manage')
+    }
+
+    // Point de vente
+    if (item.id === 'ventes-menu') {
+      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage')
+    }
+
     // Paramètres
     if (item.id === 'parametres-menu') {
-      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.manage')
+      return (
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.general') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.receipt') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.restoration') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.kitchen_printer') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.licenses')
+      )
+    }
+
+    // Corbeille
+    if (item.id === 'trash-menu') {
+      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.trash.access')
     }
 
     // Équipe
     if (item.id === 'equipe') {
-      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.employees.manage')
+      return true
     }
 
     // Le reste est contrôlé uniquement par "accès back-office" côté API.
@@ -274,7 +300,7 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
   }
 
   const isParentActive = (item: NavItem) =>
-    item.children?.some(
+    getVisibleChildren(item).some(
       (c) => activeTab === c.id || activeTab.startsWith(`${c.id}/`)
     )
 
@@ -283,6 +309,58 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
     if (item.id === 'dashboard') return activeTab === item.id
     return activeTab === item.id || activeTab.startsWith(`${item.id}/`)
   }
+
+  const getVisibleChildren = (item: NavItem) => {
+    if (item.id === 'parametres-menu') {
+      return (item.children ?? []).filter((sub) => {
+        switch (sub.id) {
+          case 'settings/general':
+            return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.general')
+          case 'settings/receipts':
+            return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.receipt')
+          case 'settings/restaurant-options':
+            return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.restoration')
+          case 'settings/kitchen-printers':
+            return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.kitchen_printer')
+          case 'settings/subscription':
+            return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.licenses')
+          default:
+            return false
+        }
+      })
+    }
+
+    if (item.id === 'equipe') {
+      const canManage = hasPermissionCode(
+        user,
+        activeOrganizationId,
+        'admin_panel.employees.manage'
+      )
+
+      const canEditProfile = hasPermissionCode(
+        user,
+        activeOrganizationId,
+        'admin_panel.employees.profile.edit'
+      )
+
+      return (item.children ?? []).filter((sub) => {
+        switch (sub.id) {
+          case 'roles':
+            // seulement profile.edit
+            return canEditProfile
+
+          case 'users':
+            // manage OU profile.edit
+            return canManage || canEditProfile
+
+          default:
+            return false
+        }
+      })
+    }
+
+  return item.children ?? []
+}
 
   const renderCollapsible = (item: NavItem) => {
     const isOpen = openSections[item.id] ?? false
@@ -308,7 +386,7 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
           )}
         </button>
         {isOpen &&
-          item.children?.map((sub) => {
+          getVisibleChildren(item).map((sub) => {
             const isSubActive =
               activeTab === sub.id || activeTab.startsWith(`${sub.id}/`)
             return (

@@ -1,34 +1,27 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../../api/auth'
 import { getApiErrorMessage } from '../../lib/apiError'
-import ReCAPTCHA from 'react-google-recaptcha'
+import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
-export default function ForgotPassword() {
+function ForgotPasswordForm() {
+  const { executeRecaptcha } = useGoogleReCaptcha()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!recaptchaToken) {
-      setError('Veuillez cocher la case "Je ne suis pas un robot".')
-      return
-    }
-
     setSubmitting(true)
     try {
+      const recaptchaToken = await executeRecaptcha('forgot_password')
       await requestPasswordReset(email, recaptchaToken)
       setSent(true)
     } catch (err) {
       setError(getApiErrorMessage(err, 'Une erreur est survenue.'))
-      recaptchaRef.current?.reset()
-      setRecaptchaToken(null)
     } finally {
       setSubmitting(false)
     }
@@ -95,15 +88,9 @@ export default function ForgotPassword() {
               />
             </div>
             <div className="flex flex-col items-center gap-4 pt-2">
-              <ReCAPTCHA
-                ref={recaptchaRef}
-                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
-                onChange={(token) => setRecaptchaToken(token)}
-                onExpired={() => setRecaptchaToken(null)}
-              />
               <button
                 type="submit"
-                disabled={submitting || !recaptchaToken}
+                disabled={submitting}
                 className="block w-full rounded-xl bg-[#3B82F6] py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] disabled:opacity-60"
               >
                 {submitting ? 'Envoi…' : 'Envoyer le lien'}
@@ -124,5 +111,15 @@ export default function ForgotPassword() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ForgotPassword() {
+  return (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY as string}
+    >
+      <ForgotPasswordForm />
+    </GoogleReCaptchaProvider>
   )
 }

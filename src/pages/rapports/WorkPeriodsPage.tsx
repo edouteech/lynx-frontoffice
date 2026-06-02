@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Filter,
   Store,
@@ -7,25 +7,23 @@ import {
   Clock,
   Wallet,
   Scale,
-  History
+  History,
+  Loader2
 } from 'lucide-react'
 import DataTable, { type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
+import { fetchCashRegisters } from '../../api/cashRegisters'
+import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
+import { fetchStores } from '../../api/stores'
+import { getApiErrorMessage } from '../../lib/apiError'
+import type { CashRegisterSession, Store as StoreType } from '../../types/api'
 
 /* ================= TYPES ================= */
 
-type Row = {
-  code: string
-  pvd: string
-  openedAt: string
-  closedAt: string
-  expectedCash: number
-  realCash: number
-  diff: number | null
-  /** Champs techniques pour filtres (maquette). */
-  storeId: string
-  /** Date ISO (ex. 2026-04-15T10:30:00) */
-  openedAtIso: string
+type Row = CashRegisterSession & {
+  cash_register_name: string
+  store_name: string
+  store_id: number
 }
 
 /* ================= FORMAT UTILS ================= */
@@ -122,99 +120,52 @@ export default function WorkPeriodsPage() {
   const [appliedFrom, setAppliedFrom] = useState(defaultFrom)
   const [appliedTo, setAppliedTo] = useState(defaultTo)
 
-  const stores = [
-    { id: 'all', name: 'Tous les magasins' },
-    { id: '1', name: 'ALUTRACO' },
-    { id: '2', name: 'PLOMBERIES' },
-    { id: '3', name: 'RESTAURANT' },
-  ]
+  /* ================= DATA ================= */
+  const [stores, setStores] = useState<StoreType[]>([])
+  const [rows, setRows] = useState<Row[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  /* ================= MOCK DATA ================= */
-  const rows: Row[] = useMemo(() => {
-    const now = new Date()
-    const fmt = new Intl.DateTimeFormat('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    const mk = (openDaysAgo: number, closeDaysAgo: number) => {
-      const opened = new Date(now)
-      opened.setDate(now.getDate() - openDaysAgo)
-      const closed = new Date(now)
-      closed.setDate(now.getDate() - closeDaysAgo)
-      return {
-        openedAtIso: opened.toISOString().slice(0, 19),
-        openedAt: fmt.format(opened).replace(',', ''),
-        closedAt: fmt.format(closed).replace(',', ''),
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      // Fetch stores
+      const storesRes = await fetchStores(1)
+      setStores(storesRes.data)
+
+      // Fetch all cash registers
+      const cashRegistersRes = await fetchCashRegisters(1, undefined, appliedStoreId !== 'all' ? Number(appliedStoreId) : undefined)
+      const cashRegisters = cashRegistersRes.data
+
+      // Fetch sessions for each cash register
+      const allSessions: Row[] = []
+      for (const register of cashRegisters) {
+        try {
+          const sessions = await fetchCashRegisterSessions(register.id)
+          const sessionsWithNames = sessions.map((session) => ({
+            ...session,
+            cash_register_name: register.name,
+            store_name: register.store?.name ?? 'Inconnu',
+            store_id: register.store_id,
+          }))
+          allSessions.push(...sessionsWithNames)
+        } catch (e) {
+          console.error(`Error fetching sessions for register ${register.id}:`, e)
+        }
       }
+
+      setRows(allSessions)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setLoading(false)
     }
+  }, [appliedStoreId])
 
-    const a = mk(1, 0)
-    const b = mk(3, 3)
-    const c = mk(5, 5)
-    const d = mk(7, 7)
-    const e = mk(10, 10)
-
-    return [
-      {
-        code: 'WP-152-0265',
-        pvd: 'Caisse 2 AL (ALUTRACO)',
-        openedAt: a.openedAt,
-        closedAt: a.closedAt,
-        expectedCash: 0,
-        realCash: 0,
-        diff: null,
-        storeId: '1',
-        openedAtIso: a.openedAtIso,
-      },
-      {
-        code: 'WP-152-0266',
-        pvd: 'Caisse 4 PL (PLOMBERIES)',
-        openedAt: b.openedAt,
-        closedAt: b.closedAt,
-        expectedCash: 110000,
-        realCash: 110000,
-        diff: null,
-        storeId: '2',
-        openedAtIso: b.openedAtIso,
-      },
-      {
-        code: 'WP-152-0267',
-        pvd: 'Caisse 1 RE (RESTAURANT)',
-        openedAt: c.openedAt,
-        closedAt: c.closedAt,
-        expectedCash: 408000,
-        realCash: 395000,
-        diff: -13000,
-        storeId: '3',
-        openedAtIso: c.openedAtIso,
-      },
-      {
-        code: 'WP-152-0268',
-        pvd: 'Caisse 2 AL (ALUTRACO)',
-        openedAt: d.openedAt,
-        closedAt: d.closedAt,
-        expectedCash: 704290,
-        realCash: 0,
-        diff: -704290,
-        storeId: '1',
-        openedAtIso: d.openedAtIso,
-      },
-      {
-        code: 'WP-152-0269',
-        pvd: 'Caisse 1 RE (RESTAURANT)',
-        openedAt: e.openedAt,
-        closedAt: e.closedAt,
-        expectedCash: 58200,
-        realCash: 60000,
-        diff: 1800,
-        storeId: '3',
-        openedAtIso: e.openedAtIso,
-      },
-    ]
-  }, [])
+  useEffect(() => {
+    void load()
+  }, [load])
 
   /* ================= FILTER LOGIC ================= */
   const filteredRows = useMemo(() => {
@@ -222,8 +173,8 @@ export default function WorkPeriodsPage() {
     const toTs = appliedTo ? new Date(appliedTo).getTime() : Number.POSITIVE_INFINITY
 
     return rows.filter((r) => {
-      if (appliedStoreId !== 'all' && r.storeId !== appliedStoreId) return false
-      const openedTs = new Date(r.openedAtIso).getTime()
+      if (appliedStoreId !== 'all' && r.store_id !== Number(appliedStoreId)) return false
+      const openedTs = new Date(r.opened_at).getTime()
       return openedTs >= fromTs && openedTs <= toTs
     })
   }, [appliedFrom, appliedStoreId, appliedTo, rows])
@@ -231,9 +182,9 @@ export default function WorkPeriodsPage() {
   /* ================= KPI CALCULATIONS ================= */
   const totals = useMemo(() => {
     return filteredRows.reduce((acc, r) => ({
-      expected: acc.expected + r.expectedCash,
-      real: acc.real + r.realCash,
-      diff: acc.diff + (r.diff ?? 0),
+      expected: acc.expected + (r.expected_closing_balance ?? 0),
+      real: acc.real + (r.closing_balance ?? 0),
+      diff: acc.diff + (r.difference ?? 0),
       count: acc.count + 1
     }), { expected: 0, real: 0, diff: 0, count: 0 })
   }, [filteredRows])
@@ -242,7 +193,7 @@ export default function WorkPeriodsPage() {
   const columns: Column<Row>[] = useMemo(
     () => [
       {
-        key: 'code',
+        key: 'id',
         label: 'ID Session',
         sortable: true,
         nowrap: true,
@@ -256,39 +207,51 @@ export default function WorkPeriodsPage() {
         ),
       },
       {
-        key: 'pvd',
-        label: 'Caisse / Point de vente',
+        key: 'cash_register_name',
+        label: 'Caisse',
         sortable: true,
         render: (v) => <span className="font-medium text-gray-700">{String(v)}</span>
       },
-      { 
-        key: 'openedAt', 
-        label: "Ouverture", 
+      {
+        key: 'store_name',
+        label: 'Magasin',
         sortable: true,
-        render: (v) => <span className="text-gray-500 text-sm whitespace-pre-wrap">{String(v)}</span>
-      },
-      { 
-        key: 'closedAt', 
-        label: 'Fermeture', 
-        sortable: true,
-        render: (v) => <span className="text-gray-500 text-sm whitespace-pre-wrap">{String(v)}</span>
+        render: (v) => <span className="text-gray-600 text-sm">{String(v)}</span>
       },
       {
-        key: 'expectedCash',
+        key: 'opened_at',
+        label: "Ouverture",
+        sortable: true,
+        render: (v) => <span className="text-gray-500 text-sm whitespace-pre-wrap">{new Date(v as string).toLocaleString('fr-FR')}</span>
+      },
+      {
+        key: 'closed_at',
+        label: 'Fermeture',
+        sortable: true,
+        render: (v) => {
+          if (!v) return <span className="text-gray-400 text-sm">Ouverte</span>
+          return <span className="text-gray-500 text-sm whitespace-pre-wrap">{new Date(v as string).toLocaleString('fr-FR')}</span>
+        }
+      },
+      {
+        key: 'expected_closing_balance',
         label: 'Prévu',
         sortable: true,
         align: 'right',
-        render: (v) => <span className="font-medium text-gray-600">{formatFcfa(Number(v))}</span>,
+        render: (v) => <span className="font-medium text-gray-600">{formatFcfa(Number(v ?? 0))}</span>,
       },
       {
-        key: 'realCash',
+        key: 'closing_balance',
         label: 'Réel',
         sortable: true,
         align: 'right',
-        render: (v) => <span className="font-bold text-gray-900">{formatFcfa(Number(v))}</span>,
+        render: (v) => {
+          if (v === null) return <span className="text-gray-400">---</span>
+          return <span className="font-bold text-gray-900">{formatFcfa(Number(v))}</span>
+        }
       },
       {
-        key: 'diff',
+        key: 'difference',
         label: 'Différence',
         sortable: true,
         align: 'right',
@@ -341,8 +304,9 @@ export default function WorkPeriodsPage() {
                 onChange={(e) => setStoreId(e.target.value)}
                 className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
               >
+                <option value="all">Tous les magasins</option>
                 {stores.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={String(s.id)}>{s.name}</option>
                 ))}
               </select>
             </div>
@@ -406,25 +370,34 @@ export default function WorkPeriodsPage() {
 
       {/* TABLE */}
       <div className="mt-6">
-        <DataTable<Row>
-          data={filteredRows}
-          columns={columns}
-          title="Audit des sessions de travail"
-          searchable
-          searchPlaceholder="Rechercher une session..."
-          exportFilename="periodes-de-travail"
-          customFilters={
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4 text-gray-500" />
-              Imprimer
-            </button>
-          }
-          getRowId={(r) => r.code}
-        />
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4">{error}</div>
+        )}
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          </div>
+        ) : (
+          <DataTable<Row>
+            data={filteredRows}
+            columns={columns}
+            title="Audit des sessions de travail"
+            searchable
+            searchPlaceholder="Rechercher une session..."
+            exportFilename="periodes-de-travail"
+            customFilters={
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Printer className="h-4 w-4 text-gray-500" />
+                Imprimer
+              </button>
+            }
+            getRowId={(r) => String(r.id)}
+          />
+        )}
       </div>
     </div>
   )

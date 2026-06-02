@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const oid = syncStoredOrganizationIdWithUser(u)
     setActiveOrganizationIdState(oid)
     setUser(u)
+    return { user: u, activeOrganizationId: oid }
   }, [])
 
   const refreshUser = useCallback(async () => {
