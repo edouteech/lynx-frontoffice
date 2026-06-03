@@ -120,6 +120,7 @@ export interface PurchaseOrderItem {
 }
 
 export type PurchaseOrderStatus =
+  | 'draft'
   | 'submitted'
   | 'confirmed'
   | 'validated'
@@ -219,8 +220,10 @@ export interface KitchenPrinter {
 export interface CashRegister {
   id: number
   name: string
+  reference: string | null
   store_id: number
   status: string
+  is_available: boolean
   organization_id: number
   open_session?: CashRegisterSession | null
   store?: Store
@@ -399,6 +402,9 @@ export interface CashRegisterSession {
   opened_at: string
   closed_at: string | null
   status: 'open' | 'closed'
+  invoice_count: number
+  last_sale_id: number | null
+  last_invoice_number: string | null
   sales_total?: number
   expected_closing_balance?: number
   difference?: number | null
@@ -409,6 +415,9 @@ export interface CashRegisterSession {
 
 export interface Sale {
   id: number
+  invoice_number: string | null
+  server_id: number | null
+  server_name: string | null
   organization_id: number
   store_id: number
   cash_register_id: number | null
@@ -416,6 +425,7 @@ export interface Sale {
   customer_id: number | null
   sale_date: string | null
   note: string | null
+  order_type: string | null
   status: 'draft' | 'confirmed' | 'cancelled'
   discount_percentage: number
   extra_fees: number
@@ -471,8 +481,8 @@ export interface InventoryItem {
   expected_quantity: number
   actual_quantity: number | null
   difference: number | null
-  purchase_price: number | null
-  selling_price: number | null
+  unit_price: number | null
+  price_difference: number | null
 }
 
 export interface Inventory {

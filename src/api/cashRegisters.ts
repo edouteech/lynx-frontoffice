@@ -29,8 +29,10 @@ export async function fetchCashRegister(id: number | string): Promise<CashRegist
 
 export async function createCashRegister(body: {
   name: string
+  reference?: string | null
   store_id: number | string
   status?: string
+  is_available?: boolean
 }): Promise<CashRegister> {
   const { data } = await api.post<CashRegister>('/cash-registers', body)
   return data
@@ -40,6 +42,7 @@ export async function updateCashRegister(
   id: number | string,
   body: {
     name?: string
+    reference?: string | null
     store_id?: number | string
     status?: string
   }
@@ -50,5 +53,13 @@ export async function updateCashRegister(
 
 export async function deleteCashRegister(id: number | string): Promise<void> {
   await api.delete(`/cash-registers/${id}`)
+}
+
+export async function toggleCashRegisterStatus(
+  id: number | string,
+  currentStatus: string
+): Promise<CashRegister> {
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+  return updateCashRegister(id, { status: newStatus })
 }
 

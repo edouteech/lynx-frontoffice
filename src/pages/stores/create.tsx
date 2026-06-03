@@ -209,7 +209,6 @@ export function StoreCreateModal({
               type="number"
               min="0"
               max="100"
-              step="0.01"
               value={commissionRate}
               onChange={(e) => setCommissionRate(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"

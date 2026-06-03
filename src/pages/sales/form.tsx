@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
@@ -90,6 +90,7 @@ export default function SaleForm() {
     return now.toISOString().slice(0, 16)
   })
   const [note, setNote] = useState('')
+  const [orderType, setOrderType] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
   const [extraFees, setExtraFees] = useState('0')
   const [status, setStatus] = useState<'draft' | 'confirmed' | 'cancelled'>('draft')
@@ -126,6 +127,20 @@ export default function SaleForm() {
   const isConfirmed = status === 'confirmed'
   const isDraft     = status === 'draft'
 
+  // ── Numéro de facture (généré côté front) ──────────────────────────────────
+  const selectedCashRegister = useMemo(
+    () => cashRegisters.find(r => String(r.id) === cashRegisterId) ?? null,
+    [cashRegisters, cashRegisterId]
+  )
+
+  const nextInvoiceNumber = useMemo(() => {
+    if (!selectedCashRegister) return null
+    const ref     = selectedCashRegister.reference || String(selectedCashRegister.id)
+    const nextSeq = (selectedCashRegister.open_session?.invoice_count ?? 0) + 1
+    const seq     = String(nextSeq).padStart(5, '0')
+    return `${ref}W-${seq}`
+  }, [selectedCashRegister])
+
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1)])
@@ -150,6 +165,7 @@ export default function SaleForm() {
         setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
         setSaleDate(s.sale_date ? s.sale_date.slice(0, 16).replace(' ', 'T') : '')
         setNote(s.note ?? '')
+        setOrderType(s.order_type ?? '')
         setDiscountPct(String(s.discount_percentage))
         setExtraFees(String(s.extra_fees))
         setStatus(s.status)
@@ -315,6 +331,8 @@ export default function SaleForm() {
           payment_method_id:    paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:            saleDate || null,
           note:                 note.trim() || null,
+          order_type:           orderType || null,
+          invoice_number:       nextInvoiceNumber,
           discount_percentage:  parseFloat(discountPct) || 0,
           extra_fees:           parseFloat(extraFees) || 0,
           items: pendingItems.map(pi => ({
@@ -332,6 +350,7 @@ export default function SaleForm() {
           payment_method_id:   paymentMethodId ? Number(paymentMethodId) : null,
           sale_date:           saleDate || null,
           note:                note.trim() || null,
+          order_type:          orderType || null,
           discount_percentage: parseFloat(discountPct) || 0,
           extra_fees:          parseFloat(extraFees) || 0,
         })
@@ -499,6 +518,22 @@ export default function SaleForm() {
               </div>
             </div>
 
+            {/* Numéro de facture prévu */}
+            {nextInvoiceNumber && isDraft && (
+              <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-blue-500" />
+                <span className="text-blue-700">N° de facture prévu :</span>
+                <span className="font-mono font-semibold text-blue-900">{nextInvoiceNumber}</span>
+              </div>
+            )}
+            {currentSale?.invoice_number && isConfirmed && (
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
+                <FileText className="h-4 w-4 shrink-0 text-gray-500" />
+                <span className="text-gray-600">N° de facture :</span>
+                <span className="font-mono font-semibold text-gray-900">{currentSale.invoice_number}</span>
+              </div>
+            )}
+
             {/* Caisse + Moyen de paiement */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -547,6 +582,34 @@ export default function SaleForm() {
               </div>
             </div>
 
+            {/* Type de commande */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Type de commande <span className="text-xs font-normal text-gray-400">(facultatif)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: '',          label: 'Non précisé' },
+                  { value: 'sur_place', label: 'Sur place'   },
+                  { value: 'emporter',  label: 'À emporter'  },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={isConfirmed}
+                    onClick={() => setOrderType(opt.value)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                      orderType === opt.value
+                        ? 'border-[#3B82F6] bg-[#3B82F6] text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Info magasin */}
             {selectedStore && (
               <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700">
@@ -592,13 +655,13 @@ export default function SaleForm() {
                 {/* Quantité */}
                 <div className="w-28">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
-                  <Inp type="number" step="0.001" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
+                  <Inp type="number" min="0" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
                 </div>
 
                 {/* Prix unitaire */}
                 <div className="w-36">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Prix unit. (CFA)</label>
-                  <Inp type="number" step="0.01" min="0" value={addPrice} onChange={e => setAddPrice(e.target.value)} placeholder="0.00" />
+                  <Inp type="number" min="0" value={addPrice} onChange={e => setAddPrice(e.target.value)} placeholder="0.00" />
                 </div>
 
                 <button
@@ -721,7 +784,6 @@ export default function SaleForm() {
                           ) : (
                             <input
                               type="number"
-                              step="0.001"
                               min="0.001"
                               value={currentQty}
                               onChange={e => {
@@ -777,7 +839,6 @@ export default function SaleForm() {
                             <div className="flex items-center justify-end gap-1">
                               <input
                                 type="number"
-                                step="0.01"
                                 min="0"
                                 value={currentPrice}
                                 onChange={e => {
@@ -827,7 +888,6 @@ export default function SaleForm() {
                   <label className="mb-1 block text-xs font-medium text-gray-600">Remise globale (%)</label>
                   <Inp
                     type="number"
-                    step="0.01"
                     min="0"
                     max="100"
                     value={discountPct}
@@ -840,7 +900,6 @@ export default function SaleForm() {
                   <label className="mb-1 block text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
                   <Inp
                     type="number"
-                    step="0.01"
                     min="0"
                     value={extraFees}
                     onChange={e => setExtraFees(e.target.value)}

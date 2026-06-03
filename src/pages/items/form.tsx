@@ -802,7 +802,7 @@ export default function ItemFormPage() {
                       : 'Prix d\'achat fournisseur TTC'}
                   >
                     <div className="relative">
-                      <Inp type="number" step="0.01" min="0" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0.00" className="pr-12" />
+                      <Inp type="number" min="0" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} placeholder="0.00" className="pr-12" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
                     </div>
                   </Field>
@@ -814,7 +814,7 @@ export default function ItemFormPage() {
                       : taxInclusive ? 'Prix de vente TTC' : 'Prix de vente HT'}
                   >
                     <div className="relative">
-                      <Inp type="number" step="0.01" min="0" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} required placeholder="0.00" className="pr-12" />
+                      <Inp type="number" min="0" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} required placeholder="0.00" className="pr-12" />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
                     </div>
                   </Field>
@@ -977,7 +977,6 @@ export default function ItemFormPage() {
                         <td className="px-4 py-3">
                           <input
                             type="number"
-                            step="0.01"
                             min="0"
                             value={priceEdits[row.store_id] ?? String(row.selling_price)}
                             onChange={e => setPriceEdits(prev => ({ ...prev, [row.store_id]: e.target.value }))}
@@ -991,7 +990,6 @@ export default function ItemFormPage() {
                             <div className="flex items-center justify-end">
                               <input
                                 type="number"
-                                step="0.001"
                                 min="0"
                                 value={stockEdits[row.store_id] ?? row.quantity}
                                 onChange={e => setStockEdits(prev => ({ ...prev, [row.store_id]: e.target.value }))}
@@ -1007,7 +1005,6 @@ export default function ItemFormPage() {
                             <div className="flex items-center justify-end">
                               <input
                                 type="number"
-                                step="0.001"
                                 min="0"
                                 value={stockAlertEdits[row.store_id] ?? row.min_stock_alert}
                                 onChange={e => setStockAlertEdits(prev => ({ ...prev, [row.store_id]: e.target.value }))}
@@ -1057,7 +1054,7 @@ export default function ItemFormPage() {
               </div>
               <div className="w-28">
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
-                <Inp type="number" step="0.001" min="0.001" value={newChildQty} onChange={e => setNewChildQty(e.target.value)} />
+                <Inp type="number" min="0.001" value={newChildQty} onChange={e => setNewChildQty(e.target.value)} />
               </div>
               <button type="button" onClick={() => void handleAddComponent()} disabled={!newChildId || compSaving}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50">

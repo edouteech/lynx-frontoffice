@@ -92,12 +92,12 @@ const s = StyleSheet.create({
   footerText: { fontSize: 7, color: '#9CA3AF', textAlign: 'center' },
 })
 
-function fmt(n: number, decimals = 3) {
-  return n.toLocaleString('fr-FR', {
-    maximumFractionDigits: decimals,
-    minimumFractionDigits: 0,
-    useGrouping: false,
-  })
+function fmt(n: number, decimals = 3): string {
+  const sign = n < 0 ? '-' : ''
+  const [intPart, decPart] = Math.abs(n).toFixed(decimals).split('.')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const trimmed = decPart ? decPart.replace(/0+$/, '') : ''
+  return sign + grouped + (trimmed ? ',' + trimmed : '')
 }
 function DiffText({ diff }: { diff: number | null }) {
   if (diff === null) return <Text style={s.dimText}>—</Text>
@@ -120,10 +120,10 @@ export default function InventoryPdf({ inventory }: Props) {
     ? new Date(inventory.applied_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
     : null
 
-  // total cost diff
+  // total diff de prix
   const totalCostDiff = items.reduce((sum, item) => {
-    if (item.difference == null || item.purchase_price == null) return sum
-    return sum + item.difference * item.purchase_price
+    if (item.difference == null || item.unit_price == null) return sum
+    return sum + item.difference * item.unit_price
   }, 0)
 
   const filledCount = items.filter(i => i.actual_quantity != null).length
@@ -173,14 +173,14 @@ export default function InventoryPdf({ inventory }: Props) {
           <View style={s.colNum}><Text style={s.thText}>Qté att.</Text></View>
           <View style={s.colNum}><Text style={s.thText}>Qté réelle</Text></View>
           <View style={s.colNum}><Text style={s.thText}>Diff.</Text></View>
-          <View style={s.colNum}><Text style={s.thText}>Coût unit.</Text></View>
+          <View style={s.colNum}><Text style={s.thText}>Prix unit.</Text></View>
           <View style={s.colNum}><Text style={s.thText}>Diff. prix</Text></View>
         </View>
 
         {/* ── rows ── */}
         {items.map((item: InventoryItem, idx: number) => {
-          const costDiff = item.difference != null && item.purchase_price != null
-            ? item.difference * item.purchase_price
+          const costDiff = item.difference != null && item.unit_price != null
+            ? item.difference * item.unit_price
             : null
           return (
             <View key={item.id} style={[s.row, idx % 2 === 1 ? s.rowAlt : {}]} wrap={false}>
@@ -203,8 +203,8 @@ export default function InventoryPdf({ inventory }: Props) {
                 <DiffText diff={item.difference} />
               </View>
               <View style={s.colNum}>
-                {item.purchase_price != null
-                  ? <Text style={s.cellText}>{fmt(item.purchase_price, 0)}</Text>
+                {item.unit_price != null
+                  ? <Text style={s.cellText}>{fmt(item.unit_price, 0)}</Text>
                   : <Text style={s.dimText}>—</Text>}
               </View>
               <View style={s.colNum}>

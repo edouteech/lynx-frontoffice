@@ -188,6 +188,18 @@ export function CloseSessionModal({
               <span className="font-medium text-blue-700">+ {fmtMoney(session.sales_total)}</span>
             </div>
           )}
+          <div className="flex justify-between text-gray-600">
+            <span>Nb. de factures</span>
+            <span className="font-medium">{session.invoice_count}</span>
+          </div>
+          {(session.last_invoice_number ?? session.last_sale_id) != null && (
+            <div className="flex justify-between text-gray-600">
+              <span>Dernière facture</span>
+              <span className="font-mono font-medium">
+                {session.last_invoice_number ?? `#${String(session.last_sale_id).padStart(4, '0')}`}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-800">
             <span>Solde théorique</span>
             <span>{fmtMoney(expected)}</span>

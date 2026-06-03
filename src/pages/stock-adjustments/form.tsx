@@ -483,7 +483,7 @@ export default function StockAdjustmentForm() {
                 {/* Quantité */}
                 <div className="w-32">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
-                  <Inp type="number" step="0.001" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
+                  <Inp type="number" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
                 </div>
 
                 <button
@@ -601,7 +601,6 @@ export default function StockAdjustmentForm() {
                           {isDraft ? (
                             <input
                               type="number"
-                              step="0.001"
                               min="0.001"
                               value={
                                 isEdit

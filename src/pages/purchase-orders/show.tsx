@@ -10,6 +10,7 @@ import {
   markPurchaseOrderCompleted,
   confirmPurchaseOrder,
   validatePurchaseOrder,
+  submitPurchaseOrder,
 } from '../../api/purchaseOrders'
 import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -19,6 +20,7 @@ import PurchaseOrderPdf from './PurchaseOrderPdf'
 // ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS: Record<string, { label: string; className: string }> = {
+  draft:              { label: 'Brouillon',             className: 'bg-gray-100 text-gray-600' },
   submitted:          { label: 'Soumise',               className: 'bg-purple-100 text-purple-700' },
   confirmed:          { label: 'Confirmée (centrale)',   className: 'bg-indigo-100 text-indigo-700' },
   validated:          { label: 'Validée',               className: 'bg-blue-100 text-blue-700' },
@@ -36,6 +38,7 @@ export default function PurchaseOrderShow() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [validating, setValidating] = useState(false)
   const [printing, setPrinting] = useState(false)
@@ -78,6 +81,20 @@ export default function PurchaseOrderShow() {
       setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } finally {
       setPrinting(false)
+    }
+  }
+
+  async function handleSubmit() {
+    if (!order) return
+    if (!window.confirm('Soumettre ce brouillon à la centrale d\'achat ?')) return
+    setSubmitting(true)
+    try {
+      const updated = await submitPurchaseOrder(order.id)
+      setOrder(prev => prev ? { ...prev, status: updated.status } : null)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -130,13 +147,17 @@ export default function PurchaseOrderShow() {
 
   const isCentral = order?.purchasing_center_id !== null && order?.purchasing_center_id !== undefined
 
-  const canEdit = order && order.status !== 'completed' &&
-    !(isCentral && (order.status === 'validated' || order.status === 'partially_received'))
+  const canEdit = order && (
+    isCentral
+      ? ['draft', 'submitted', 'confirmed'].includes(order.status)
+      : order.status !== 'completed'
+  )
 
   const canReceive = order &&
     (order.status === 'validated' || order.status === 'partially_received') &&
     (order.items ?? []).some(i => i.remaining_quantity > 0)
 
+  const canSubmit   = order && isCentral && order.status === 'draft'
   const canConfirm  = order && isCentral && order.status === 'submitted'
   const canValidate = order && isCentral && order.status === 'confirmed'
   const canMarkComplete = order && order.status === 'partially_received'
@@ -208,6 +229,14 @@ export default function PurchaseOrderShow() {
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 <Edit className="h-4 w-4" />
                 Modifier
+              </button>
+            )}
+
+            {canSubmit && (
+              <button onClick={() => void handleSubmit()} disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                Soumettre
               </button>
             )}
 

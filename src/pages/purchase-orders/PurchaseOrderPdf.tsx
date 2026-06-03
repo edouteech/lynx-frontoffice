@@ -113,12 +113,12 @@ const STATUS_BADGE_STYLE: Record<string, Style> = {
   completed:          s.badgeCompleted,
 }
 
-function fmt(n: number) {
-  return n.toLocaleString('fr-FR', {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-    useGrouping: false,
-  })
+function fmt(n: number, decimals = 2): string {
+  const sign = n < 0 ? '-' : ''
+  const [intPart, decPart] = Math.abs(n).toFixed(decimals).split('.')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const trimmed = decPart ? decPart.replace(/0+$/, '') : ''
+  return sign + grouped + (trimmed ? ',' + trimmed : '')
 }
 
 interface Props {
