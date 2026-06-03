@@ -86,7 +86,6 @@ export default function SaleForm() {
   const [loadingRegisters, setLoadingRegisters] = useState(false)
 
   // session open states
-  const [lastClosingBalance, setLastClosingBalance] = useState<number | null>(null)
   const [openingBalance, setOpeningBalance] = useState('0')
   const [openingNote, setOpeningNote] = useState('')
   const [openingSubmitting, setOpeningSubmitting] = useState(false)
