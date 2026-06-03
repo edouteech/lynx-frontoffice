@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, ChevronDown, FileText, Loader2,
-  Plus, Receipt, Save, ShoppingBag, Trash2,
+  AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, FileText, Loader2,
+  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2,
 } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import {
@@ -15,8 +15,10 @@ import { fetchProducts } from '../../api/products'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchCustomers } from '../../api/customer'
 import { fetchStorePaymentMethods } from '../../api/paymentMethods'
+import { openCashRegisterSession, fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { useAuth } from '../../contexts/useAuth'
+import Swal from 'sweetalert2'
 import SalePdf from './SalePdf'
 import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, Sale, SaleItem, Store } from '../../types/api'
 
@@ -78,6 +80,17 @@ export default function SaleForm() {
   const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingSale, setLoadingSale] = useState(isEdit)
+
+  // selection steps state
+  const [step, setStep] = useState<'loading' | 'select_store' | 'select_register' | 'open_session' | 'sale_form'>('loading')
+  const [loadingRegisters, setLoadingRegisters] = useState(false)
+
+  // session open states
+  const [lastClosingBalance, setLastClosingBalance] = useState<number | null>(null)
+  const [openingBalance, setOpeningBalance] = useState('0')
+  const [openingNote, setOpeningNote] = useState('')
+  const [openingSubmitting, setOpeningSubmitting] = useState(false)
+  const [openingError, setOpeningError] = useState<string | null>(null)
 
   // header
   const [storeId, setStoreId] = useState('')
@@ -141,18 +154,65 @@ export default function SaleForm() {
     return `${ref}W-${seq}`
   }, [selectedCashRegister])
 
-  // ── Load meta ──────────────────────────────────────────────────────────────
+  // ── Load meta & Handle Session Persistence ──────────────────────────────────
   useEffect(() => {
     Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1)])
-      .then(([strs, prods, cats, custs]) => {
+      .then(async ([strs, prods, cats, custs]) => {
         setStores(strs.data)
         setAllProducts(prods.data)
         setCategories(cats.data)
         setCustomers(custs.data)
+
+        if (isEdit) {
+          setStep('sale_form')
+          setLoadingMeta(false)
+          return
+        }
+
+        const storedStoreId = localStorage.getItem('lynx_sales_store_id')
+        const storedRegisterId = localStorage.getItem('lynx_sales_cash_register_id')
+
+        if (storedStoreId && storedRegisterId) {
+          if (storedRegisterId === 'none') {
+            setStoreId(storedStoreId)
+            setCashRegisterId('')
+            setStep('sale_form')
+            return
+          }
+          try {
+            setLoadingRegisters(true)
+            const regs = await fetchCashRegisters(1, undefined, storedStoreId)
+            setCashRegisters(regs.data)
+            
+            const activeReg = regs.data.find(r => String(r.id) === storedRegisterId)
+            if (activeReg) {
+              setStoreId(storedStoreId)
+              setCashRegisterId(storedRegisterId)
+
+              if (activeReg.open_session) {
+                setStep('sale_form')
+              } else {
+                setStep('open_session')
+                // (pas de pré-remplissage du solde)
+              }
+            } else {
+              localStorage.removeItem('lynx_sales_store_id')
+              localStorage.removeItem('lynx_sales_cash_register_id')
+              setStep('select_store')
+            }
+          } catch (err) {
+            console.error('Persistence validation failed', err)
+            setStep('select_store')
+          } finally {
+            setLoadingRegisters(false)
+          }
+        } else {
+          setStep('select_store')
+        }
       })
       .catch(console.error)
       .finally(() => setLoadingMeta(false))
-  }, [])
+  }, [isEdit])
 
   // ── Load sale (edit mode) ──────────────────────────────────────────────────
   useEffect(() => {
@@ -195,6 +255,74 @@ export default function SaleForm() {
       setStorePaymentMethods(methods)
     }).catch(console.error)
   }, [storeId])
+
+  // ── Handlers pour les étapes de sélection de caisse ─────────────────────────
+  const handleSelectStore = (id: number) => {
+    setStoreId(String(id))
+    setStep('select_register')
+  }
+
+  const handleSelectRegister = async (register: CashRegister) => {
+    setCashRegisterId(String(register.id))
+    if (register.open_session) {
+      localStorage.setItem('lynx_sales_store_id', storeId)
+      localStorage.setItem('lynx_sales_cash_register_id', String(register.id))
+      setStep('sale_form')
+    } else {
+      setStep('open_session')
+      setOpeningBalance('0')
+    }
+  }
+
+  const handleOpenSession = async () => {
+    const val = parseFloat(openingBalance)
+    if (isNaN(val) || val < 0) {
+      setOpeningError('Solde d\'ouverture invalide.')
+      return
+    }
+    setOpeningSubmitting(true)
+    setOpeningError(null)
+    try {
+      await openCashRegisterSession(Number(cashRegisterId), {
+        opening_balance: val,
+        note: openingNote.trim() || null,
+      })
+      localStorage.setItem('lynx_sales_store_id', storeId)
+      localStorage.setItem('lynx_sales_cash_register_id', cashRegisterId)
+      
+      // Refresh register list to get active session preloaded
+      if (storeId) {
+        const regs = await fetchCashRegisters(1, undefined, storeId)
+        setCashRegisters(regs.data)
+      }
+      setStep('sale_form')
+    } catch (e) {
+      setOpeningError(getApiErrorMessage(e))
+    } finally {
+      setOpeningSubmitting(false)
+    }
+  }
+
+  const handleChangeRegister = async () => {
+    if (isEdit && isConfirmed) return
+    const result = await Swal.fire({
+      title: 'Changer de caisse ?',
+      text: 'La sélection du magasin et de la caisse sera réinitialisée.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0F2E4A',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Oui, changer',
+      cancelButtonText: 'Annuler',
+    })
+    if (!result.isConfirmed) return
+
+    localStorage.removeItem('lynx_sales_store_id')
+    localStorage.removeItem('lynx_sales_cash_register_id')
+    setStoreId('')
+    setCashRegisterId('')
+    setStep('select_store')
+  }
 
   // ── Pré-remplir le prix de vente quand on sélectionne un produit ──────────
   useEffect(() => {
@@ -394,7 +522,7 @@ export default function SaleForm() {
     }
   }
 
-  if (loadingMeta || loadingSale) {
+  if (loadingMeta || loadingSale || step === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#EFF6FF]">
         <Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" />
@@ -402,8 +530,270 @@ export default function SaleForm() {
     )
   }
 
+  if (step === 'select_store') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
+        <div className="mx-auto max-w-5xl space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
+            <p className="mt-1 text-sm font-medium text-gray-500">Étape 1 sur 3</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">Sélectionnez un magasin</h2>
+            <p className="mt-1 text-sm text-gray-500">Choisissez le magasin où vous souhaitez effectuer la vente.</p>
+
+            <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {stores.map(store => (
+                <button
+                  key={store.id}
+                  type="button"
+                  onClick={() => handleSelectStore(store.id)}
+                  className="flex items-center justify-between p-5 rounded-2xl border border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md transition-all cursor-pointer text-left group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
+                      <StoreIcon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
+                        {store.name}
+                      </p>
+                      {store.address && (
+                        <p className="mt-1 text-xs text-gray-500 line-clamp-1">{store.address}</p>
+                      )}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'select_register') {
+    const selectedStore = stores.find(s => String(s.id) === storeId)
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
+        <div className="mx-auto max-w-5xl space-y-8">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStep('select_store')}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm transition"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
+              <p className="mt-1 text-sm font-medium text-gray-500">Étape 2 sur 3</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">Sélectionnez une caisse</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Magasin : <span className="font-semibold text-gray-800">{selectedStore?.name ?? '—'}</span>
+            </p>
+
+            {loadingRegisters ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              </div>
+            ) : cashRegisters.length === 0 ? (
+              <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCashRegisterId('')
+                    localStorage.setItem('lynx_sales_store_id', storeId)
+                    localStorage.setItem('lynx_sales_cash_register_id', 'none')
+                    setStep('sale_form')
+                  }}
+                  className="flex items-center justify-between p-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50/30 hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer group transition-all text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#3B82F6] transition-colors">
+                      <ShoppingBag className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
+                        Continuer sans caisse
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Vente directe sans session de caisse
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
+                </button>
+              </div>
+            ) : (
+              <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {cashRegisters.map(register => {
+                  const isActive = register.status === 'active'
+                  const hasSession = !!register.open_session
+                  return (
+                    <button
+                      key={register.id}
+                      type="button"
+                      disabled={!isActive}
+                      onClick={() => void handleSelectRegister(register)}
+                      className={`flex items-center justify-between p-5 rounded-2xl border transition-all text-left group
+                        ${!isActive
+                          ? 'border-gray-150 bg-gray-50 opacity-60 cursor-not-allowed'
+                          : 'border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer'}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors
+                          ${hasSession
+                            ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}`}>
+                          <div className={`h-3 w-3 rounded-full ${hasSession ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
+                            {register.name}
+                          </p>
+                          <p className={`mt-1 text-xs font-medium ${hasSession ? 'text-emerald-600' : 'text-gray-500'}`}>
+                            {hasSession ? 'Active' : 'Fermée'}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
+                    </button>
+                  )
+                })}
+                {/* Special card to continue without register */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCashRegisterId('')
+                    localStorage.setItem('lynx_sales_store_id', storeId)
+                    localStorage.setItem('lynx_sales_cash_register_id', 'none')
+                    setStep('sale_form')
+                  }}
+                  className="flex items-center justify-between p-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50/30 hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer group transition-all text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#3B82F6] transition-colors">
+                      <ShoppingBag className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
+                        Continuer sans caisse
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Vente directe sans session de caisse
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'open_session') {
+    const selectedStore = stores.find(s => String(s.id) === storeId)
+    const selectedRegister = cashRegisters.find(r => String(r.id) === cashRegisterId)
+
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
+        <div className="mx-auto max-w-xl space-y-8">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStep('select_register')}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm transition"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
+              <p className="mt-1 text-sm font-medium text-gray-500">Étape 3 sur 3</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 font-sans">Ouvrir la session de caisse</h2>
+              <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
+                Magasin : <span className="font-semibold text-gray-800">{selectedStore?.name ?? '—'}</span>
+                <br />
+                Caisse : <span className="font-semibold text-gray-800">{selectedRegister?.name ?? '—'}</span>
+              </p>
+            </div>
+
+            {openingError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+                {openingError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Solde d'ouverture (CFA) <span className="text-red-500">*</span>
+                </label>
+                <p className="mb-2 text-xs text-gray-500">
+                  Comptez le montant physiquement présent dans la caisse avant d'ouvrir la session.
+                </p>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={openingBalance}
+                  autoFocus
+                  onChange={e => setOpeningBalance(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-semibold"
+                />
+
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Note (optionnelle)</label>
+                <textarea
+                  value={openingNote}
+                  onChange={e => setOpeningNote(e.target.value)}
+                  rows={3}
+                  placeholder="Observations, remarques…"
+                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={openingSubmitting}
+              onClick={() => void handleOpenSession()}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/10 active:scale-95 transition disabled:opacity-65"
+            >
+              {openingSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <LockOpen className="h-5 w-5" />
+              )}
+              Ouvrir la caisse et commencer à vendre
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const statusMeta  = STATUS_META[status]
   const selectedStore = stores.find(s => String(s.id) === storeId)
+  const selectedRegisterName = selectedCashRegister?.name || (cashRegisterId ? `Caisse #${cashRegisterId}` : '—')
+  const selectedStoreName = selectedStore?.name || (storeId ? `Magasin #${storeId}` : '—')
+  const hasActiveSession = !!(selectedCashRegister?.open_session)
 
   return (
     <div className=" space-y-6">
@@ -489,6 +879,41 @@ export default function SaleForm() {
           <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{successMsg}</div>
         )}
 
+        {/* Bandeau magasin + caisse en lecture seule */}
+        {storeId && (
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-xs">Magasin :</span>
+                <span className="font-bold text-gray-900">{selectedStoreName}</span>
+              </div>
+              <div className="h-4 w-px bg-gray-300 hidden sm:block" />
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-xs">Caisse :</span>
+                <span className="font-bold text-gray-900">{selectedRegisterName}</span>
+              </div>
+              {hasActiveSession && (
+                <>
+                  <div className="h-4 w-px bg-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="font-semibold text-xs">Session active</span>
+                  </div>
+                </>
+              )}
+            </div>
+            {!isConfirmed && (
+              <button
+                type="button"
+                onClick={() => void handleChangeRegister()}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition active:scale-95"
+              >
+                Changer
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ══════════════════ EN-TÊTE ══════════════════════════════════════════ */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="flex justify-center pt-8 pb-4">
@@ -498,22 +923,26 @@ export default function SaleForm() {
           </div>
 
           <div className="px-6 pb-6 space-y-4">
-            {/* Magasin + Client */}
+            {/* Client + Moyen de paiement sur la même ligne */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Magasin <span className="text-red-500">*</span>
-                </label>
-                <Sel value={storeId} onChange={e => setStoreId(e.target.value)} disabled={isConfirmed}>
-                  <option value="">— Choisir un magasin —</option>
-                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </Sel>
-              </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Client</label>
                 <Sel value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={isConfirmed}>
                   <option value="">— Anonyme —</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Sel>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Moyen de paiement</label>
+                <Sel
+                  value={paymentMethodId}
+                  onChange={e => setPaymentMethodId(e.target.value)}
+                  disabled={isConfirmed || !storeId}
+                >
+                  <option value="">— Non renseigné —</option>
+                  {storePaymentMethods.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
                 </Sel>
               </div>
             </div>
@@ -534,35 +963,7 @@ export default function SaleForm() {
               </div>
             )}
 
-            {/* Caisse + Moyen de paiement */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Caisse</label>
-                <Sel
-                  value={cashRegisterId}
-                  onChange={e => setCashRegisterId(e.target.value)}
-                  disabled={isConfirmed || !storeId}
-                >
-                  <option value="">— Sans caisse —</option>
-                  {cashRegisters.map(r => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </Sel>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Moyen de paiement</label>
-                <Sel
-                  value={paymentMethodId}
-                  onChange={e => setPaymentMethodId(e.target.value)}
-                  disabled={isConfirmed || !storeId}
-                >
-                  <option value="">— Non renseigné —</option>
-                  {storePaymentMethods.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </Sel>
-              </div>
-            </div>
+
 
             {/* Date + Note */}
             <div className="grid gap-4 sm:grid-cols-2">

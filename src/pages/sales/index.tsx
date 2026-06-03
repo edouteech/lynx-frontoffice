@@ -54,7 +54,7 @@ export default function SalesIndex() {
       label: 'N° vente',
       render: (v, row) => (
         <span className="font-mono font-semibold text-gray-700">
-          {v ?? `#${String(row.id).padStart(4, '0')}`}
+          {(v as string) ?? `#${String(row.id).padStart(4, '0')}`}
         </span>
       ),
     },
