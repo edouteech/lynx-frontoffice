@@ -288,7 +288,20 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
 
     // Équipe
     if (item.id === 'equipe') {
-      return true
+      const canManage = hasPermissionCode(
+        user,
+        activeOrganizationId,
+        'admin_panel.employees.manage'
+      )
+ 
+      const canEditProfile = hasPermissionCode(
+        user,
+        activeOrganizationId,
+        'admin_panel.employees.profile.edit'
+      )
+ 
+      // Only show if user has at least one permission
+      return canManage || canEditProfile
     }
 
     // Le reste est contrôlé uniquement par "accès back-office" côté API.
