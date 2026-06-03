@@ -5,6 +5,7 @@ import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deletePurchaseOrder, fetchPurchaseOrders } from '../../api/purchaseOrders'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder } from '../../types/api'
+import Can from '../../components/Can'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   submitted:          { label: 'Soumise',            className: 'bg-purple-100 text-purple-700' },
@@ -107,12 +108,14 @@ export default function PurchaseOrdersIndex({ type }: Props) {
       icon: Eye,
       variant: 'primary',
       onClick: o => navigate(`/purchase-orders/${o.id}`),
+      permission: 'admin_panel.orders.create_or_edit',
     },
     {
       label: 'Supprimer',
       icon: Trash2,
       variant: 'danger',
       onClick: o => void handleDelete(o),
+      permission: 'admin_panel.orders.create_or_edit',
     },
   ], [navigate, handleDelete])
 
@@ -133,23 +136,27 @@ export default function PurchaseOrdersIndex({ type }: Props) {
         </div>
         <div className="flex items-center gap-2">
           {isCentral ? (
-            <button
-              type="button"
-              onClick={() => navigate('/central-orders/create')}
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-            >
-              <Store className="h-4 w-4" />
-              Nouvelle commande centrale
-            </button>
+            <Can code="admin_panel.orders.create_or_edit">
+              <button
+                type="button"
+                onClick={() => navigate('/central-orders/create')}
+                className="inline-flex w-fit items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+              >
+                <Store className="h-4 w-4" />
+                Nouvelle commande centrale
+              </button>
+            </Can>
           ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/purchase-orders/create')}
-              className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvelle commande fournisseur
-            </button>
+            <Can code="admin_panel.orders.create_or_edit">
+              <button
+                type="button"
+                onClick={() => navigate('/purchase-orders/create')}
+                className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
+              >
+                <Plus className="h-4 w-4" />
+                Nouvelle commande fournisseur
+              </button>
+            </Can>
           )}
         </div>
       </header>

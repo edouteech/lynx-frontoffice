@@ -5,6 +5,7 @@ import { fetchPurchaseOrder } from '../../api/purchaseOrders'
 import { createReception } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder } from '../../types/api'
+import Can from '../../components/Can'
 
 export default function PurchaseOrderReceive() {
   const { id } = useParams<{ id: string }>()
@@ -266,16 +267,18 @@ export default function PurchaseOrderReceive() {
                 Annuler
               </button>
               {pending.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => void handleSubmit()}
-                  disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
-                >
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  <Truck className="h-4 w-4" />
-                  Valider la réception
-                </button>
+                <Can code="admin_panel.orders.ack_or_adjust">
+                  <button
+                    type="button"
+                    onClick={() => void handleSubmit()}
+                    disabled={submitting}
+                    className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
+                  >
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <Truck className="h-4 w-4" />
+                    Valider la réception
+                  </button>
+                </Can>
               )}
             </div>
           </div>

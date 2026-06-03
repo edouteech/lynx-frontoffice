@@ -15,6 +15,7 @@ import { fetchProducts } from '../../api/products'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { ItemCategory, Product, PurchaseOrderItem, PurchaseOrderStatus, Store as StoreType, Supplier } from '../../types/api'
+import Can from '../../components/Can'
 
 // ── Tiny primitives ───────────────────────────────────────────────────────────
 
@@ -422,35 +423,41 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
             )}
             {canEdit && !isEdit && orderIsCentral ? (
               <>
+                <Can code="admin_panel.orders.create_or_edit">
+                  <button
+                    type="button"
+                    onClick={() => void handleSave('draft')}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Créer (brouillon)
+                  </button>
+                </Can>
+                <Can code="admin_panel.orders.submit">
+                  <button
+                    type="button"
+                    onClick={() => void handleSave('submit')}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Soumettre
+                  </button>
+                </Can>
+              </>
+            ) : canEdit && (
+              <Can code="admin_panel.orders.create_or_edit">
                 <button
                   type="button"
-                  onClick={() => void handleSave('draft')}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Créer (brouillon)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSave('submit')}
+                  onClick={() => void handleSave()}
                   disabled={saving}
                   className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Soumettre
+                  Enregistrer
                 </button>
-              </>
-            ) : canEdit && (
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer
-              </button>
+              </Can>
             )}
           </div>
         </div>
@@ -570,15 +577,17 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Coût unitaire (CFA)</label>
                   <Inp type="number" min="0" value={addCost} onChange={e => setAddCost(e.target.value)} placeholder="0.00" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleAddItem()}
-                  disabled={!selectedProductId}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
-                >
-                  <Plus className="h-4 w-4" />
-                  Ajouter
-                </button>
+                <Can code="admin_panel.orders.create_or_edit">
+                  <button
+                    type="button"
+                    onClick={() => void handleAddItem()}
+                    disabled={!selectedProductId}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Ajouter
+                  </button>
+                </Can>
               </div>
             </div>
           </div>
@@ -728,13 +737,15 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         </td>
                         {canEdit && (
                           <td className="px-4 py-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => void handleRemoveItem(item.id)}
-                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <Can code="admin_panel.orders.create_or_edit">
+                              <button
+                                type="button"
+                                onClick={() => void handleRemoveItem(item.id)}
+                                className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </Can>
                           </td>
                         )}
                       </tr>

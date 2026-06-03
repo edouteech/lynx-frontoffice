@@ -16,6 +16,7 @@ import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder, PurchaseOrderReception } from '../../types/api'
 import PurchaseOrderPdf from './PurchaseOrderPdf'
+import Can from '../../components/Can'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -225,51 +226,63 @@ export default function PurchaseOrderShow() {
             </button>
 
             {canEdit && (
-              <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/edit`)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <Edit className="h-4 w-4" />
-                Modifier
-              </button>
+              <Can code="admin_panel.orders.create_or_edit">
+                <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/edit`)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Edit className="h-4 w-4" />
+                  Modifier
+                </button>
+              </Can>
             )}
 
             {canSubmit && (
-              <button onClick={() => void handleSubmit()} disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
-                Soumettre
-              </button>
+              <Can code="admin_panel.orders.submit">
+                <button onClick={() => void handleSubmit()} disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                  Soumettre
+                </button>
+              </Can>
             )}
 
             {canConfirm && (
-              <button onClick={() => void handleConfirm()} disabled={confirming}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
-                {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                Confirmer
-              </button>
+              <Can code="admin_panel.orders.validate">
+                <button onClick={() => void handleConfirm()} disabled={confirming}
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
+                  {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                  Confirmer
+                </button>
+              </Can>
             )}
 
             {canValidate && (
-              <button onClick={() => void handleValidate()} disabled={validating}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
-                {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Passer &amp; valider
-              </button>
+              <Can code="admin_panel.orders.validate">
+                <button onClick={() => void handleValidate()} disabled={validating}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                  {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Passer &amp; valider
+                </button>
+              </Can>
             )}
 
             {canReceive && (
-              <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receive`)}
-                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
-                <Truck className="h-4 w-4" />
-                Réceptionner
-              </button>
+              <Can code="admin_panel.orders.ack_or_adjust">
+                <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receive`)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
+                  <Truck className="h-4 w-4" />
+                  Réceptionner
+                </button>
+              </Can>
             )}
 
             {canMarkComplete && (
-              <button onClick={() => void handleMarkCompleted()} disabled={completing}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60">
-                {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Marquer terminée
-              </button>
+              <Can code="admin_panel.orders.ack_or_adjust">
+                <button onClick={() => void handleMarkCompleted()} disabled={completing}
+                  className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60">
+                  {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Marquer terminée
+                </button>
+              </Can>
             )}
           </div>
         </header>

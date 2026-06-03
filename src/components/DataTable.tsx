@@ -18,6 +18,7 @@ import {
   exportToXlsx,
   type ExportCell,
 } from '../lib/tableExport'
+import Can from './Can'
 
 export interface Column<T> {
   key: keyof T | string
@@ -35,6 +36,7 @@ export interface Action<T> {
   onClick: (item: T) => void
   variant?: 'default' | 'danger' | 'primary'
   show?: (item: T) => boolean
+  permission?: string
 }
 
 export interface ServerPagination {
@@ -454,7 +456,7 @@ export default function DataTable<T extends object>({
                         {actions.map((action, ai) => {
                           if (action.show && !action.show(item)) return null
                           const Icon = defaultActionIcon(action)
-                          return (
+                          const button = (
                             <button
                               key={ai}
                               type="button"
@@ -465,6 +467,10 @@ export default function DataTable<T extends object>({
                               <Icon className="h-4 w-4" />
                             </button>
                           )
+                          if (action.permission) {
+                            return <Can key={ai} code={action.permission}>{button}</Can>
+                          }
+                          return button
                         })}
                       </div>
                     </td>
