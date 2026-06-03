@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
@@ -108,7 +108,7 @@ function SuspensionListener() {
   return null
 }
 
-function RequireAnyPermission({ codes, children }) {
+function RequireAnyPermission({ codes, children }: { codes: string[]; children: ReactNode }) {
   const { user, activeOrganizationId } = useAuth()
   const hasAny = codes.some(code =>
     hasPermissionCode(user, activeOrganizationId, code)

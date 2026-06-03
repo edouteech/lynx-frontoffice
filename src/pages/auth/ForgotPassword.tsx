@@ -17,6 +17,9 @@ function ForgotPasswordForm() {
 
     setSubmitting(true)
     try {
+      if (!executeRecaptcha) {
+        throw new Error("reCAPTCHA n'est pas encore prêt. Veuillez réessayer.")
+      }
       const recaptchaToken = await executeRecaptcha('forgot_password')
       await requestPasswordReset(email, recaptchaToken)
       setSent(true)

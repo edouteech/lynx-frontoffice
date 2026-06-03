@@ -7,7 +7,7 @@ import {
 import {
   fetchPurchaseOrder, createPurchaseOrder, updatePurchaseOrder,
   addPurchaseOrderItem, updatePurchaseOrderItem, removePurchaseOrderItem,
-  fetchPurchasingCenters, submitPurchaseOrder,
+  fetchPurchasingCenters,
 } from '../../api/purchaseOrders'
 import { fetchSuppliers } from '../../api/suppliers'
 import { fetchStores } from '../../api/stores'

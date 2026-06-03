@@ -54,6 +54,7 @@ export function CustomerTransactionsModal({
   useEffect(() => {
     if (!open || !customer) return
 
+    const customerId = customer.id
     let cancelled = false
     async function load() {
       setLoading(true)
@@ -61,7 +62,7 @@ export function CustomerTransactionsModal({
       try {
         const res = await fetchSales({
           page,
-          customer_id: customer.id,
+          customer_id: customerId,
         })
         if (!cancelled) {
           setSales(res.data)

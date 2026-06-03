@@ -54,6 +54,9 @@ function RegisterRequestForm() {
 
     setSubmitting(true)
     try {
+      if (!executeRecaptcha) {
+        throw new Error("reCAPTCHA n'est pas encore prêt. Veuillez réessayer.")
+      }
       const recaptchaToken = await executeRecaptcha('register_request')
       const data = await submitOrganizationRegistrationRequest({
         name: organizationName,

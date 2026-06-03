@@ -45,6 +45,7 @@ export async function updateCashRegister(
     reference?: string | null
     store_id?: number | string
     status?: string
+    is_available?: boolean
   }
 ): Promise<CashRegister> {
   const { data } = await api.patch<CashRegister>(`/cash-registers/${id}`, body)
