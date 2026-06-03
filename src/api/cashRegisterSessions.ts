@@ -36,7 +36,7 @@ export async function closeCashRegisterSession(
   _sessionId: number | string,
   body: { closing_balance: number; note?: string | null }
 ): Promise<CashRegisterSession> {
-  const { data } = await api.post<CashRegisterSession>(
+  const { data } = await api.patch<CashRegisterSession>(
     `/cash-registers/sessions/close`,
     { cash_register_id: cashRegisterId, ...body }
   )
