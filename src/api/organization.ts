@@ -3,6 +3,11 @@ import type { Organization, User } from '../types/api'
 
 export interface CreateOrganizationBody {
   name: string
+  legal_name?: string
+  tax_id?: string
+  company_registration_number?: string
+  address?: string
+  phone?: string
   country: string
   currency: string
   timezone?: string | null
@@ -19,6 +24,24 @@ export async function createOrganization(
   const { data } = await api.post<CreateOrganizationResponse>(
     '/organizations',
     body
+  )
+  return data
+}
+
+export async function createOrganizationWithLogo(
+  body: CreateOrganizationBody,
+  logoFile: File
+): Promise<CreateOrganizationResponse> {
+  const form = new FormData()
+  form.append('logo', logoFile)
+  Object.entries(body).forEach(([k, v]) => {
+    if (v === undefined) return
+    form.append(k, v === null ? '' : String(v))
+  })
+
+  const { data } = await api.post<CreateOrganizationResponse>(
+    '/organizations',
+    form
   )
   return data
 }

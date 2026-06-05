@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Building2, CheckCircle2, UserRound } from 'lucide-react'
-import { createOrganization } from '../../api/organization'
+import { createOrganization, createOrganizationWithLogo } from '../../api/organization'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { CountrySelect } from '../../components/CountrySelect'
+import { PhoneInput } from '../../components/PhoneInput'
 import { TimeZoneSelect } from '../../components/TimeZoneSelect'
+import { telephoneForApi } from '../../lib/phoneValue'
 import { timezoneForApi } from '../../lib/timezone'
 import { CURRENCY_OPTIONS } from '../../lib/registerFormOptions'
 import { isOwnerRole } from '../../lib/ownerRole'
@@ -25,18 +27,39 @@ export default function UserProfilePage() {
     ) ?? false
 
   const [organizationName, setOrganizationName] = useState('')
+  const [legalName, setLegalName] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState('')
+  const [address, setAddress] = useState('')
+  const [phone, setPhone] = useState('')
   const [country, setCountry] = useState('Bénin')
   const [currency, setCurrency] = useState('XOF')
   const [selectedTimezone, setSelectedTimezone] = useState('Africa/Porto-Novo')
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   function resetForm() {
     setOrganizationName('')
+    setLegalName('')
+    setTaxId('')
+    setCompanyRegistrationNumber('')
+    setAddress('')
+    setPhone('')
     setCountry('Bénin')
     setCurrency('XOF')
     setSelectedTimezone('Africa/Porto-Novo')
+    setLogoFile(null)
     setError(null)
+  }
+
+  function normalizeTaxId(v: string): string {
+    return v.replace(/\D/g, '').slice(0, 13)
+  }
+
+  function isValidTaxId(v: unknown): boolean {
+    const s = String(v ?? '').trim()
+    return /^\d{13}$/.test(s)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,6 +72,10 @@ export default function UserProfilePage() {
     }
     if (!country.trim()) {
       setError('Veuillez sélectionner un pays.')
+      return
+    }
+    if (taxId && !isValidTaxId(taxId)) {
+      setError('L\'IFU doit contenir exactement 13 chiffres.')
       return
     }
 
@@ -78,12 +105,22 @@ export default function UserProfilePage() {
     })
 
     try {
-      const data = await createOrganization({
+      const organizationData = {
         name: n,
+        legal_name: legalName.trim() || undefined,
+        tax_id: taxId || undefined,
+        company_registration_number: companyRegistrationNumber.trim() || undefined,
+        address: address.trim() || undefined,
+        phone: telephoneForApi(phone) || undefined,
         country: country.trim(),
         currency,
         timezone: timezoneForApi(selectedTimezone),
-      })
+      }
+      
+      const data = logoFile 
+        ? await createOrganizationWithLogo(organizationData, logoFile)
+        : await createOrganization(organizationData)
+      
       applyUserAndOrganization(data.user, data.organization.id)
       resetForm()
 
@@ -270,74 +307,169 @@ export default function UserProfilePage() {
               onSubmit={(e) => void handleSubmit(e)}
               className="mt-6 space-y-4"
             >
-              <div>
-                <label
-                  htmlFor="ent-nom"
-                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  Nom de l’entreprise
-                </label>
-                <input
-                  id="ent-nom"
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
-                  placeholder="Ex. Boutique Soleil"
-                  autoComplete="organization"
-                  required
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="ent-pays"
-                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  Pays
-                </label>
-                <CountrySelect
-                  id="ent-pays"
-                  value={country}
-                  onChange={setCountry}
-                  allowClear={false}
-                  placeholder="Choisir un pays…"
-                  className="[&_button]:rounded-lg"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="ent-devise"
-                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  Devise
-                </label>
-                <select
-                  id="ent-devise"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
-                >
-                  {CURRENCY_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor="ent-timezone"
-                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  Fuseau horaire (optionnel)
-                </label>
-                <TimeZoneSelect
-                  id="ent-timezone"
-                  value={selectedTimezone}
-                  onChange={setSelectedTimezone}
-                  placeholder="Choisir un fuseau…"
-                  className="[&_button]:rounded-lg"
-                  ariaLabel="Fuseau horaire de l’entreprise"
-                />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="ent-nom"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Nom de l'entreprise
+                  </label>
+                  <input
+                    id="ent-nom"
+                    value={organizationName}
+                    onChange={(e) => setOrganizationName(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    placeholder="Ex. Boutique Soleil"
+                    autoComplete="organization"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-logo"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Logo (optionnel)
+                  </label>
+                  <input
+                    id="ent-logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-legal-name"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Raison sociale (optionnel)
+                  </label>
+                  <input
+                    id="ent-legal-name"
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    placeholder="Ex. SARL Boutique Soleil"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-tax-id"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    IFU (optionnel, 13 chiffres)
+                  </label>
+                  <input
+                    id="ent-tax-id"
+                    value={taxId}
+                    onChange={(e) => setTaxId(normalizeTaxId(e.target.value))}
+                    inputMode="numeric"
+                    pattern="\d{13}"
+                    maxLength={13}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    placeholder="13 chiffres"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-rccm"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    RCCM (optionnel)
+                  </label>
+                  <input
+                    id="ent-rccm"
+                    value={companyRegistrationNumber}
+                    onChange={(e) => setCompanyRegistrationNumber(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    placeholder="Ex. RB-ABJ-2024-B-12345"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-address"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Adresse (optionnel)
+                  </label>
+                  <input
+                    id="ent-address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    placeholder="Ex. 123 Rue du Commerce"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-phone"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Téléphone (optionnel)
+                  </label>
+                  <PhoneInput
+                    id="ent-phone"
+                    value={phone}
+                    onChange={setPhone}
+                    placeholder="01 97 …"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-pays"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Pays
+                  </label>
+                  <CountrySelect
+                    id="ent-pays"
+                    value={country}
+                    onChange={setCountry}
+                    allowClear={false}
+                    placeholder="Choisir un pays…"
+                    className="[&_button]:rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-devise"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Devise
+                  </label>
+                  <select
+                    id="ent-devise"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                  >
+                    {CURRENCY_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="ent-timezone"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Fuseau horaire (optionnel)
+                  </label>
+                  <TimeZoneSelect
+                    id="ent-timezone"
+                    value={selectedTimezone}
+                    onChange={setSelectedTimezone}
+                    placeholder="Choisir un fuseau…"
+                    className="[&_button]:rounded-lg"
+                    ariaLabel="Fuseau horaire de l'entreprise"
+                  />
+                </div>
               </div>
               <div className="flex justify-end pt-2">
                 <button
@@ -345,7 +477,7 @@ export default function UserProfilePage() {
                   disabled={submitting}
                   className="rounded-lg bg-[#3B82F6] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#2563EB] disabled:opacity-50"
                 >
-                  {submitting ? 'Création…' : 'Créer l’entreprise'}
+                  {submitting ? 'Création…' : 'Créer l\'entreprise'}
                 </button>
               </div>
             </form>
