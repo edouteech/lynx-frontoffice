@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, Plus, Store, Trash2 } from 'lucide-react'
+import Swal from 'sweetalert2'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deletePurchaseOrder, fetchPurchaseOrders } from '../../api/purchaseOrders'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -52,7 +53,16 @@ export default function PurchaseOrdersIndex({ type }: Props) {
   useEffect(() => { void load(page) }, [page, load])
 
   const handleDelete = useCallback(async (o: PurchaseOrder) => {
-    if (!window.confirm(`Supprimer la commande #${String(o.id).padStart(4, '0')} ?`)) return
+    const result = await Swal.fire({
+      title: 'Supprimer la commande ?',
+      text: `Supprimer la commande #${String(o.id).padStart(4, '0')} ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#dc2626',
+    })
+    if (!result.isConfirmed) return
     try {
       await deletePurchaseOrder(o.id)
       void load(page)

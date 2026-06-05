@@ -5,6 +5,7 @@ import {
   Printer, ShieldCheck, Truck,
 } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
+import Swal from 'sweetalert2'
 import {
   fetchPurchaseOrder,
   markPurchaseOrderCompleted,
@@ -87,7 +88,16 @@ export default function PurchaseOrderShow() {
 
   async function handleSubmit() {
     if (!order) return
-    if (!window.confirm('Soumettre ce brouillon à la centrale d\'achat ?')) return
+    const result = await Swal.fire({
+      title: 'Soumettre le brouillon ?',
+      text: 'Soumettre ce brouillon à la centrale d\'achat ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, soumettre',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#9333ea',
+    })
+    if (!result.isConfirmed) return
     setSubmitting(true)
     try {
       const updated = await submitPurchaseOrder(order.id)
@@ -101,7 +111,16 @@ export default function PurchaseOrderShow() {
 
   async function handleConfirm() {
     if (!order) return
-    if (!window.confirm('Confirmer cette commande centrale ?')) return
+    const result = await Swal.fire({
+      title: 'Confirmer la commande ?',
+      text: 'Confirmer cette commande centrale ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, confirmer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#4f46e5',
+    })
+    if (!result.isConfirmed) return
     setConfirming(true)
     try {
       const updated = await confirmPurchaseOrder(order.id)
@@ -115,7 +134,16 @@ export default function PurchaseOrderShow() {
 
   async function handleValidate() {
     if (!order) return
-    if (!window.confirm('Passer et valider cette commande ? Le magasin pourra ensuite réceptionner les produits.')) return
+    const result = await Swal.fire({
+      title: 'Passer et valider la commande ?',
+      text: 'Passer et valider cette commande ? Le magasin pourra ensuite réceptionner les produits.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, valider',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#2563eb',
+    })
+    if (!result.isConfirmed) return
     setValidating(true)
     try {
       const updated = await validatePurchaseOrder(order.id)
@@ -129,7 +157,16 @@ export default function PurchaseOrderShow() {
 
   async function handleMarkCompleted() {
     if (!order) return
-    if (!window.confirm('Marquer cette commande comme terminée ?')) return
+    const result = await Swal.fire({
+      title: 'Marquer comme terminée ?',
+      text: 'Marquer cette commande comme terminée ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, terminer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#16a34a',
+    })
+    if (!result.isConfirmed) return
     setCompleting(true)
     try {
       const updated = await markPurchaseOrderCompleted(order.id)
