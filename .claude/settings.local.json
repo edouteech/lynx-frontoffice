@@ -22,7 +22,13 @@
       "Bash(npm install *)",
       "Bash(node -e \"require\\('@react-pdf/renderer'\\); console.log\\('ok'\\)\")",
       "Bash(node -e ' *)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(xargs grep -l \"store\")",
+      "Bash(xargs grep -l \"useStore\\\\|StoreSelect\\\\|StoreContext\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(xargs grep -l \"payment_methods\")",
+      "Bash(xargs grep -l \"deleted_at.*payment\\\\|payment.*deleted_at\")",
+      "Bash(xargs grep -l \"table\\\\->softDeletes\\\\|table\\\\->dropColumn.*deleted_at\")"
     ]
   }
 }

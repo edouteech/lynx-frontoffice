@@ -7,13 +7,16 @@ import {
   fetchPaymentMethod,
   fetchPaymentMethods,
 } from '../../api/paymentMethods'
+import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { PaymentMethod } from '../../types/api'
+import type { PaymentMethod, Store } from '../../types/api'
 import { PaymentMethodCreateModal } from './create'
 
 export default function PaymentMethodsIndex() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('')
+  const [stores, setStores] = useState<Store[]>([])
   const [paginated, setPaginated] = useState<{
     data: PaymentMethod[]
     current_page: number
@@ -26,10 +29,16 @@ export default function PaymentMethodsIndex() {
   const [modalPaymentMethod, setModalPaymentMethod] =
     useState<PaymentMethod | null>(null)
 
+  useEffect(() => {
+    fetchStores(1)
+      .then((res) => setStores(res.data))
+      .catch(() => {})
+  }, [])
+
   const refreshList = useCallback(async () => {
     setError(null)
     try {
-      const res = await fetchPaymentMethods(page)
+      const res = await fetchPaymentMethods(page, undefined, selectedStoreId || undefined)
       setPaginated({
         data: res.data,
         current_page: res.current_page,
@@ -39,7 +48,7 @@ export default function PaymentMethodsIndex() {
     } catch (e) {
       setError(getApiErrorMessage(e))
     }
-  }, [page])
+  }, [page, selectedStoreId])
 
   useEffect(() => {
     let cancelled = false
@@ -47,7 +56,7 @@ export default function PaymentMethodsIndex() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetchPaymentMethods(page)
+        const res = await fetchPaymentMethods(page, undefined, selectedStoreId || undefined)
         if (!cancelled) {
           setPaginated({
             data: res.data,
@@ -69,7 +78,7 @@ export default function PaymentMethodsIndex() {
     return () => {
       cancelled = true
     }
-  }, [page])
+  }, [page, selectedStoreId])
 
   const handleDelete = useCallback(
     async (pm: PaymentMethod) => {
@@ -77,7 +86,7 @@ export default function PaymentMethodsIndex() {
       setError(null)
       try {
         await deletePaymentMethod(pm.id)
-        const res = await fetchPaymentMethods(page)
+        const res = await fetchPaymentMethods(page, undefined, selectedStoreId || undefined)
         setPaginated({
           data: res.data,
           current_page: res.current_page,
@@ -88,7 +97,7 @@ export default function PaymentMethodsIndex() {
         setError(getApiErrorMessage(err))
       }
     },
-    [page]
+    [page, selectedStoreId]
   )
 
   const columns: Column<PaymentMethod>[] = useMemo(
@@ -172,17 +181,34 @@ export default function PaymentMethodsIndex() {
             Créez un moyen et choisissez les magasins où il est utilisable.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setModalPaymentMethod(null)
-            setModalOpen(true)
-          }}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau moyen
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={selectedStoreId}
+            onChange={(e) => {
+              setSelectedStoreId(e.target.value)
+              setPage(1)
+            }}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Tous les magasins</option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              setModalPaymentMethod(null)
+              setModalOpen(true)
+            }}
+            className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau moyen
+          </button>
+        </div>
       </header>
 
       {error && (
