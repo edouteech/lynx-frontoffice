@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Building2, ChevronDown, Loader2, Pencil, Plus, Trash2, Package, RefreshCw, X, Eye } from 'lucide-react'
+import { Building2, ChevronDown, FileUp, Loader2, Pencil, Plus, Trash2, Package, RefreshCw, X, Eye } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
+import ProductImportModal from '../../components/ProductImportModal'
 import { fetchProducts, deleteProduct, fetchProductStock, recalculateAllStock } from '../../api/products'
 import { fetchStores } from '../../api/stores'
 import { fetchItemCategories } from '../../api/itemCategories'
@@ -185,6 +186,7 @@ export default function ItemsIndex() {
 
   // modal
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
+  const [showImport, setShowImport] = useState(false)
 
   // Load stores + categories once
   useEffect(() => {
@@ -396,6 +398,14 @@ export default function ItemsIndex() {
             Actualiser les stocks
           </button>
           <button
+            type="button"
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <FileUp className="h-4 w-4" />
+            Importer Excel
+          </button>
+          <button
             onClick={() => navigate('/items/create')}
             className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#2563EB] transition-colors"
           >
@@ -500,6 +510,13 @@ export default function ItemsIndex() {
         <StockModal
           product={stockModalProduct}
           onClose={() => setStockModalProduct(null)}
+        />
+      )}
+
+      {showImport && (
+        <ProductImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { void load(page) }}
         />
       )}
     </div>
