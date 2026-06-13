@@ -55,6 +55,16 @@ export function CustomerCreateModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Validation IFU
+    if (ifu.trim()) {
+      const ifuDigits = ifu.trim().replace(/\D/g, '')
+      if (ifuDigits.length !== 13) {
+        setError('L\'IFU doit contenir exactement 13 chiffres.')
+        return
+      }
+    }
+    
     const payload = {
       name: customerName.trim(),
       email: email.trim() || null,
@@ -162,6 +172,7 @@ export function CustomerCreateModal({
             </label>
             <input
               id="customer-form-tax-id"
+              maxLength={13}
               value={ifu}
               onChange={(e) => setIfu(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"

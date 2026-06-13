@@ -8,6 +8,8 @@ import {
 
   LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2,
 
+  X,
+
 } from 'lucide-react'
 
 import { pdf } from '@react-pdf/renderer'
@@ -28,7 +30,10 @@ import { fetchProducts } from '../../api/products'
 
 import { fetchItemCategories } from '../../api/itemCategories'
 
-import { fetchCustomers } from '../../api/customer'
+import { fetchCustomers, createCustomer } from '../../api/customer'
+import { PhoneInput } from '../../components/PhoneInput'
+import { telephoneForApi } from '../../lib/phoneValue'
+import Modal from '../../components/Modal'
 
 import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 
@@ -239,6 +244,15 @@ export default function SaleForm() {
   const [customerSearchQuery, setCustomerSearchQuery] = useState('')
 
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [newCustomerName, setNewCustomerName] = useState('')
+  const [newCustomerPhone, setNewCustomerPhone] = useState('')
+  const [newCustomerEmail, setNewCustomerEmail] = useState('')
+  const [newCustomerIfu, setNewCustomerIfu] = useState('')
+  const [newCustomerNote, setNewCustomerNote] = useState('')
+  const [newCustomerAib, setNewCustomerAib] = useState(false)
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [customerError, setCustomerError] = useState<string | null>(null)
 
   const [addQty, setAddQty] = useState('1')
 
@@ -992,6 +1006,97 @@ export default function SaleForm() {
 
 
 
+  // ── Créer un nouveau client ───────────────────────────────────────────────
+
+  const handleCreateCustomer = async () => {
+
+    if (!newCustomerName.trim()) {
+
+      setCustomerError('Le nom du client est requis.')
+
+      return
+
+    }
+
+    if (newCustomerIfu.trim()) {
+
+      const ifuDigits = newCustomerIfu.trim().replace(/\D/g, '')
+      if (ifuDigits.length !== 13) {
+        setCustomerError('L\'IFU doit contenir exactement 13 chiffres.')
+        return
+      }
+    }
+
+
+
+    setCreatingCustomer(true)
+
+    setCustomerError(null)
+
+
+
+    try {
+
+      const newCustomer = await createCustomer({
+
+        name: newCustomerName.trim(),
+
+        phone: telephoneForApi(newCustomerPhone),
+
+        email: newCustomerEmail.trim() || null,
+
+        tax_id: newCustomerIfu.trim() || null,
+
+        note: newCustomerNote.trim() || null,
+
+        aib: newCustomerAib,
+
+      })
+
+
+
+      // Add the new customer to the list
+
+      setCustomers(prev => [...prev, newCustomer])
+
+
+
+      // Select the new customer
+
+      setCustomerId(String(newCustomer.id))
+
+
+
+      // Close modal and reset form
+
+      setShowCustomerModal(false)
+
+      setNewCustomerName('')
+
+      setNewCustomerPhone('')
+
+      setNewCustomerEmail('')
+
+      setNewCustomerIfu('')
+
+      setNewCustomerNote('')
+
+      setNewCustomerAib(false)
+
+    } catch (err) {
+
+      setCustomerError(getApiErrorMessage(err))
+
+    } finally {
+
+      setCreatingCustomer(false)
+
+    }
+
+  }
+
+
+
   // ── Enregistrer ───────────────────────────────────────────────────────────
 
   async function handleSave() {
@@ -1699,6 +1804,131 @@ export default function SaleForm() {
 
 
 
+  // ── Modal de création de client ─────────────────────────────────────────────
+  if (showCustomerModal) {
+    return (
+      <Modal
+        open={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        preventClose={creatingCustomer}
+        title="Nouveau client"
+        subtitle="Créez une fiche client."
+        maxWidthClassName="max-w-2xl"
+      >
+        {customerError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+            {customerError}
+          </div>
+        )}
+
+        <form onSubmit={(e) => { e.preventDefault(); void handleCreateCustomer(); }} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="customer-form-name" className="mb-1 block text-sm font-medium text-gray-700">
+                Nom <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="customer-form-name"
+                required
+                value={newCustomerName}
+                onChange={(e) => setNewCustomerName(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="Ex. Jean Dupont"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="customer-form-email" className="mb-1 block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                id="customer-form-email"
+                type="email"
+                value={newCustomerEmail}
+                onChange={(e) => setNewCustomerEmail(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="exemple@mail.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="customer-form-phone" className="mb-1 block text-sm font-medium text-gray-700">
+                Téléphone
+              </label>
+              <PhoneInput
+                id="customer-form-phone"
+                value={newCustomerPhone}
+                onChange={setNewCustomerPhone}
+                placeholder="01 97 …"
+                className="rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="customer-form-tax-id" className="mb-1 block text-sm font-medium text-gray-700">
+                IFU
+              </label>
+              <input
+                id="customer-form-tax-id"
+                maxLength={13}
+                value={newCustomerIfu}
+                onChange={(e) => setNewCustomerIfu(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="IFU…"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label htmlFor="customer-form-note" className="mb-1 block text-sm font-medium text-gray-700">
+                Note
+              </label>
+              <textarea
+                id="customer-form-note"
+                rows={3}
+                value={newCustomerNote}
+                onChange={(e) => setNewCustomerNote(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="Remarques…"
+              />
+            </div>
+
+            <div className="flex items-center sm:col-span-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={newCustomerAib}
+                  onChange={(e) => setNewCustomerAib(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-[#3B82F6] focus:ring-[#3B82F6]"
+                />
+                AIB
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={creatingCustomer}
+              className="rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB] disabled:opacity-60"
+            >
+              {creatingCustomer ? <Loader2 className="inline h-4 w-4 animate-spin" /> : 'Créer le client'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!creatingCustomer) setShowCustomerModal(false)
+              }}
+              disabled={creatingCustomer}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      </Modal>
+    )
+  }
+
   const statusMeta  = STATUS_META[status]
 
   const selectedStore = stores.find(s => String(s.id) === storeId)
@@ -2066,6 +2296,46 @@ export default function SaleForm() {
                       </button>
 
                     ))}
+
+                    <button
+
+                      type="button"
+
+                      onClick={() => {
+
+                        setShowCustomerDropdown(false)
+
+                        setShowCustomerModal(true)
+
+                        setCustomerError(null)
+
+                        setNewCustomerName('')
+
+                        setNewCustomerPhone('')
+
+                        setNewCustomerEmail('')
+
+                        setNewCustomerIfu('')
+
+                        setNewCustomerNote('')
+
+                        setNewCustomerAib(false)
+
+                      }}
+
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none text-blue-600 font-semibold border-t border-gray-100 mt-1"
+
+                    >
+
+                      <div className="flex items-center gap-2">
+
+                        <Plus className="h-4 w-4" />
+
+                        Nouveau client
+
+                      </div>
+
+                    </button>
 
                   </div>
 
