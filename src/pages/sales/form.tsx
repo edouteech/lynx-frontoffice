@@ -6,9 +6,7 @@ import {
 
   AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, FileText, Loader2,
 
-  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2,
-
-  X,
+  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2
 
 } from 'lucide-react'
 
