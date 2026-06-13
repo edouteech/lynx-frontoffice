@@ -232,6 +232,14 @@ export default function SaleForm() {
 
   const [selectedProductId, setSelectedProductId] = useState('')
 
+  const [productSearchQuery, setProductSearchQuery] = useState('')
+
+  const [showProductDropdown, setShowProductDropdown] = useState(false)
+
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('')
+
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+
   const [addQty, setAddQty] = useState('1')
 
   const [addPrice, setAddPrice] = useState('')
@@ -417,6 +425,44 @@ export default function SaleForm() {
       .finally(() => setLoadingMeta(false))
 
   }, [isEdit])
+
+
+
+  // ── Fermer les dropdowns quand on clique en dehors ─────────────────────────────
+
+  useEffect(() => {
+
+    const handleClickOutside = (event: MouseEvent) => {
+
+      const target = event.target as HTMLElement
+
+      const productDropdown = target.closest('[data-product-dropdown]')
+
+      const customerDropdown = target.closest('[data-customer-dropdown]')
+
+
+
+      if (!productDropdown && showProductDropdown) {
+
+        setShowProductDropdown(false)
+
+      }
+
+      if (!customerDropdown && showCustomerDropdown) {
+
+        setShowCustomerDropdown(false)
+
+      }
+
+    }
+
+
+
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+
+  }, [showProductDropdown, showCustomerDropdown])
 
 
 
@@ -680,6 +726,14 @@ export default function SaleForm() {
 
     setSelectedProductId('')
 
+    setProductSearchQuery('')
+
+    setShowProductDropdown(false)
+
+    setCustomerSearchQuery('')
+
+    setShowCustomerDropdown(false)
+
     setAddQty('1')
 
     setAddPrice('')
@@ -707,11 +761,27 @@ export default function SaleForm() {
   // ── Produits filtrés ───────────────────────────────────────────────────────
 
   const filteredProducts = allProducts.filter(p => {
-
     if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
-
+    if (productSearchQuery) {
+      const q = productSearchQuery.toLowerCase()
+      const matchesName = p.name.toLowerCase().includes(q)
+      const matchesSku = p.sku?.toLowerCase().includes(q)
+      if (!matchesName && !matchesSku) return false
+    }
     return true
+  })
 
+
+
+  // ── Clients filtrés ───────────────────────────────────────────────────────
+
+  const filteredCustomers = customers.filter(c => {
+    if (customerSearchQuery) {
+      const q = customerSearchQuery.toLowerCase()
+      const matchesName = c.name.toLowerCase().includes(q)
+      if (!matchesName) return false
+    }
+    return true
   })
 
 
@@ -1901,17 +1971,105 @@ export default function SaleForm() {
 
             <div className="grid gap-4 sm:grid-cols-2">
 
-              <div>
+              <div className="relative" data-customer-dropdown>
 
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Client</label>
 
-                <Sel value={customerId} onChange={e => setCustomerId(e.target.value)} disabled={isConfirmed}>
+                <input
 
-                  <option value="">— Anonyme —</option>
+                  type="text"
 
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  value={customerId ? (customers.find(c => String(c.id) === customerId)?.name || '') : ''}
 
-                </Sel>
+                  readOnly
+
+                  onClick={() => !isConfirmed && setShowCustomerDropdown(!showCustomerDropdown)}
+
+                  placeholder="Anonyme..."
+
+                  disabled={isConfirmed}
+
+                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
+
+                />
+
+                {showCustomerDropdown && !isConfirmed && (
+
+                  <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+
+                    <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+
+                      <input
+
+                        type="text"
+
+                        value={customerSearchQuery}
+
+                        onChange={e => setCustomerSearchQuery(e.target.value)}
+
+                        placeholder="Rechercher un client..."
+
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+
+                        autoFocus
+
+                      />
+
+                    </div>
+
+                    <button
+
+                      type="button"
+
+                      onClick={() => {
+
+                        setCustomerId('')
+
+                        setCustomerSearchQuery('')
+
+                        setShowCustomerDropdown(false)
+
+                      }}
+
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none text-gray-500 italic"
+
+                    >
+
+                      — Anonyme —
+
+                    </button>
+
+                    {filteredCustomers.map(c => (
+
+                      <button
+
+                        key={c.id}
+
+                        type="button"
+
+                        onClick={() => {
+
+                          setCustomerId(String(c.id))
+
+                          setCustomerSearchQuery('')
+
+                          setShowCustomerDropdown(false)
+
+                        }}
+
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+
+                      >
+
+                        <div className="font-medium text-gray-900">{c.name}</div>
+
+                      </button>
+
+                    ))}
+
+                  </div>
+
+                )}
 
               </div>
 
@@ -2101,7 +2259,7 @@ export default function SaleForm() {
 
         {isDraft && (
 
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
 
             <div className="border-b border-gray-100 px-6 py-3">
 
@@ -2119,7 +2277,7 @@ export default function SaleForm() {
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
 
-                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId('') }}>
+                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId(''); setProductSearchQuery('') }}>
 
                     <option value="">Toutes</option>
 
@@ -2133,7 +2291,7 @@ export default function SaleForm() {
 
                 {/* Produit */}
 
-                <div className="flex-1 min-w-[200px]">
+                <div className="flex-1 min-w-[200px] relative" data-product-dropdown>
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">
 
@@ -2141,21 +2299,79 @@ export default function SaleForm() {
 
                   </label>
 
-                  <Sel value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
+                  <input
 
-                    <option value="">— Sélectionner —</option>
+                    type="text"
 
-                    {filteredProducts.map(p => (
+                    value={selectedProductId ? (allProducts.find(p => String(p.id) === selectedProductId)?.name || '') : ''}
 
-                      <option key={p.id} value={p.id}>
+                    readOnly
 
-                        {p.name}{p.sku ? ` (${p.sku})` : ''}
+                    onClick={() => setShowProductDropdown(!showProductDropdown)}
 
-                      </option>
+                    placeholder="Sélectionner un produit..."
 
-                    ))}
+                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
 
-                  </Sel>
+                  />
+
+                  {showProductDropdown && (
+
+                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+
+                      <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+
+                        <input
+
+                          type="text"
+
+                          value={productSearchQuery}
+
+                          onChange={e => setProductSearchQuery(e.target.value)}
+
+                          placeholder="Rechercher un produit..."
+
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+
+                          autoFocus
+
+                        />
+
+                      </div>
+
+                      {filteredProducts.map(p => (
+
+                        <button
+
+                          key={p.id}
+
+                          type="button"
+
+                          onClick={() => {
+
+                            setSelectedProductId(String(p.id))
+
+                            setProductSearchQuery('')
+
+                            setShowProductDropdown(false)
+
+                          }}
+
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+
+                        >
+
+                          <div className="font-medium text-gray-900">{p.name}</div>
+
+                          {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+
+                        </button>
+
+                      ))}
+
+                    </div>
+
+                  )}
 
                 </div>
 

@@ -84,6 +84,8 @@ export default function StockTransferForm() {
   // add-item form
   const [filterCategoryId, setFilterCategoryId] = useState('')
   const [selectedProductId, setSelectedProductId] = useState('')
+  const [productSearchQuery, setProductSearchQuery] = useState('')
+  const [showProductDropdown, setShowProductDropdown] = useState(false)
   const [addQty, setAddQty] = useState('1')
 
   // search
@@ -131,10 +133,30 @@ export default function StockTransferForm() {
       .finally(() => setLoadingTransfer(false))
   }, [id, isEdit])
 
+  // ── Fermer le dropdown quand on clique en dehors ─────────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      const productDropdown = target.closest('[data-product-dropdown]')
+      if (!productDropdown && showProductDropdown) {
+        setShowProductDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showProductDropdown])
+
   // ── Produits filtrés ───────────────────────────────────────────────────────
-  const filteredProducts = filterCategoryId
-    ? allProducts.filter(p => String(p.item_category_id) === filterCategoryId)
-    : allProducts
+  const filteredProducts = allProducts.filter(p => {
+    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
+    if (productSearchQuery) {
+      const q = productSearchQuery.toLowerCase()
+      const matchesName = p.name.toLowerCase().includes(q)
+      const matchesSku = p.sku?.toLowerCase().includes(q)
+      if (!matchesName && !matchesSku) return false
+    }
+    return true
+  })
 
   // ── Items à afficher ───────────────────────────────────────────────────────
   const displayItems: StockTransferItem[] = isEdit
@@ -177,6 +199,8 @@ export default function StockTransferForm() {
 
     // Réinitialiser immédiatement pour éviter les doubles soumissions
     setSelectedProductId('')
+    setProductSearchQuery('')
+    setShowProductDropdown(false)
     setAddQty('1')
 
     if (!isEdit) {
@@ -469,7 +493,7 @@ export default function StockTransferForm() {
 
         {/* ══════════════════ AJOUT D'ARTICLE ══════════════════════════════════ */}
         {isDraft && (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 px-6 py-3">
               <p className="text-sm font-semibold text-gray-700">Ajouter un article</p>
             </div>
@@ -478,25 +502,54 @@ export default function StockTransferForm() {
                 {/* Catégorie */}
                 <div className="w-44">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
-                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId('') }}>
+                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId(''); setProductSearchQuery('') }}>
                     <option value="">Toutes</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </Sel>
                 </div>
 
                 {/* Produit */}
-                <div className="flex-1 min-w-[200px]">
+                <div className="flex-1 min-w-[200px] relative" data-product-dropdown>
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">
                     Article <span className="text-red-500">*</span>
                   </label>
-                  <Sel value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
-                    <option value="">— Sélectionner —</option>
-                    {filteredProducts.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}{p.sku ? ` (${p.sku})` : ''}
-                      </option>
-                    ))}
-                  </Sel>
+                  <input
+                    type="text"
+                    value={selectedProductId ? (allProducts.find(p => String(p.id) === selectedProductId)?.name || '') : ''}
+                    readOnly
+                    onClick={() => setShowProductDropdown(!showProductDropdown)}
+                    placeholder="Sélectionner un produit..."
+                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
+                  />
+                  {showProductDropdown && (
+                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                      <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+                        <input
+                          type="text"
+                          value={productSearchQuery}
+                          onChange={e => setProductSearchQuery(e.target.value)}
+                          placeholder="Rechercher un produit..."
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                          autoFocus
+                        />
+                      </div>
+                      {filteredProducts.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductId(String(p.id))
+                            setProductSearchQuery('')
+                            setShowProductDropdown(false)
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                        >
+                          <div className="font-medium text-gray-900">{p.name}</div>
+                          {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Quantité */}
