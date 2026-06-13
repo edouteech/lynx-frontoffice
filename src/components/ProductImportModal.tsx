@@ -214,6 +214,7 @@ export default function ProductImportModal({ onClose, onSuccess }: ProductImport
               <li><strong>tva_achat</strong> : Taux de TVA achat (ex: 18%)</li>
               <li><strong>tva_vente</strong> : Taux de TVA vente (ex: 18%)</li>
               <li><strong>stock</strong> : Quantité en stock</li>
+              <li><strong>seuil_alerte</strong> : Seuil d'alerte de stock</li>
               <li>
                 <strong>vendu_par</strong> : Unité de vente
                 <span className="ml-1 text-blue-500">(unité / poids / surface — défaut : unité)</span>
