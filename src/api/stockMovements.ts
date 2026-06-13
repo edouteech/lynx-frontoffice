@@ -14,6 +14,7 @@ export interface StockMovement {
   quantity_change: number
   stock_store_snapshot: number | null
   stock_global_snapshot: number | null
+  user_name: string
 }
 
 export interface StockMovementPaginated {

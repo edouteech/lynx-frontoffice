@@ -229,6 +229,7 @@ export default function StockMovementsPage() {
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Magasin</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Utilisateur</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Raison</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
                       <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Ajustement</th>
@@ -260,6 +261,11 @@ export default function StockMovementsPage() {
                         {/* Magasin */}
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                           {m.store_name}
+                        </td>
+
+                        {/* Utilisateur */}
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                          {m.user_name}
                         </td>
 
                         {/* Raison */}
