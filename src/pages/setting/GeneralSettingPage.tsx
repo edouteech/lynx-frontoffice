@@ -6,7 +6,7 @@ import {
   Receipt,
   ShoppingCart,
   TriangleAlert,
-  UserCheck,
+  //UserCheck,
   Wallet,
 } from 'lucide-react'
 import type { Organization } from '../../types/api'

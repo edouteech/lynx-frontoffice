@@ -52,6 +52,36 @@ export function FavoriteCreateModal({
     })()
   }, [open])
 
+  // Fetch products filtered by selected stores (favorites-specific logic)
+  useEffect(() => {
+    if (!open) return
+    ;(async () => {
+      try {
+        if (storeIds.length === 0) {
+          // No stores selected, show all products
+          const products = await fetchProducts(1)
+          setAvailableProducts(products.data)
+        } else {
+          // One or more stores selected, fetch products for each store and merge
+          const productPromises = storeIds.map(storeId =>
+            fetchProducts({ store_id: storeId })
+          )
+          const results = await Promise.all(productPromises)
+          // Merge and deduplicate products by ID
+          const allProducts = new Map<number, Product>()
+          for (const result of results) {
+            for (const product of result.data) {
+              allProducts.set(product.id, product)
+            }
+          }
+          setAvailableProducts(Array.from(allProducts.values()))
+        }
+      } catch {
+        // best-effort, le formulaire reste utilisable avec ce qu'on a déjà.
+      }
+    })()
+  }, [open, storeIds])
+
   useEffect(() => {
     if (!open) return
     if (!favorite) {
