@@ -158,6 +158,7 @@ export default function GeneralSettingPage() {
         icon: <Clock className="h-5 w-5" />,
         checked: data.work_periods,
       },
+      /*
       {
         key: 'time_tracking' as const,
         title: 'Pointage',
@@ -165,9 +166,10 @@ export default function GeneralSettingPage() {
         icon: <UserCheck className="h-5 w-5" />,
         checked: data.time_tracking,
       },
+      */
       {
         key: 'open_tickets' as const,
-        title: 'Tickets ouverts',
+        title: 'Bon de commande POS',
         description:
           'Autoriser à enregistrer et modifier les commandes avant paiement.',
         icon: <Receipt className="h-5 w-5" />,
@@ -213,6 +215,7 @@ export default function GeneralSettingPage() {
         icon: <ShoppingCart className="h-5 w-5" />,
         checked: data.item_buyback,
       },
+      /*
       {
         key: 'payment_methods' as const,
         title: 'Moyens de paiement',
@@ -220,6 +223,7 @@ export default function GeneralSettingPage() {
         icon: <Wallet className="h-5 w-5" />,
         checked: data.payment_methods,
       },
+      */
       {
         key: 'customer_account_payment' as const,
         title: 'Paiement compte client',
