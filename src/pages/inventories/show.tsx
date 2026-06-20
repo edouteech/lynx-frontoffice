@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, CheckCircle2, ClipboardCheck, FileText, Loader2,
@@ -47,6 +47,31 @@ export default function InventoryShowPage() {
   const [deleting,  setDeleting]  = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Extract unique categories (must be before conditional returns)
+  const categories = useMemo(() => {
+    const items = inventory?.items ?? []
+    const cats = new Set(items.map(item => item.product_category).filter(Boolean))
+    return Array.from(cats).sort()
+  }, [inventory?.items])
+
+  // Filter items by category (must be before conditional returns)
+  const filteredItems = useMemo(() => {
+    const items = inventory?.items ?? []
+    let filtered = selectedCategory === 'all' ? items : items.filter(item => item.product_category === selectedCategory)
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(item =>
+        item.product_name.toLowerCase().includes(query) ||
+        item.product_sku?.toLowerCase().includes(query)
+      )
+    }
+    
+    return filtered
+  }, [inventory?.items, selectedCategory, searchQuery])
 
   // per-item local state: edited value + save state
   const [actualQtys,  setActualQtys]  = useState<Record<number, string>>({})
@@ -226,8 +251,6 @@ export default function InventoryShowPage() {
     )
   }
 
-  const items = inventory.items ?? []
-
   return (
     <div className="space-y-6">
 
@@ -337,7 +360,39 @@ export default function InventoryShowPage() {
 
         {/* ─── tableau des articles ─────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {items.length === 0 ? (
+          {/* Category filter and search */}
+          <div className="border-b border-gray-200 px-5 py-3 bg-gray-50">
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Category dropdown */}
+              {categories.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Catégorie :</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                  >
+                    <option value="all">Toutes</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Search input */}
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Article :</label>
+              <div className="flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher un article..."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                />
+              </div>
+            </div>
+          </div>
+          {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <ClipboardCheck className="mb-3 h-10 w-10 text-gray-300" />
               <p className="text-sm text-gray-400">Aucun article dans cet inventaire.</p>
@@ -357,7 +412,7 @@ export default function InventoryShowPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {items.map((item: InventoryItem) => {
+                  {filteredItems.map((item: InventoryItem) => {
                     const rawVal   = actualQtys[item.id] ?? ''
                     const parsedActual = rawVal.trim() !== '' ? parseFloat(rawVal) : null
                     const liveDiff = parsedActual !== null
@@ -463,7 +518,7 @@ export default function InventoryShowPage() {
                     <td colSpan={4} />
                     <td className="px-4 py-3 text-right tabular-nums">
                       {(() => {
-                        const total = items.reduce((sum, item) => {
+                        const total = filteredItems.reduce((sum, item) => {
                           const raw = actualQtys[item.id] ?? ''
                           const parsed = raw.trim() !== '' ? parseFloat(raw) : null
                           const diff = parsed !== null

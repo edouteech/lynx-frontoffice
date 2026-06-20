@@ -29,6 +29,7 @@ export function FavoriteCreateModal({
   const [availableProducts, setAvailableProducts] = useState<Product[]>([])
   const [storeIds, setStoreIds] = useState<number[]>([])
   const [productIds, setProductIds] = useState<number[]>([])
+  const [productSearch, setProductSearch] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -89,12 +90,14 @@ export function FavoriteCreateModal({
       setStatus('active')
       setStoreIds([])
       setProductIds([])
+      setProductSearch('')
       return
     }
     setName(favorite.name)
     setStatus(favorite.status)
     setStoreIds((favorite.stores ?? []).map((s) => s.id))
     setProductIds((favorite.products ?? []).map((p) => p.id))
+    setProductSearch('')
   }, [open, favorite])
 
   const selectedStoreSet = useMemo(() => new Set(storeIds), [storeIds])
@@ -107,6 +110,15 @@ export function FavoriteCreateModal({
     () => availableProducts.map((p) => p.id),
     [availableProducts]
   )
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch) return availableProducts
+    const search = productSearch.toLowerCase()
+    return availableProducts.filter(p =>
+      p.name.toLowerCase().includes(search) ||
+      p.sku?.toLowerCase().includes(search)
+    )
+  }, [availableProducts, productSearch])
 
   const allStoresSelected =
     allStoreIds.length > 0 && storeIds.length === allStoreIds.length
@@ -258,11 +270,22 @@ export function FavoriteCreateModal({
                 Tout sélectionner
               </label>
             </div>
+            <div className="mb-2">
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Rechercher un produit..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+              />
+            </div>
             <div className="max-h-64 space-y-2 overflow-auto pr-1">
-              {availableProducts.length === 0 ? (
-                <div className="text-sm text-gray-500">Aucun produit chargé.</div>
+              {filteredProducts.length === 0 ? (
+                <div className="text-sm text-gray-500">
+                  {productSearch ? 'Aucun produit trouvé.' : 'Aucun produit chargé.'}
+                </div>
               ) : (
-                availableProducts.map((p) => (
+                filteredProducts.map((p) => (
                   <label
                     key={p.id}
                     className="flex cursor-pointer items-center gap-2 text-sm text-gray-700"
