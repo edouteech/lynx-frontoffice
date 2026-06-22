@@ -50,8 +50,8 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0F2E4A]/95 via-[#0F2E4A]/85 to-[#3B82F6]/35 px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white p-8 shadow-2xl">
         <div className="mb-6 text-center">
-          <div className=" mb-4 inline-flex rounded-lg bg-[#0F2E4A] px-5 py-2">
-            <span className="text-lg font-bold text-white">Lynx</span>
+          <div className="mb-4 flex justify-center">
+            <img src="/lynx_400px.png" alt="Lynx" className="h-24 w-auto" />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Connexion</h1>
           <p className="mt-2 text-sm text-gray-600">

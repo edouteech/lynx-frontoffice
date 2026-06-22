@@ -82,8 +82,8 @@ function RegisterRequestForm() {
     <div className="min-h-screen bg-gradient-to-br from-[#0F2E4A]/95 via-[#0F2E4A]/85 to-[#3B82F6]/35 px-4 py-10">
       <div className=" w-full  rounded-2xl border border-white/20 bg-white p-6 shadow-2xl sm:p-8 lg:p-10">
         <div className="mb-8 text-center">
-          <div className=" mb-4 inline-flex rounded-lg bg-[#0F2E4A] px-5 py-2">
-            <span className="text-lg font-bold text-white">Lynx</span>
+          <div className="mb-4 flex justify-center">
+            <img src="/lynx_400px.png" alt="Lynx" className="h-24 w-auto" />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">
             Demander l’ouverture d’un compte entreprise
