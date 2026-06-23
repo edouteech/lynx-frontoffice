@@ -13,6 +13,7 @@ export interface GeneralSetting {
   payment_methods: boolean
   customer_account_payment: boolean
   commission: boolean
+  online_articles: boolean
   created_at: string
   updated_at: string
 }

@@ -8,11 +8,14 @@ import {
   TriangleAlert,
   //UserCheck,
   Wallet,
+  Link,
+  ExternalLink,
 } from 'lucide-react'
-import type { Organization } from '../../types/api'
+import type { Organization, Store } from '../../types/api'
 import type { GeneralSetting } from '../../types/generalSetting'
 import { updateOrganization, updateOrganizationWithLogo } from '../../api/organization'
 import { fetchGeneralSetting, updateGeneralSetting } from '../../api/generalSettings'
+import { fetchStores } from '../../api/stores'
 import { useAuth } from '../../contexts/useAuth'
 import { resolveBackendUrl } from '../../lib/url'
 import { CountrySelect } from '../../components/CountrySelect'
@@ -101,6 +104,9 @@ export default function GeneralSettingPage() {
   const [savingOrganization, setSavingOrganization] = useState(false)
   const [organizationDraft, setOrganizationDraft] = useState<Partial<Organization>>({})
   const [logoFile, setLogoFile] = useState<File | null>(null)
+  
+  const [stores, setStores] = useState<Store[]>([])
+  const [storesLoading, setStoresLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -121,6 +127,28 @@ export default function GeneralSettingPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadStores() {
+      if (!data?.online_articles || stores.length > 0) return
+      try {
+        setStoresLoading(true)
+        const res = await fetchStores(1) // Fetch first page of stores
+        if (!cancelled) {
+          setStores(res.data)
+        }
+      } catch (e) {
+        // Handle silently or show toast
+      } finally {
+        if (!cancelled) setStoresLoading(false)
+      }
+    }
+    void loadStores()
+    return () => {
+      cancelled = true
+    }
+  }, [data?.online_articles])
 
   useEffect(() => {
     if (!organization) return
@@ -231,6 +259,14 @@ export default function GeneralSettingPage() {
         icon: <Wallet className="h-5 w-5" />,
         checked: data.customer_account_payment,
       },
+      {
+        key: 'online_articles' as const,
+        title: 'Articles en ligne',
+        description:
+          "Activer la page publique pour présenter les articles destinés à la vente en ligne.",
+        icon: <ShoppingCart className="h-5 w-5" />,
+        checked: data.online_articles,
+      },
     ]
   }, [data])
 
@@ -286,6 +322,7 @@ export default function GeneralSettingPage() {
           | 'payment_methods'
           | 'customer_account_payment'
           | 'commission'
+          | 'online_articles'
         >
       >)
       setData(updated)
@@ -330,405 +367,450 @@ export default function GeneralSettingPage() {
       )}
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-      <div className="self-start rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Informations de l’entreprise
-            </h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Données d’identité et paramètres régionaux.
-            </p>
-          </div>
-        </div>
+        <div>
+          <div className="self-start rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Informations de l’entreprise
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Données d’identité et paramètres régionaux.
+                </p>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {editingOrganization ? (
-            <>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">Nom</div>
-                <input
-                  aria-label="Nom"
-                  title="Nom"
-                  value={String(organizationDraft.name ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({
-                      ...draft,
-                      name: e.target.value,
-                    }))
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="text-xs font-semibold text-gray-500">Logo</div>
-                  {logoFile ? (
-                    <img
-                      src={URL.createObjectURL(logoFile)}
-                      alt="Logo entreprise"
-                      className="h-8 w-8 rounded-lg border border-gray-200 bg-white object-contain"
-                      onError={(e) => {
-                        ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                      }}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {editingOrganization ? (
+                <>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">Nom</div>
+                    <input
+                      aria-label="Nom"
+                      title="Nom"
+                      value={String(organizationDraft.name ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({
+                          ...draft,
+                          name: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
                     />
-                  ) : organization?.logo ? (
-                    <img
-                      src={resolveBackendUrl(organization.logo) ?? ''}
-                      alt="Logo entreprise"
-                      className="h-8 w-8 rounded-lg border border-gray-200 bg-white object-contain"
-                      onError={(e) => {
-                        ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                      }}
-                    />
-                  ) : null}
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  aria-label="Logo"
-                  title="Logo"
-                  onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">
-                  Raison sociale
-                </div>
-                <input
-                  aria-label="Raison sociale"
-                  title="Raison sociale"
-                  value={String(organizationDraft.legal_name ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({
-                      ...draft,
-                      legal_name: e.target.value,
-                    }))
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">IFU</div>
-                <input
-                  aria-label="IFU"
-                  title="IFU"
-                  value={String(organizationDraft.tax_id ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({
-                      ...draft,
-                      tax_id: normalizeTaxId(e.target.value),
-                    }))
-                  }
-                  inputMode="numeric"
-                  pattern="\\d{13}"
-                  maxLength={13}
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">Adresse</div>
-                <input
-                  aria-label="Adresse"
-                  title="Adresse"
-                  value={String(organizationDraft.address ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({
-                      ...draft,
-                      address: e.target.value,
-                    }))
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">RCCM</div>
-                <input
-                  aria-label="RCCM"
-                  title="RCCM"
-                  value={String(organizationDraft.company_registration_number ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({ ...draft, company_registration_number: e.target.value }))
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">
-                  Téléphone
-                </div>
-                <div className="mt-2">
-                  <PhoneInput
-                    value={String(organizationDraft.phone ?? '')}
-                    onChange={(v) =>
-                      setOrganizationDraft((draft) => ({ ...draft, phone: v }))
-                    }
-                    placeholder="01 97 …"
-                    className="rounded-lg"
-                  />
-                </div>
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">Pays</div>
-                <div className="mt-2">
-                  <CountrySelect
-                    value={String(organizationDraft.country ?? '')}
-                    onChange={(v) =>
-                      setOrganizationDraft((draft) => ({ ...draft, country: v }))
-                    }
-                    allowClear={false}
-                    placeholder="Choisir un pays…"
-                    className="[&_button]:rounded-lg"
-                  />
-                </div>
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">Devise</div>
-                <input
-                  aria-label="Devise"
-                  title="Devise"
-                  value={String(organizationDraft.currency ?? '')}
-                  onChange={(e) =>
-                    setOrganizationDraft((draft) => ({
-                      ...draft,
-                      currency: e.target.value,
-                    }))
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">
-                  Fuseau horaire
-                </div>
-                <div className="mt-2">
-                  <TimeZoneSelect
-                    value={String(organizationDraft.timezone ?? '')}
-                    onChange={(v) =>
-                      setOrganizationDraft((draft) => ({ ...draft, timezone: v }))
-                    }
-                    placeholder="Choisir un fuseau…"
-                    className="[&_button]:rounded-lg"
-                    ariaLabel="Fuseau horaire de l’entreprise"
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <FieldRow label="Nom" value={organizationValue(organization, 'name')} />
-              <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
-                <div className="text-xs font-semibold text-gray-500">Logo</div>
-                <div className="mt-2 flex items-center gap-3">
-                  {organization?.logo ? (
-                    <img
-                      src={resolveBackendUrl(organization.logo) ?? ''}
-                      alt="Logo entreprise"
-                      className="h-10 w-10 rounded-lg border border-gray-200 bg-white object-contain"
-                      onError={(e) => {
-                        ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-400">
-                      —
-                    </div>
-                  )}
-                  <div className="min-w-0 truncate text-sm font-medium text-gray-900">
-                    {organization?.logo ? 'Logo configuré' : 'Aucun logo'}
                   </div>
-                </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="text-xs font-semibold text-gray-500">Logo</div>
+                      {logoFile ? (
+                        <img
+                          src={URL.createObjectURL(logoFile)}
+                          alt="Logo entreprise"
+                          className="h-8 w-8 rounded-lg border border-gray-200 bg-white object-contain"
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : organization?.logo ? (
+                        <img
+                          src={resolveBackendUrl(organization.logo) ?? ''}
+                          alt="Logo entreprise"
+                          className="h-8 w-8 rounded-lg border border-gray-200 bg-white object-contain"
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label="Logo"
+                      title="Logo"
+                      onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">
+                      Raison sociale
+                    </div>
+                    <input
+                      aria-label="Raison sociale"
+                      title="Raison sociale"
+                      value={String(organizationDraft.legal_name ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({
+                          ...draft,
+                          legal_name: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">IFU</div>
+                    <input
+                      aria-label="IFU"
+                      title="IFU"
+                      value={String(organizationDraft.tax_id ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({
+                          ...draft,
+                          tax_id: normalizeTaxId(e.target.value),
+                        }))
+                      }
+                      inputMode="numeric"
+                      pattern="\\d{13}"
+                      maxLength={13}
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">Adresse</div>
+                    <input
+                      aria-label="Adresse"
+                      title="Adresse"
+                      value={String(organizationDraft.address ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({
+                          ...draft,
+                          address: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">RCCM</div>
+                    <input
+                      aria-label="RCCM"
+                      title="RCCM"
+                      value={String(organizationDraft.company_registration_number ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({ ...draft, company_registration_number: e.target.value }))
+                      }
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">
+                      Téléphone
+                    </div>
+                    <div className="mt-2">
+                      <PhoneInput
+                        value={String(organizationDraft.phone ?? '')}
+                        onChange={(v) =>
+                          setOrganizationDraft((draft) => ({ ...draft, phone: v }))
+                        }
+                        placeholder="01 97 …"
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">Pays</div>
+                    <div className="mt-2">
+                      <CountrySelect
+                        value={String(organizationDraft.country ?? '')}
+                        onChange={(v) =>
+                          setOrganizationDraft((draft) => ({ ...draft, country: v }))
+                        }
+                        allowClear={false}
+                        placeholder="Choisir un pays…"
+                        className="[&_button]:rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">Devise</div>
+                    <input
+                      aria-label="Devise"
+                      title="Devise"
+                      value={String(organizationDraft.currency ?? '')}
+                      onChange={(e) =>
+                        setOrganizationDraft((draft) => ({
+                          ...draft,
+                          currency: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">
+                      Fuseau horaire
+                    </div>
+                    <div className="mt-2">
+                      <TimeZoneSelect
+                        value={String(organizationDraft.timezone ?? '')}
+                        onChange={(v) =>
+                          setOrganizationDraft((draft) => ({ ...draft, timezone: v }))
+                        }
+                        placeholder="Choisir un fuseau…"
+                        className="[&_button]:rounded-lg"
+                        ariaLabel="Fuseau horaire de l’entreprise"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <FieldRow label="Nom" value={organizationValue(organization, 'name')} />
+                  <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="text-xs font-semibold text-gray-500">Logo</div>
+                    <div className="mt-2 flex items-center gap-3">
+                      {organization?.logo ? (
+                        <img
+                          src={resolveBackendUrl(organization.logo) ?? ''}
+                          alt="Logo entreprise"
+                          className="h-10 w-10 rounded-lg border border-gray-200 bg-white object-contain"
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-400">
+                          —
+                        </div>
+                      )}
+                      <div className="min-w-0 truncate text-sm font-medium text-gray-900">
+                        {organization?.logo ? 'Logo configuré' : 'Aucun logo'}
+                      </div>
+                    </div>
+                  </div>
+                  <FieldRow
+                    label="Raison sociale"
+                    value={organizationValue(organization, 'legal_name')}
+                  />
+                  <FieldRow label="IFU" value={organizationValue(organization, 'tax_id')} />
+                  <FieldRow
+                    label="Adresse"
+                    value={organizationValue(organization, 'address')}
+                  />
+                  <FieldRow label="RCCM" value={organizationValue(organization, 'company_registration_number')} />
+                  <FieldRow
+                    label="Téléphone"
+                    value={organizationValue(organization, 'phone')}
+                  />
+                  <FieldRow
+                    label="Pays"
+                    value={organizationValue(organization, 'country')}
+                  />
+                  <FieldRow
+                    label="Devise"
+                    value={organizationValue(organization, 'currency')}
+                  />
+                  <FieldRow
+                    label="Fuseau horaire"
+                    value={organizationValue(organization, 'timezone')}
+                  />
+                </>
+              )}
+            </div>
+
+            {editingOrganization && (
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  type="button"
+                  disabled={savingOrganization}
+                  onClick={() => {
+                    setEditingOrganization(false)
+                    setError(null)
+                    if (organization) {
+                      setOrganizationDraft({
+                        name: organization.name,
+                        legal_name: organization.legal_name,
+                        tax_id: organization.tax_id,
+                        company_registration_number: organization.company_registration_number,
+                        address: organization.address,
+                        phone: organization.phone,
+                        country: organization.country,
+                        currency: organization.currency,
+                        timezone: organization.timezone,
+                      })
+                    }
+                    setLogoFile(null)
+                  }}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  disabled={savingOrganization}
+                  onClick={async () => {
+                    if (organizationDraft.tax_id && !isValidTaxId(organizationDraft.tax_id)) {
+                      Swal.fire({
+                        title: 'IFU invalide',
+                        text: 'L’IFU doit contenir exactement 13 chiffres.',
+                        icon: 'warning',
+                        confirmButtonColor: '#3B82F6',
+                      })
+                      return
+                    }
+
+
+                    const result = await Swal.fire({
+                      title: 'Modifier les informations ?',
+                      text: 'Voulez-vous vraiment enregistrer ces informations ?',
+                      icon: 'question',
+                      showCancelButton: true,
+                      confirmButtonText: 'Oui, enregistrer',
+                      cancelButtonText: 'Annuler',
+                      confirmButtonColor: '#3B82F6',
+                      cancelButtonColor: '#EF4444',
+                      reverseButtons: true,
+                    })
+
+                    if (!result.isConfirmed) return
+
+                    setSavingOrganization(true)
+                    setError(null)
+
+                    Swal.fire({
+                      title: 'Enregistrement en cours...',
+                      allowOutsideClick: false,
+                      didOpen: () => {
+                        Swal.showLoading()
+                      },
+                    })
+
+                    try {
+                      const patch = {
+                        ...organizationDraft,
+                        phone: telephoneForApi(
+                          String(organizationDraft.phone ?? '')
+                        ),
+                        timezone: timezoneForApi(
+                          String(organizationDraft.timezone ?? '')
+                        ),
+                      }
+                      if (logoFile) {
+                        await updateOrganizationWithLogo(patch, logoFile)
+                      } else {
+                        await updateOrganization(patch)
+                      }
+                      await refreshUser()
+                      setEditingOrganization(false)
+                      Swal.fire({
+                        title: 'Enregistré !',
+                        text: 'Les informations de l’entreprise ont été mises à jour.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end',
+                      })
+                    } catch {
+                      setError(
+                        "Impossible d’enregistrer les informations de l’entreprise."
+                      )
+                      Swal.fire({
+                        title: 'Erreur',
+                        text: "Impossible d’enregistrer les informations de l’entreprise.",
+                        icon: 'error',
+                        confirmButtonColor: '#3B82F6',
+                      })
+                    } finally {
+                      setSavingOrganization(false)
+                    }
+                  }}
+                  className="rounded-xl bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Enregistrer
+                </button>
               </div>
-              <FieldRow
-                label="Raison sociale"
-                value={organizationValue(organization, 'legal_name')}
-              />
-              <FieldRow label="IFU" value={organizationValue(organization, 'tax_id')} />
-              <FieldRow
-                label="Adresse"
-                value={organizationValue(organization, 'address')}
-              />
-              <FieldRow label="RCCM" value={organizationValue(organization, 'company_registration_number')} />
-              <FieldRow
-                label="Téléphone"
-                value={organizationValue(organization, 'phone')}
-              />
-              <FieldRow
-                label="Pays"
-                value={organizationValue(organization, 'country')}
-              />
-              <FieldRow
-                label="Devise"
-                value={organizationValue(organization, 'currency')}
-              />
-              <FieldRow
-                label="Fuseau horaire"
-                value={organizationValue(organization, 'timezone')}
-              />
-            </>
+            )}
+
+            {!editingOrganization && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingOrganization(true)}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+                >
+                  Modifier
+                </button>
+              </div>
+            )}
+          </div>
+          {data?.online_articles && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm mt-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Link className="h-5 w-5 text-[#3B82F6]" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Liens publics des magasins
+                </h2>
+              </div>
+              <p className="mb-4 text-sm text-gray-600">
+                Copiez ou cliquez sur les liens ci-dessous pour accéder à la page des articles en ligne de chaque magasin.
+              </p>
+              
+              {storesLoading ? (
+                <div className="text-sm text-gray-500">Chargement des magasins...</div>
+              ) : stores.length === 0 ? (
+                <div className="text-sm text-gray-500">Aucun magasin disponible.</div>
+              ) : (
+                <div className="space-y-3">
+                  {stores.map(store => {
+                    const url = `${window.location.origin}/${organization?.slug || ''}/${store.slug || ''}`
+                    return (
+                      <div key={store.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div>
+                          <div className="font-medium text-gray-900">{store.name}</div>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-sm text-[#3B82F6] hover:underline">
+                            {url}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(url)
+                          }}
+                          className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
+                        >
+                          Copier le lien
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
-
-        {editingOrganization && (
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              disabled={savingOrganization}
-              onClick={() => {
-                setEditingOrganization(false)
-                setError(null)
-                if (organization) {
-                  setOrganizationDraft({
-                    name: organization.name,
-                    legal_name: organization.legal_name,
-                    tax_id: organization.tax_id,
-                    company_registration_number: organization.company_registration_number,
-                    address: organization.address,
-                    phone: organization.phone,
-                    country: organization.country,
-                    currency: organization.currency,
-                    timezone: organization.timezone,
-                  })
-                }
-                setLogoFile(null)
-              }}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              disabled={savingOrganization}
-              onClick={async () => {
-                if (organizationDraft.tax_id && !isValidTaxId(organizationDraft.tax_id)) {
-                  Swal.fire({
-                    title: 'IFU invalide',
-                    text: 'L’IFU doit contenir exactement 13 chiffres.',
-                    icon: 'warning',
-                    confirmButtonColor: '#3B82F6',
-                  })
-                  return
-                }
-
-
-                const result = await Swal.fire({
-                  title: 'Modifier les informations ?',
-                  text: 'Voulez-vous vraiment enregistrer ces informations ?',
-                  icon: 'question',
-                  showCancelButton: true,
-                  confirmButtonText: 'Oui, enregistrer',
-                  cancelButtonText: 'Annuler',
-                  confirmButtonColor: '#3B82F6',
-                  cancelButtonColor: '#EF4444',
-                  reverseButtons: true,
-                })
-
-                if (!result.isConfirmed) return
-
-                setSavingOrganization(true)
-                setError(null)
-
-                Swal.fire({
-                  title: 'Enregistrement en cours...',
-                  allowOutsideClick: false,
-                  didOpen: () => {
-                    Swal.showLoading()
-                  },
-                })
-
-                try {
-                  const patch = {
-                    ...organizationDraft,
-                    phone: telephoneForApi(
-                      String(organizationDraft.phone ?? '')
-                    ),
-                    timezone: timezoneForApi(
-                      String(organizationDraft.timezone ?? '')
-                    ),
-                  }
-                  if (logoFile) {
-                    await updateOrganizationWithLogo(patch, logoFile)
-                  } else {
-                    await updateOrganization(patch)
-                  }
-                  await refreshUser()
-                  setEditingOrganization(false)
-                  Swal.fire({
-                    title: 'Enregistré !',
-                    text: 'Les informations de l’entreprise ont été mises à jour.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end',
-                  })
-                } catch {
-                  setError(
-                    "Impossible d’enregistrer les informations de l’entreprise."
-                  )
-                  Swal.fire({
-                    title: 'Erreur',
-                    text: "Impossible d’enregistrer les informations de l’entreprise.",
-                    icon: 'error',
-                    confirmButtonColor: '#3B82F6',
-                  })
-                } finally {
-                  setSavingOrganization(false)
-                }
-              }}
-              className="rounded-xl bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Enregistrer
-            </button>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Fonctionnalités Générales de l’Entreprise
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Activez ou désactivez les modules disponibles.
+            </p>
           </div>
-        )}
 
-        {!editingOrganization && (
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setEditingOrganization(true)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-            >
-              Modifier
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Fonctionnalités Générales de l’Entreprise
-          </h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Activez ou désactivez les modules disponibles.
-          </p>
+          {loading || !data ? (
+            <div className="rounded-xl border border-gray-100 bg-[#EFF6FF] px-4 py-6 text-sm text-gray-600">
+              Chargement…
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {features.map((feature) => (
+                <ToggleRow
+                  key={feature.key}
+                  title={feature.title}
+                  description={feature.description}
+                  icon={feature.icon}
+                  checked={feature.checked}
+                  disabled={savingKey === feature.key}
+                  onChange={(next) => onToggle(feature.key, next)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-
-        {loading || !data ? (
-          <div className="rounded-xl border border-gray-100 bg-[#EFF6FF] px-4 py-6 text-sm text-gray-600">
-            Chargement…
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {features.map((feature) => (
-              <ToggleRow
-                key={feature.key}
-                title={feature.title}
-                description={feature.description}
-                icon={feature.icon}
-                checked={feature.checked}
-                disabled={savingKey === feature.key}
-                onChange={(next) => onToggle(feature.key, next)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
-    </div>
+  </div>
   )
 }
 

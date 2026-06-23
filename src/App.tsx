@@ -78,6 +78,7 @@ import TrashPaymentMethods from './pages/trash/payment-methods'
 import TrashCustomers from './pages/trash/customers'
 import TrashVatRates from './pages/trash/vat-rates'
 import AccueilPage from './pages/accueil'
+import PublicStoreArticlesPage from './pages/public/PublicStoreArticlesPage'
 
 function withLayout(page: ReactElement) {
   return <Layout>{page}</Layout>
@@ -132,6 +133,7 @@ export default function App() {
         <Route path="/register-request" element={<RegisterRequest />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/:organizationSlug/:storeSlug" element={<PublicStoreArticlesPage />} />
         <Route
           path="/"
           element={

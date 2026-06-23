@@ -1,6 +1,7 @@
 export interface Organization {
   id: number
   name: string
+  slug?: string
   logo: string | null
   legal_name: string | null
   tax_id: string | null
@@ -64,6 +65,7 @@ export interface ItemCategory {
 export interface Store {
   id: number
   name: string
+  slug?: string
   address: string | null
   phone: string | null
   token: string | null
