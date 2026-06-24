@@ -150,16 +150,16 @@ export default function SalesInvoicesPage() {
   /* columns */
   const columns: Column<Sale>[] = useMemo(() => [
     {
-      key: 'id',
+      key: 'invoice_number',
       label: 'N° Facture',
       sortable: true,
       nowrap: true,
-      render: (v) => (
+      render: (v, row) => (
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600">
             <FileText className="h-4 w-4" />
           </div>
-          <span className="font-bold text-gray-900">FAC-{String(v).padStart(6, '0')}</span>
+          <span className="font-bold text-gray-900">{String(v ?? `FAC-${String(row.id).padStart(6, '0')}`)}</span>
         </div>
       ),
     },

@@ -35,6 +35,8 @@ import Modal from '../../components/Modal'
 
 import { fetchStorePaymentMethods } from '../../api/paymentMethods'
 
+import { fetchRestaurantOptions } from '../../api/restaurantOptions'
+
 import { openCashRegisterSession } from '../../api/cashRegisterSessions'
 
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -45,7 +47,7 @@ import Swal from 'sweetalert2'
 
 import SalePdf from './SalePdf'
 
-import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, Sale, SaleItem, Store } from '../../types/api'
+import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, RestaurantOption, Sale, SaleItem, Store } from '../../types/api'
 
 
 
@@ -160,6 +162,8 @@ export default function SaleForm() {
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
 
   const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
+
+  const [restaurantOptions, setRestaurantOptions] = useState<RestaurantOption[]>([])
 
   const [loadingMeta, setLoadingMeta] = useState(true)
 
@@ -540,6 +544,8 @@ export default function SaleForm() {
 
       setStorePaymentMethods([])
 
+      setRestaurantOptions([])
+
       return
 
     }
@@ -550,11 +556,21 @@ export default function SaleForm() {
 
       fetchStorePaymentMethods(storeId),
 
-    ]).then(([regs, methods]) => {
+      fetchRestaurantOptions(1),
+
+    ]).then(([regs, methods, opts]) => {
 
       setCashRegisters(regs.data)
 
       setStorePaymentMethods(methods)
+
+      setRestaurantOptions(opts.data)
+
+      // Définir "Espèces" comme moyen de paiement par défaut
+      const cashMethod = methods.find(m => m.name === 'Espèces')
+      if (cashMethod && !paymentMethodId) {
+        setPaymentMethodId(String(cashMethod.id))
+      }
 
     }).catch(console.error)
 
@@ -702,7 +718,9 @@ export default function SaleForm() {
 
     setCustomerId('')
 
-    setPaymentMethodId('')
+    // Réinitialiser à Espèces par défaut
+    const cashMethod = storePaymentMethods.find(m => m.name === 'Espèces')
+    setPaymentMethodId(cashMethod ? String(cashMethod.id) : '')
 
     setSaleDate('')
 
@@ -2355,8 +2373,6 @@ export default function SaleForm() {
 
                 >
 
-                  <option value="">— Non renseigné —</option>
-
                   {storePaymentMethods.map(m => (
 
                     <option key={m.id} value={m.id}>{m.name}</option>
@@ -2459,29 +2475,45 @@ export default function SaleForm() {
 
               <div className="flex flex-wrap gap-2">
 
-                {[
+                <button
 
-                  { value: '',          label: 'Non précisé' },
+                  type="button"
 
-                  { value: 'sur_place', label: 'Sur place'   },
+                  disabled={isConfirmed}
 
-                  { value: 'emporter',  label: 'À emporter'  },
+                  onClick={() => setOrderType('')}
 
-                ].map(opt => (
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+
+                    orderType === ''
+
+                      ? 'border-[#3B82F6] bg-[#3B82F6] text-white'
+
+                      : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+
+                  }`}
+
+                >
+
+                  Non précisé
+
+                </button>
+
+                {restaurantOptions.map(opt => (
 
                   <button
 
-                    key={opt.value}
+                    key={opt.id}
 
                     type="button"
 
                     disabled={isConfirmed}
 
-                    onClick={() => setOrderType(opt.value)}
+                    onClick={() => setOrderType(String(opt.id))}
 
                     className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
 
-                      orderType === opt.value
+                      orderType === String(opt.id)
 
                         ? 'border-[#3B82F6] bg-[#3B82F6] text-white'
 
@@ -2491,7 +2523,7 @@ export default function SaleForm() {
 
                   >
 
-                    {opt.label}
+                    {opt.name}
 
                   </button>
 

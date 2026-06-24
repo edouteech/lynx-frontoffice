@@ -11,7 +11,7 @@ import type { ReceiptSetting } from '../../types/receiptSetting'
 
 function fmtMoney(v: number): string {
   const [intPart] = Math.abs(v).toFixed(0).split('.')
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
   return (v < 0 ? '-' : '') + grouped + ' XOF'
 }
 
@@ -19,6 +19,66 @@ function fmtDate(d: string | null | undefined) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
 }
+
+const PRINT_STYLES = `
+  @media print {
+    /* Force l'impression des couleurs de fond */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Supprimer les ombres et les marges de page */
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    /* Masquer la barre d'outils */
+    .invoice-toolbar {
+      display: none !important;
+    }
+
+    /* Retirer les marges et ombres du conteneur */
+    .invoice-wrapper {
+      box-shadow: none !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+
+    /* Éviter les coupures de page au mauvais endroit */
+    .invoice-header-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .invoice-parties {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    table {
+      page-break-inside: auto;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .invoice-totals {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .invoice-footer {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
+`
 
 export default function InvoicePage() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +88,16 @@ export default function InvoicePage() {
   const [receiptSetting, setReceiptSetting] = useState<ReceiptSetting | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Injection des styles d'impression dans le <head>
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = PRINT_STYLES
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -76,9 +146,10 @@ export default function InvoicePage() {
       : null
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
-      {/* Toolbar — hidden when printing */}
-      <div className="print:hidden sticky top-0 z-10 flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3 shadow-sm">
+    <div className="min-h-screen bg-gray-100 print:bg-white pb-10">
+
+      {/* Toolbar — masquée à l'impression via la classe CSS */}
+      <div className="invoice-toolbar print:hidden sticky top-0 z-10 flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3 shadow-sm">
         <span className="text-sm font-semibold text-gray-700">{invoiceNumber}</span>
         <button
           type="button"
@@ -90,142 +161,161 @@ export default function InvoicePage() {
         </button>
       </div>
 
-      {/* Invoice body */}
-      <div className="mx-auto max-w-2xl bg-white p-10 shadow-md print:shadow-none print:p-8 my-6 print:my-0">
+      {/* Corps de la facture */}
+      <div className="invoice-wrapper mx-auto max-w-[900px] bg-white shadow-md print:shadow-none my-8 print:my-0 pb-16">
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+        {/* Bloc en-tête */}
+        <div
+          className="invoice-header-block px-10 py-10 mb-12 flex justify-between items-start"
+          style={{ backgroundColor: '#F3F6FA' }}
+        >
           <div>
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={currentOrganization?.name ?? 'Logo'}
-                className="max-h-16 max-w-[160px] object-contain mb-2"
-              />
-            ) : (
-              <p className="text-xl font-bold text-gray-900 mb-1">{currentOrganization?.name ?? ''}</p>
-            )}
-            {currentOrganization?.address && (
-              <p className="text-xs text-gray-500">{currentOrganization.address}</p>
-            )}
-            {currentOrganization?.phone && (
-              <p className="text-xs text-gray-500">{currentOrganization.phone}</p>
-            )}
-            {receiptSetting?.header_text && (
-              <p className="mt-1 text-xs text-gray-500 whitespace-pre-line">{receiptSetting.header_text}</p>
-            )}
+            <h1 className="text-3xl font-black text-[#1E293B] mb-6 uppercase tracking-wider">Facture</h1>
+            <div className="space-y-3 text-sm font-semibold text-[#64748B]">
+              <p className="uppercase">Date : {fmtDate(sale.sale_date ?? sale.created_at)}</p>
+              <p className="uppercase">Facture N° : {invoiceNumber}</p>
+              {sale.store && (
+                <p className="uppercase">Magasin : {sale.store.name}</p>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-gray-900">FACTURE</p>
-            <p className="text-sm text-gray-500 mt-1">{invoiceNumber}</p>
-            <p className="text-sm text-gray-500">Date : {fmtDate(sale.sale_date ?? sale.created_at)}</p>
-            {sale.store && (
-              <p className="text-xs text-gray-400 mt-1">{sale.store.name}</p>
-            )}
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={currentOrganization?.name ?? 'Logo'}
+              className="max-h-24 max-w-[200px] object-contain"
+            />
+          )}
+        </div>
+
+        {/* Bloc parties */}
+        <div className="invoice-parties flex justify-between gap-16 mb-12 px-10">
+          {/* Entreprise */}
+          <div className="flex-1">
+            <div className="border-b-2 border-[#1E293B] mb-5">
+              <h2 className="text-sm font-black text-[#1E293B] uppercase tracking-widest pb-2">Entreprise</h2>
+            </div>
+            <div className="space-y-2.5 text-sm text-[#475569]">
+              <p className="text-lg font-bold text-[#1E293B] mb-3">{currentOrganization?.name ?? ''}</p>
+              {currentOrganization?.tax_id && <p><span className="font-bold text-[#1E293B]">IFU :</span> {currentOrganization.tax_id}</p>}
+              {currentOrganization?.company_registration_number && <p><span className="font-bold text-[#1E293B]">RCCM :</span> {currentOrganization.company_registration_number}</p>}
+              {currentOrganization?.phone && <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {currentOrganization.phone}</p>}
+              {currentOrganization?.address && <p><span className="font-bold text-[#1E293B]">Adresse :</span> {currentOrganization.address}</p>}
+              {sale.seller_name && <p><span className="font-bold text-[#1E293B]">Vendeur :</span> {sale.seller_name}</p>}
+            </div>
+          </div>
+
+          {/* Client */}
+          <div className="flex-1">
+            <div className="border-b-2 border-[#1E293B] mb-5 text-right">
+              <h2 className="text-sm font-black text-[#1E293B] uppercase tracking-widest pb-2">Client</h2>
+            </div>
+            <div className="space-y-2.5 text-sm text-[#475569] text-right">
+              {sale.customer_name ? (
+                <>
+                  <p className="text-lg font-bold text-[#1E293B] mb-3">{sale.customer_name}</p>
+                  {sale.customer_phone && <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {sale.customer_phone}</p>}
+                  {sale.customer_email && <p><span className="font-bold text-[#1E293B]">E-mail :</span> {sale.customer_email}</p>}
+                  {sale.customer_tax_id && <p><span className="font-bold text-[#1E293B]">NIF :</span> {sale.customer_tax_id}</p>}
+                </>
+              ) : (
+                <p className="italic text-gray-400">Client anonyme</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Customer block */}
-        {sale.customer_name && (
-          <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Client</p>
-            <p className="font-semibold text-gray-900">{sale.customer_name}</p>
-            {sale.customer_phone && (
-              <p className="text-sm text-gray-600">{sale.customer_phone}</p>
-            )}
-            {sale.customer_email && (
-              <p className="text-sm text-gray-600">{sale.customer_email}</p>
-            )}
-            {sale.customer_tax_id && (
-              <p className="text-xs text-gray-500">NIF : {sale.customer_tax_id}</p>
-            )}
-          </div>
-        )}
-
-        {/* Items table */}
-        <table className="w-full text-sm mb-6">
-          <thead>
-            <tr className="border-b-2 border-gray-900">
-              <th className="py-2 text-left font-semibold text-gray-900">Article</th>
-              <th className="py-2 text-right font-semibold text-gray-900 w-16">Qté</th>
-              <th className="py-2 text-right font-semibold text-gray-900 w-28">Prix unit.</th>
-              <th className="py-2 text-right font-semibold text-gray-900 w-28">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b border-gray-100">
-                <td className="py-2 text-gray-900">
-                  {item.product_name}
-                  {item.product_sku && (
-                    <span className="ml-1 text-xs text-gray-400">({item.product_sku})</span>
-                  )}
-                </td>
-                <td className="py-2 text-right text-gray-700">{item.quantity}</td>
-                <td className="py-2 text-right text-gray-700">{fmtMoney(item.unit_price)}</td>
-                <td className="py-2 text-right font-medium text-gray-900">{fmtMoney(item.quantity * item.unit_price)}</td>
+        {/* Tableau des articles */}
+        <div className="px-10 mb-10">
+          <table className="w-full text-base border-collapse">
+            <thead>
+              <tr style={{ backgroundColor: '#304169', color: 'white' }} className="text-sm">
+                <th className="py-4 px-4 text-left font-semibold border-r border-[#4A5D8A] w-1/2">Description</th>
+                <th className="py-4 px-4 text-center font-semibold border-r border-[#4A5D8A]">Prix Unitaire TTC</th>
+                <th className="py-4 px-4 text-center font-semibold border-r border-[#4A5D8A] w-24">Qté</th>
+                <th className="py-4 px-4 text-right font-semibold">Total TTC</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className="border-b border-[#E2E8F0]">
+                  <td className="py-4 px-4 text-[#1E293B] border-r border-[#E2E8F0]">
+                    {item.product_name}
+                    {item.product_sku && <span className="ml-1.5 text-sm text-gray-500">({item.product_sku})</span>}
+                  </td>
+                  <td className="py-4 px-4 text-center text-[#475569] border-r border-[#E2E8F0]">{fmtMoney(item.unit_price)}</td>
+                  <td className="py-4 px-4 text-center text-[#475569] border-r border-[#E2E8F0]">{item.quantity}</td>
+                  <td className="py-4 px-4 text-right font-medium text-[#1E293B]">{fmtMoney(item.quantity * item.unit_price)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Totals */}
-        <div className="flex justify-end mb-8">
-          <div className="w-64 space-y-1.5 text-sm">
-            <div className="flex justify-between text-gray-600">
-              <span>Sous-total</span>
-              <span>{fmtMoney(subtotal)}</span>
-            </div>
+        {/* Totaux */}
+        <div className="invoice-totals px-10 flex justify-end mb-12">
+          <div
+            className="w-[360px] border border-[#E2E8F0] p-6 space-y-4"
+            style={{ backgroundColor: '#FAFAFA' }}
+          >
             {discount > 0 && (
-              <div className="flex justify-between text-amber-600">
+              <div className="flex justify-between text-base font-bold text-[#475569]">
                 <span>Remise ({sale.discount_percentage}%)</span>
                 <span>-{fmtMoney(discount)}</span>
               </div>
             )}
             {extraFees > 0 && (
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-base font-bold text-[#475569]">
                 <span>Frais supplémentaires</span>
                 <span>+{fmtMoney(extraFees)}</span>
               </div>
             )}
-            <div className="flex justify-between border-t-2 border-gray-900 pt-2 font-bold text-gray-900 text-base">
-              <span>Total</span>
+            <div className="flex justify-between text-base font-bold text-[#475569] pb-4 border-b-2 border-[#1E293B]">
+              <span className="uppercase">Total</span>
+              <span>{fmtMoney(total)}</span>
+            </div>
+            <div className="flex justify-between font-black text-[#1E293B] text-lg pt-1">
+              <span className="uppercase tracking-wide">Net à payer</span>
               <span>{fmtMoney(total)}</span>
             </div>
           </div>
         </div>
 
-        {/* Payment info */}
-        {(sale.payment_method || sale.cash_register) && (
-          <div className="mb-6 flex gap-6 text-sm text-gray-600">
-            {sale.payment_method && (
-              <div>
-                <span className="font-medium text-gray-700">Paiement : </span>
-                {sale.payment_method.name}
-              </div>
-            )}
-            {sale.cash_register && (
-              <div>
-                <span className="font-medium text-gray-700">Caisse : </span>
-                {sale.cash_register.name}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Pied de facture */}
+        <div className="invoice-footer px-10">
+          {(sale.payment_method || sale.cash_register) && (
+            <div className="mb-6 flex gap-8 text-sm text-[#475569] border-t border-[#E2E8F0] pt-6">
+              {sale.payment_method && (
+                <div>
+                  <span className="font-bold text-[#1E293B]">Paiement : </span>
+                  {sale.payment_method.name}
+                </div>
+              )}
+              {sale.cash_register && (
+                <div>
+                  <span className="font-bold text-[#1E293B]">Caisse : </span>
+                  {sale.cash_register.name}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Note */}
-        {sale.note && (
-          <div className="mb-6 rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-600 italic">
-            {sale.note}
-          </div>
-        )}
+          {sale.note && (
+            <div
+              className="mb-6 border border-[#E2E8F0] px-5 py-4 text-sm text-[#475569] italic"
+              style={{ backgroundColor: '#F8FAFC' }}
+            >
+              {sale.note}
+            </div>
+          )}
 
-        {/* Footer */}
-        {receiptSetting?.footer_text && (
-          <div className="border-t border-gray-200 pt-4 text-center text-xs text-gray-400 whitespace-pre-line">
-            {receiptSetting.footer_text}
-          </div>
-        )}
+          {receiptSetting?.footer_text && (
+            <div className="border-t border-[#E2E8F0] pt-6 text-center text-xs text-[#94A3B8] whitespace-pre-line">
+              {receiptSetting.footer_text}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

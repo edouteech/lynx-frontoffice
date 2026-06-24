@@ -279,6 +279,38 @@ export default function SalesByPaymentMethodPage() {
     }), { revenue_ttc: 0, revenue_ht: 0, total_cost_ht: 0, profit_ht: 0, items_sold: 0 });
   }, [rows]);
 
+  /* ================= CHART DATA AGGREGATION ================= */
+  const chartData = useMemo(() => {
+    const aggregated = new Map<string, Row>();
+    
+    rows.forEach(row => {
+      const key = row.payment_method;
+      if (aggregated.has(key)) {
+        const existing = aggregated.get(key)!;
+        aggregated.set(key, {
+          ...existing,
+          quantity_sold: Number(existing.quantity_sold) + Number(row.quantity_sold),
+          revenue_net: Number(existing.revenue_net) + Number(row.revenue_net),
+          revenue_ht: Number(existing.revenue_ht) + Number(row.revenue_ht),
+          total_cost_ht: Number(existing.total_cost_ht) + Number(row.total_cost_ht),
+          profit_ht: Number(existing.profit_ht) + Number(row.profit_ht),
+          margin_percent: 0,
+          store_name: existing.store_name,
+        });
+      } else {
+        aggregated.set(key, { ...row });
+      }
+    });
+
+    // Recalculate margin percentages for aggregated data
+    const result = Array.from(aggregated.values()).map(row => ({
+      ...row,
+      margin_percent: row.total_cost_ht > 0 ? (Number(row.profit_ht) / Number(row.total_cost_ht)) * 100 : 0,
+    }));
+
+    return result.sort((a, b) => Number(b.revenue_net) - Number(a.revenue_net));
+  }, [rows]);
+
   const avgMarginPct = useMemo(() => {
     if (totals.total_cost_ht === 0) return 0;
     return (totals.profit_ht / totals.total_cost_ht) * 100;
@@ -490,7 +522,7 @@ export default function SalesByPaymentMethodPage() {
       {/* ================= CHARTS ================= */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PaymentHistogram 
-          data={rows} 
+          data={chartData} 
           title="CA TTC par moyen de paiement" 
           subtitle="Trié par CA TTC décroissant"
           valueKey="revenue_net"
@@ -498,7 +530,7 @@ export default function SalesByPaymentMethodPage() {
           colorScale={["#3B82F6","#6366F1","#8B5CF6","#EC4899","#F59E0B","#10B981","#06B6D4","#F97316"]}
         />
         <PaymentHistogram 
-          data={rows} 
+          data={chartData} 
           title="Articles vendus par moyen de paiement" 
           subtitle="Trié par quantité décroissante"
           valueKey="quantity_sold"
