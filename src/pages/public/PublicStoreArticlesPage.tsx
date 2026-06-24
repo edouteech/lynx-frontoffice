@@ -87,13 +87,6 @@ export default function PublicStoreArticlesPage() {
   const hasContactInfo = Boolean(data.store.address || data.store.phone)
   const hasCategories = data.categories.length > 0
 
-  // Fond pastel pour les vignettes produit, dérivé de la couleur de catégorie.
-  // Sans couleur définie, on retombe sur un gris neutre.
-  const tintBackground = (hex?: string | null) => {
-    if (!hex) return '#F3F4F6'
-    return `${hex}26` // ~15% opacité sur fond clair
-  }
-
   const filteredArticles = data.articles.filter((article) => {
     const matchesCategory = activeCategory === null || article.item_category_id === activeCategory
     const matchesSearch = search.trim() === '' || article.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -102,38 +95,38 @@ export default function PublicStoreArticlesPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA]">
-      {/* Top bar — bold color block instead of white */}
-      <header className="sticky top-0 z-30 bg-[#3B5BDB]">
+      {/* Top bar — compact, neutral, no heavy color block */}
+      <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             {data.organization.logo ? (
               <img
                 src={resolveBackendUrl(data.organization.logo) ?? ''}
-                className="h-10 w-10 shrink-0 rounded-lg bg-white/15 object-contain p-1"
+                className="h-10 w-10 shrink-0 rounded-lg object-contain"
               />
             ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15 text-[15px] font-semibold text-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EFF3FF] text-[15px] font-semibold text-[#3B5BDB]">
                 {data.organization.name.charAt(0)}
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-semibold leading-tight text-white">
+              <h1 className="truncate text-[15px] font-semibold leading-tight text-[#111827]">
                 {data.organization.name}
               </h1>
-              <p className="truncate text-[12.5px] text-white/70">{data.store.name}</p>
+              <p className="truncate text-[12.5px] text-[#9CA3AF]">{data.store.name}</p>
             </div>
           </div>
 
           {hasContactInfo && (
             <div className="hidden shrink-0 items-center gap-5 md:flex">
               {data.store.address && (
-                <div className="flex items-center gap-1.5 text-[13px] text-white/80">
+                <div className="flex items-center gap-1.5 text-[13px] text-[#6B7280]">
                   <MapPin className="h-3.5 w-3.5" />
                   {data.store.address}
                 </div>
               )}
               {data.store.phone && (
-                <div className="flex items-center gap-1.5 text-[13px] text-white/80">
+                <div className="flex items-center gap-1.5 text-[13px] text-[#6B7280]">
                   <Phone className="h-3.5 w-3.5" />
                   {data.store.phone}
                 </div>
@@ -143,14 +136,14 @@ export default function PublicStoreArticlesPage() {
 
           <button
             aria-label="Panier"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F4F6] text-[#111827] transition hover:bg-[#E5E7EB]"
           >
             <ShoppingBag className="h-4.5 w-4.5" />
           </button>
         </div>
 
-        {/* Search bar — sits on the color block, white pill for contrast */}
-        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+        {/* Search bar — pill style, full width under the top bar */}
+        <div className="mx-auto max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
           <div className="relative flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
@@ -159,52 +152,53 @@ export default function PublicStoreArticlesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Rechercher un article…"
-                className="w-full rounded-full border-none bg-white py-2.5 pl-10 pr-4 text-[14px] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-white/40"
+                className="w-full rounded-full border border-[#E5E7EB] bg-[#F7F8FA] py-2.5 pl-10 pr-4 text-[14px] text-[#111827] placeholder:text-[#9CA3AF] focus:border-[#3B5BDB] focus:bg-white focus:outline-none"
               />
             </div>
             <button
               aria-label="Filtres"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E5E7EB] text-[#6B7280] transition hover:bg-[#F3F4F6]"
             >
               <SlidersHorizontal className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Category pills — filled pastel colors per category */}
-      {hasCategories && (
-        <div className="sticky top-[96px] z-20 bg-[#F7F8FA] md:top-[100px]">
-          <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden">
+        {/* Category pills — dot indicator instead of filled pill */}
+        {hasCategories && (
+          <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setActiveCategory(null)}
               className={`flex shrink-0 items-center whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
-                activeCategory === null ? 'bg-[#111827] text-white' : 'bg-white text-[#6B7280] hover:bg-[#EEF0F3]'
+                activeCategory === null
+                  ? 'bg-[#111827] text-white'
+                  : 'border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6]'
               }`}
             >
               Tous
             </button>
-            {data.categories.map((cat) => {
-              const isActive = activeCategory === cat.id
-              const color = cat.color || '#9CA3AF'
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-medium transition"
-                  style={
-                    isActive
-                      ? { backgroundColor: color, color: '#fff' }
-                      : { backgroundColor: `${color}26`, color }
-                  }
-                >
-                  {cat.name}
-                </button>
-              )
-            })}
+            {data.categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-medium transition ${
+                  activeCategory === cat.id
+                    ? 'bg-[#111827] text-white'
+                    : 'border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6]'
+                }`}
+              >
+                {cat.color && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: activeCategory === cat.id ? '#fff' : cat.color }}
+                  />
+                )}
+                {cat.name}
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {!loading && (
@@ -248,12 +242,9 @@ export default function PublicStoreArticlesPage() {
               return (
                 <div
                   key={article.id}
-                  className="group flex flex-col overflow-hidden rounded-xl bg-white transition duration-150 hover:shadow-md"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-[#E5E7EB] bg-white transition duration-150 hover:border-[#D1D5DB] hover:shadow-sm"
                 >
-                  <div
-                    className="relative aspect-square w-full overflow-hidden"
-                    style={{ backgroundColor: tintBackground(article.category?.color) }}
-                  >
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#F7F8FA]">
                     {article.image_url ? (
                       <img
                         src={resolveBackendUrl(article.image_url) ?? ''}
@@ -261,7 +252,7 @@ export default function PublicStoreArticlesPage() {
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                       />
                     ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#9CA3AF]">
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#D1D5DB]">
                         <ShoppingBag className="h-7 w-7" />
                         <span className="text-[10.5px] font-medium">Pas d'image</span>
                       </div>
@@ -269,7 +260,7 @@ export default function PublicStoreArticlesPage() {
 
                     <span
                       className={`absolute left-2 top-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-                        inStock ? 'bg-[#C0DD97] text-[#173404]' : 'bg-[#F7C1C1] text-[#501313]'
+                        inStock ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                       }`}
                     >
                       {inStock ? 'En stock' : 'Rupture'}
@@ -278,10 +269,7 @@ export default function PublicStoreArticlesPage() {
 
                   <div className="flex flex-1 flex-col gap-1 p-3">
                     {article.category && (
-                      <span
-                        className="text-[10px] font-semibold uppercase tracking-wide"
-                        style={{ color: article.category.color || '#9CA3AF' }}
-                      >
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
                         {article.category.name}
                       </span>
                     )}
