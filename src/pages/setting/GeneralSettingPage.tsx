@@ -16,7 +16,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import type { Organization, Store } from '../../types/api'
 import type { GeneralSetting } from '../../types/generalSetting'
 import { updateOrganization, updateOrganizationWithLogo } from '../../api/organization'
-import { fetchGeneralSetting, updateGeneralSetting } from '../../api/generalSettings'
+import { fetchGeneralSetting, updateGeneralSetting, updateGeneralSettingWithCover } from '../../api/generalSettings'
 import { fetchStores } from '../../api/stores'
 import { useAuth } from '../../contexts/useAuth'
 import { resolveBackendUrl } from '../../lib/url'
@@ -106,7 +106,8 @@ export default function GeneralSettingPage() {
   const [savingOrganization, setSavingOrganization] = useState(false)
   const [organizationDraft, setOrganizationDraft] = useState<Partial<Organization>>({})
   const [logoFile, setLogoFile] = useState<File | null>(null)
-  
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [savingCover, setSavingCover] = useState(false)  
   const [stores, setStores] = useState<Store[]>([])
   const [storesLoading, setStoresLoading] = useState(false)
 
@@ -747,6 +748,78 @@ export default function GeneralSettingPage() {
               <p className="mb-4 text-sm text-gray-600">
                 Copiez ou cliquez sur les liens ci-dessous pour accéder à la page des articles en ligne de chaque magasin.
               </p>
+
+              <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <div className="text-sm font-semibold text-gray-900 mb-2">Image de couverture (Bannière)</div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  {coverFile ? (
+                    <img
+                      src={URL.createObjectURL(coverFile)}
+                      alt="Bannière"
+                      className="h-20 w-32 rounded-lg border border-gray-200 object-cover"
+                    />
+                  ) : data?.store_cover_image ? (
+                    <img
+                      src={resolveBackendUrl(data.store_cover_image) ?? ''}
+                      alt="Bannière"
+                      className="h-20 w-32 rounded-lg border border-gray-200 object-cover"
+                      onError={(e) => {
+                        ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-20 w-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-xs text-gray-400">
+                      Aucune
+                    </div>
+                  )}
+                  <div className="flex-1 w-full">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-gray-700 hover:file:bg-gray-200"
+                    />
+                    <div className="mt-2 text-xs text-gray-500">
+                      Taille recommandée : 1200x400 px. Format image uniquement.
+                    </div>
+                  </div>
+                  {coverFile && (
+                    <button
+                      type="button"
+                      disabled={savingCover}
+                      onClick={async () => {
+                        try {
+                          setSavingCover(true)
+                          const updated = await updateGeneralSettingWithCover(coverFile)
+                          setData(updated)
+                          setCoverFile(null)
+                          Swal.fire({
+                            title: 'Enregistré',
+                            text: 'La bannière a été mise à jour.',
+                            icon: 'success',
+                            toast: true,
+                            position: 'top-end',
+                            timer: 2000,
+                            showConfirmButton: false
+                          })
+                        } catch {
+                          Swal.fire({
+                            title: 'Erreur',
+                            text: 'Impossible de sauvegarder la bannière.',
+                            icon: 'error'
+                          })
+                        } finally {
+                          setSavingCover(false)
+                        }
+                      }}
+                      className="w-full sm:w-auto rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2563EB] disabled:opacity-50"
+                    >
+                      {savingCover ? '...' : 'Enregistrer'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
               
               {storesLoading ? (
                 <div className="text-sm text-gray-500">Chargement des magasins...</div>

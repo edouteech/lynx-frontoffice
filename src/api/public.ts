@@ -25,6 +25,7 @@ export interface PublicStoreInfo {
     name: string
     logo: string | null
     currency: string | null
+    store_cover_image?: string | null
   }
   store: {
     name: string

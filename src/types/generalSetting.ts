@@ -14,6 +14,7 @@ export interface GeneralSetting {
   customer_account_payment: boolean
   commission: boolean
   online_articles: boolean
+  store_cover_image?: string | null
   created_at: string
   updated_at: string
 }

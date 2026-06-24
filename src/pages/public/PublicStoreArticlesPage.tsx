@@ -94,232 +94,265 @@ export default function PublicStoreArticlesPage() {
   })
 
   return (
-    <div className="min-h-screen bg-[#FBF7EE]" style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* Header — vert épinard plein, pas de gradient générique */}
-      <header className="sticky top-0 z-30 bg-[#101842]">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            {/* Section gauche : logo + nom boutique */}
-            <div className="flex min-w-0 items-center gap-3.5">
-              {data.organization.logo ? (
-                <img
-                  src={resolveBackendUrl(data.organization.logo) ?? ''}
-                  className="h-[50px] w-[50px] shrink-0 rounded-xl bg-white/10 object-contain p-1.5"
-                />
-              ) : (
-                <div
-                  className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-xl bg-[#D9A640] text-[22px] font-semibold text-[#1F3D2E]"
-                  style={{ fontFamily: "'Fraunces', serif" }}
-                >
-                  {data.organization.name.charAt(0)}
-                </div>
-              )}
-
-              <div className="hidden h-8 w-px bg-white/15 sm:block" />
-
-              <div className="min-w-0">
-                <h1
-                  className="truncate text-[22px] font-semibold leading-tight text-[#FBF7EE]"
-                  style={{ fontFamily: "'Fraunces', serif" }}
-                >
-                  {data.organization.name}
-                </h1>
-                <p className="truncate text-[12.5px] text-[#FBF7EE]/65">{data.store.name}</p>
-              </div>
-            </div>
-
-            {/* Section droite : contact + panier */}
-            <div className="flex shrink-0 items-center gap-5">
-              {hasContactInfo && (
-                <div className="hidden items-center gap-[18px] md:flex">
-                  {data.store.address && (
-                    <div className="flex items-center gap-1.5 text-[13px] text-[#FBF7EE]/75">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {data.store.address}
-                    </div>
-                  )}
-                  {data.store.phone && (
-                    <div className="flex items-center gap-1.5 text-[13px] text-[#FBF7EE]/75">
-                      <Phone className="h-3.5 w-3.5" />
-                      {data.store.phone}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <button
-                aria-label="Panier"
-                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/[0.06] text-[#FBF7EE] transition-colors duration-200 hover:bg-white/[0.12]"
-              >
-                <ShoppingBag className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+    <div 
+      className="min-h-screen text-slate-800" 
+      style={{ 
+        fontFamily: "'Inter', sans-serif",
+        background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #f8fafc 100%)'
+      }}
+    >
+      {/* 1. Header & Cover Image */}
+      <div className="relative">
+        {/* Cover Background */}
+        <div 
+          className="h-48 md:h-64 w-full bg-cover bg-center bg-no-repeat relative overflow-hidden bg-slate-900"
+          style={{
+            backgroundImage: data.organization.store_cover_image 
+              ? `url(${resolveBackendUrl(data.organization.store_cover_image)})` 
+              : 'bg-[#ffffff]'
+          }}
+        >
+           {/* Subtle pattern or overlay */}
+           <div className="absolute inset-0 bg-black/20" />
+           <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-900/50 to-transparent" />
         </div>
 
-        {/* Barre de recherche + catégories, sur un bandeau légèrement plus clair */}
-        <div className="bg-[#16205B] border-t border-white/10">
-          <div className="mx-auto max-w-7xl px-4 pt-3.5 sm:px-6 lg:px-8">
-            <div className="relative flex items-center gap-2.5">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#FBF7EE]/45" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher un article…"
-                  className="w-full rounded-[10px] border border-white/15 bg-white/[0.07] py-2.5 pl-10 pr-4 text-[14px] text-[#FBF7EE] placeholder:text-[#FBF7EE]/45 focus:border-[#D9A640] focus:bg-white/10 focus:outline-none"
-                />
-              </div>
-              <button
-                aria-label="Filtres"
-                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/[0.07] text-[#FBF7EE] transition-colors duration-200 hover:bg-white/[0.12]"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-              </button>
-            </div>
+        {/* Cart Button */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+          <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition-colors shadow-lg ring-1 ring-white/30">
+            <ShoppingBag className="h-5 w-5" />
+          </button>
+        </div>
 
-            {/* Catégories — "tickets" actifs en crème plein */}
-            {hasCategories && (
-              <div className="mt-3.5 flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Store Info Container */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative">
+           <div className="flex flex-row items-center gap-4 -mt-12 sm:-mt-20 mb-8">
+              {/* Floating Logo */}
+              <div className="h-20 w-20 sm:h-32 sm:w-32 shrink-0 rounded-2xl sm:rounded-3xl bg-white p-1.5 shadow-2xl ring-4 ring-white/50 relative z-10 overflow-hidden">
+                 {data.organization.logo ? (
+                   <img
+                     src={resolveBackendUrl(data.organization.logo) ?? ''}
+                     alt="Logo"
+                     className="h-full w-full rounded-xl sm:rounded-2xl object-contain bg-slate-50"
+                   />
+                 ) : (
+                   <div className="flex h-full w-full items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#D9A640] to-amber-600 text-2xl sm:text-[40px] font-bold text-white shadow-inner">
+                     {data.organization.name.charAt(0)}
+                   </div>
+                 )}
+              </div>
+
+              {/* Title & Contact */}
+              <div className="text-left flex-1 pt-2">
+                 <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                   {data.organization.name}
+                 </h1>
+                 <p className="mt-2 text-slate-400 font-medium text-sm sm:text-lg flex items-center justify-start gap-2">
+                   {data.store.name}
+                 </p>
+                 {hasContactInfo && (
+                    <div className="mt-2 hidden sm:flex flex-wrap items-center justify-start gap-x-6 gap-y-2 text-sm text-slate-600 font-medium">
+                      {data.store.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-blue-500" />
+                          {data.store.address}
+                        </div>
+                      )}
+                      {data.store.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-green-500" />
+                          {data.store.phone}
+                        </div>
+                      )}
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* 2. Statistics Section */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-10">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 rounded-2xl sm:rounded-3xl bg-white p-3 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+           <div className="flex flex-col sm:flex-row items-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
+              <div className="flex h-9 w-9 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-blue-50 text-base sm:text-2xl">
+                 📦
+              </div>
+              <div>
+                 <p className="text-xs sm:text-lg font-extrabold text-slate-900">{data.articles.length} <span className="hidden sm:inline">Articles</span><span className="sm:hidden">Art.</span></p>
+                 <p className="text-[10px] sm:text-sm text-slate-500 font-medium leading-tight">Disponibles</p>
+              </div>
+           </div>
+           <div className="flex flex-col sm:flex-row items-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left border-x border-slate-100 sm:border-x-0">
+              <div className="flex h-9 w-9 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-purple-50 text-base sm:text-2xl">
+                 🏷️
+              </div>
+              <div>
+                 <p className="text-xs sm:text-lg font-extrabold text-slate-900">{data.categories.length} <span className="hidden sm:inline">Catégories</span><span className="sm:hidden">Cat.</span></p>
+                 <p className="text-[10px] sm:text-sm text-slate-500 font-medium leading-tight">Disponibles</p>
+              </div>
+           </div>
+           <div className="flex flex-col sm:flex-row items-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
+              <div className="flex h-9 w-9 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-green-50 text-base sm:text-2xl">
+                 ⭐
+              </div>
+              <div>
+                 <p className="text-xs sm:text-lg font-extrabold text-slate-900">Vérifiés</p>
+                 <p className="text-[10px] sm:text-sm text-slate-500 font-medium leading-tight">Qualité</p>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* 3. Hero message & Search Bar */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 mb-12 text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6">
+          Découvrez nos meilleurs articles
+        </h2>
+        <div className="relative flex items-center w-full h-14 sm:h-16 bg-white rounded-full shadow-lg border border-slate-200 focus-within:ring-4 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all duration-300">
+           <Search className="absolute left-4 sm:left-6 h-5 w-5 sm:h-6 sm:w-6 text-slate-400" />
+           <input
+             type="text"
+             value={search}
+             onChange={(e) => setSearch(e.target.value)}
+             placeholder="Rechercher un article..."
+             className="w-full h-full pl-12 sm:pl-16 pr-14 sm:pr-16 bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none text-base sm:text-lg font-medium rounded-full"
+           />
+           <button className="absolute right-1.5 sm:right-2 p-2.5 sm:p-3 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+              <SlidersHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
+           </button>
+        </div>
+      </div>
+
+      {/* 4. Categories (Netflix Style) */}
+      {hasCategories && (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-10">
+          <div className="flex gap-3 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-center">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`flex shrink-0 items-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold transition-all duration-300 border ${
+                activeCategory === null
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {activeCategory === null ? '◉' : '○'} Tous
+            </button>
+            {data.categories.map((cat) => {
+              const isActive = activeCategory === cat.id
+              return (
                 <button
-                  onClick={() => setActiveCategory(null)}
-                  className={`flex shrink-0 items-center whitespace-nowrap rounded-t-[10px] px-5 py-2.5 text-[13px] font-medium transition-colors duration-200 ${
-                    activeCategory === null
-                      ? 'bg-[#FBF7EE] text-[#C8462E] font-semibold'
-                      : 'text-[#FBF7EE]/70 hover:bg-white/5 hover:text-[#FBF7EE]'
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`flex shrink-0 items-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold transition-all duration-300 border ${
+                    isActive
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  Tous
+                  {isActive ? '◉' : '○'} {cat.name}
                 </button>
-                {data.categories.map((cat) => {
-                  const isActive = activeCategory === cat.id
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-[10px] px-5 py-2.5 text-[13px] font-medium transition-colors duration-200 ${
-                        isActive
-                          ? 'bg-[#FBF7EE] text-[#C8462E] font-semibold'
-                          : 'text-[#FBF7EE]/70 hover:bg-white/5 hover:text-[#FBF7EE]'
-                      }`}
-                    >
-                      {cat.color && (
-                        <span
-                          className="h-1.5 w-1.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: isActive ? cat.color : '#fff' }}
-                        />
-                      )}
-                      {cat.name}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+              )
+            })}
           </div>
         </div>
-      </header>
+      )}
 
-      <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-        {!loading && (
-          <>
-            <span className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#C8462E]">
-              <span className="h-[1.5px] w-3.5 bg-[#C8462E]" />
-              Catalogue
-            </span>
-            <div className="mb-4 text-[13.5px] text-[#6B7D6E]">
-              <span className="font-bold text-[#1F3D2E]">{filteredArticles.length}</span>{' '}
-              {filteredArticles.length === 1 ? 'article disponible' : 'articles disponibles'}
-            </div>
-          </>
-        )}
-
+      {/* 5. Catalogue */}
+      <main className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
         {loading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {[1, 2, 3, 4, 5, 6, 8, 9, 10].map((i) => (
-              <div key={i} className="overflow-hidden rounded-2xl border border-[#E6E0D2] bg-white">
-                <div className="aspect-square w-full animate-pulse bg-[#F3ECDC]" />
-                <div className="space-y-2 p-3">
-                  <div className="h-2.5 w-1/3 animate-pulse rounded bg-[#F3ECDC]" />
-                  <div className="h-3.5 w-3/4 animate-pulse rounded bg-[#F3ECDC]" />
-                  <div className="h-4 w-1/2 animate-pulse rounded bg-[#F3ECDC]" />
+              <div key={i} className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100">
+                <div className="aspect-square w-full animate-pulse bg-slate-100" />
+                <div className="space-y-3 p-3 sm:p-5">
+                  <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
+                  <div className="h-5 w-1/2 animate-pulse rounded bg-slate-200" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="flex flex-col items-center rounded-[20px] border border-dashed border-[#DCD4BE] bg-white/50 px-6 py-20 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F3ECDC] text-[#D9A640]">
-              <PackageX className="h-6 w-6" />
+          <div className="flex flex-col items-center rounded-3xl border border-dashed border-slate-300 bg-white/50 px-6 py-24 text-center">
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <PackageX className="h-8 w-8" />
             </div>
-            <h3 className="text-[18px] font-semibold text-[#1F3D2E]" style={{ fontFamily: "'Fraunces', serif" }}>
+            <h3 className="text-xl font-bold text-slate-900">
               {search ? 'Aucun résultat' : 'Aucun article ici'}
             </h3>
-            <p className="mt-2 max-w-sm text-[13.5px] leading-relaxed text-[#6B7D6E]">
+            <p className="mt-2 max-w-sm text-base text-slate-500">
               {search
                 ? `Aucun article ne correspond à « ${search} ». Essayez un autre mot-clé.`
                 : "Cette catégorie ne contient pas encore d'article. Essayez « Tous » ou revenez plus tard."}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filteredArticles.map((article) => {
               const inStock = article.stock_quantity > 0
               return (
                 <div
                   key={article.id}
-                  className="group flex flex-col overflow-visible rounded-2xl border border-[#E6E0D2] bg-white transition-all duration-200 hover:-translate-y-[3px] hover:border-[#D8D0BC] hover:shadow-[0_10px_24px_-8px_rgba(31,61,46,0.18)]"
+                  className="group relative flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border border-slate-100"
                 >
-                  <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-[#F3ECDC]">
+                  {/* Stock Badge */}
+                  {inStock ? (
+                    <div className="absolute top-4 left-4 z-10 rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-700 shadow-sm">
+                      En stock
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 left-4 z-10 rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-lg">
+                      Épuisé
+                    </div>
+                  )}
+
+                  {/* Image Container */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-slate-50">
                     {article.image_url ? (
                       <img
                         src={resolveBackendUrl(article.image_url) ?? ''}
                         alt={article.name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-[#C8BFA8]">
-                        <ShoppingBag className="h-7 w-7" />
-                        <span className="text-[10.5px] font-medium">Pas d'image</span>
+                      <div className="flex h-full w-full flex-col items-center justify-center text-slate-300 transition-transform duration-500 group-hover:scale-110">
+                        <ShoppingBag className="h-12 w-12 mb-3" />
+                        <span className="text-sm font-medium">Sans image</span>
                       </div>
                     )}
-
-                    {/* Pastille stock — forme organique, pas un simple rectangle */}
-                    <span
-                      className="absolute left-2.5 top-2.5 px-2.5 py-[5px] text-[10px] font-bold leading-none"
-                      style={{
-                        borderRadius: '40% 60% 55% 45% / 60% 50% 60% 40%',
-                        backgroundColor: inStock ? '#E7F0E4' : '#FBEAE7',
-                        color: inStock ? '#2B5240' : '#B3463A',
-                      }}
-                    >
-                      {inStock ? 'En stock' : 'Rupture'}
-                    </span>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-1 p-3">
-                    {article.category && (
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#6B7D6E]">
-                        {article.category.name}
+                  {/* Product Info */}
+                  <div className="flex flex-1 flex-col p-3 sm:p-5">
+                    <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {article.category?.name || 'Général'}
                       </span>
-                    )}
-                    <h3 className="line-clamp-2 min-h-[2.6em] text-[13.5px] font-medium leading-snug text-[#1F3D2E]">
+                    </div>
+
+                    <h3 className="mb-2 sm:mb-4 line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] text-sm sm:text-[15px] font-semibold leading-snug text-slate-800">
                       {article.name}
                     </h3>
 
-                    {/* Étiquette prix façon "tampon" — élément signature */}
-                    <span
-                      className="mt-1.5 inline-block self-start px-3 py-[5px] text-[14px] font-medium leading-none text-[#FBF7EE]"
-                      style={{
-                        backgroundColor: '#E8553A',
-                        fontFamily: "'DM Mono', monospace",
-                        transform: 'rotate(-1.5deg)',
-                        clipPath:
-                          'polygon(0% 15%, 4% 0%, 96% 0%, 100% 15%, 100% 85%, 96% 100%, 4% 100%, 0% 85%)',
-                      }}
+                    <div className="mt-auto flex flex-col">
+                      <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 sm:mt-2">
+                        {formatPrice(article.selling_price)}
+                      </span>
+                    </div>
+
+                    {/* Action Button */}
+                    <button 
+                      className={`mt-3 sm:mt-5 w-full rounded-xl sm:rounded-2xl py-2 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 ${
+                        inStock 
+                          ? 'bg-slate-50 text-slate-700 group-hover:bg-slate-900 group-hover:text-white group-hover:shadow-md'
+                          : 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                      }`}
+                      disabled={!inStock}
                     >
-                      {formatPrice(article.selling_price)}
-                    </span>
+                      {inStock ? 'Voir le produit' : 'Indisponible'}
+                    </button>
                   </div>
                 </div>
               )

@@ -29,3 +29,19 @@ export async function updateGeneralSetting(
   return data
 }
 
+export async function updateGeneralSettingWithCover(
+  coverFile: File | null
+): Promise<GeneralSetting> {
+  const form = new FormData()
+  form.append('_method', 'PATCH')
+  if (coverFile) {
+    form.append('store_cover_image', coverFile)
+  } else {
+    // If we want to clear the cover, maybe send an empty string
+    // but the backend doesn't explicitly handle clearing right now.
+  }
+
+  const { data } = await api.post<GeneralSetting>('/general-settings', form)
+  return data
+}
+
