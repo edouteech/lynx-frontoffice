@@ -254,7 +254,11 @@ export default function PublicStoreArticlesPage() {
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  {isActive ? '◉' : '○'} {cat.name}
+                  <div
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: cat.color || '#94a3b8' }}
+                   />
+                  <span>{cat.name}</span>
                 </button>
               )
             })}
@@ -331,9 +335,19 @@ export default function PublicStoreArticlesPage() {
                   {/* Product Info */}
                   <div className="flex flex-1 flex-col p-3 sm:p-5">
                     <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                        {article.category?.name || 'Général'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{
+                            backgroundColor:
+                              article.category?.color || '#ffff',
+                          }}
+                        />
+
+                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
+                          {article.category?.name || 'Général'}
+                        </span>
+                      </div>
                     </div>
 
                     <h3 className="line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] text-sm sm:text-[15px] font-semibold leading-snug text-slate-800">
