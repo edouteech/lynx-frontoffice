@@ -10,7 +10,9 @@ import {
   Wallet,
   Link,
   ExternalLink,
+  Download,
 } from 'lucide-react'
+import { QRCodeCanvas } from 'qrcode.react'
 import type { Organization, Store } from '../../types/api'
 import type { GeneralSetting } from '../../types/generalSetting'
 import { updateOrganization, updateOrganizationWithLogo } from '../../api/organization'
@@ -755,22 +757,50 @@ export default function GeneralSettingPage() {
                   {stores.map(store => {
                     const url = `${window.location.origin}/${organization?.slug || ''}/${store.slug || ''}`
                     return (
-                      <div key={store.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                        <div>
+                      <div key={store.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div className="flex-1">
                           <div className="font-medium text-gray-900">{store.name}</div>
-                          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-sm text-[#3B82F6] hover:underline">
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-sm text-[#3B82F6] hover:underline break-all">
                             {url}
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-3 w-3 shrink-0" />
                           </a>
                         </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(url)
-                          }}
-                          className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
-                        >
-                          Copier le lien
-                        </button>
+                        <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
+                          <div className="hidden">
+                            <QRCodeCanvas
+                              id={`qr-code-${store.id}`}
+                              value={url}
+                              size={1024}
+                              level="H"
+                              includeMargin={true}
+                            />
+                          </div>
+                          <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(url)
+                              }}
+                              className="w-full sm:w-auto rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
+                            >
+                              Copier le lien
+                            </button>
+                            <button
+                              onClick={() => {
+                                const canvas = document.getElementById(`qr-code-${store.id}`) as HTMLCanvasElement
+                                if (!canvas) return
+                                const pngUrl = canvas.toDataURL("image/png")
+                                const downloadLink = document.createElement("a")
+                                downloadLink.href = pngUrl
+                                downloadLink.download = `QR_${store.name.replace(/\s+/g, '_')}.png`
+                                document.body.appendChild(downloadLink)
+                                downloadLink.click()
+                                document.body.removeChild(downloadLink)
+                              }}
+                              className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg border border-[#3B82F6] bg-[#EFF6FF] px-3 py-1.5 text-sm font-medium text-[#3B82F6] transition hover:bg-[#DBEAFE]"
+                            >
+                              <Download className="h-4 w-4" />
+                              Télécharger QR
+                            </button>
+                        </div>
                       </div>
                     )
                   })}
