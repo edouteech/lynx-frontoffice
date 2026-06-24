@@ -148,7 +148,7 @@ export default function PublicStoreArticlesPage() {
                  <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
                    {data.organization.name}
                  </h1>
-                 <p className="mt-2 text-slate-400 font-medium text-sm sm:text-lg flex items-center justify-start gap-2">
+                 <p className="mt-2 text-slate-500 font-medium text-sm sm:text-lg flex items-center justify-start gap-2">
                    {data.store.name}
                  </p>
                  {hasContactInfo && (
