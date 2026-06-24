@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchPublicStoreArticles, type PublicStoreInfo } from '../../api/public'
 import { resolveBackendUrl } from '../../lib/url'
@@ -12,6 +12,7 @@ export default function PublicStoreArticlesPage() {
   const [data, setData] = useState<PublicStoreInfo | null>(null)
   const [activeCategory, setActiveCategory] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const searchSectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!organizationSlug || !storeSlug) return
@@ -172,7 +173,7 @@ export default function PublicStoreArticlesPage() {
       </div>
 
       {/* 2. Statistics Section */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-4">
         <div className="grid grid-cols-3 gap-2 sm:gap-6 rounded-2xl sm:rounded-3xl bg-white p-3 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
            <div className="flex flex-col sm:flex-row items-center sm:justify-start gap-1 sm:gap-4 text-center sm:text-left">
               <div className="flex h-9 w-9 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-blue-50 text-base sm:text-2xl">
@@ -205,7 +206,7 @@ export default function PublicStoreArticlesPage() {
       </div>
 
       {/* 3. Hero message & Search Bar */}
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 mb-12 text-center">
+      <div ref={searchSectionRef} className="mx-auto pt-6 max-w-4xl px-4 sm:px-6 lg:px-8 mb-12 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6">
           Découvrez nos meilleurs articles
         </h2>
@@ -215,6 +216,9 @@ export default function PublicStoreArticlesPage() {
              type="text"
              value={search}
              onChange={(e) => setSearch(e.target.value)}
+             onFocus={() => {
+               searchSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+             }}
              placeholder="Rechercher un article..."
              className="w-full h-full pl-12 sm:pl-16 pr-14 sm:pr-16 bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none text-base sm:text-lg font-medium rounded-full"
            />
@@ -332,26 +336,20 @@ export default function PublicStoreArticlesPage() {
                       </span>
                     </div>
 
-                    <h3 className="mb-2 sm:mb-4 line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] text-sm sm:text-[15px] font-semibold leading-snug text-slate-800">
+                    <h3 className="line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] text-sm sm:text-[15px] font-semibold leading-snug text-slate-800">
                       {article.name}
                     </h3>
 
-                    <div className="mt-auto flex flex-col">
-                      <span className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1 sm:mt-2">
-                        {formatPrice(article.selling_price)}
-                      </span>
-                    </div>
-
                     {/* Action Button */}
                     <button 
-                      className={`mt-3 sm:mt-5 w-full rounded-xl sm:rounded-2xl py-2 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 ${
+                      className={`w-full rounded-xl sm:rounded-2xl py-2 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 ${
                         inStock 
                           ? 'bg-slate-50 text-slate-700 group-hover:bg-slate-900 group-hover:text-white group-hover:shadow-md'
                           : 'bg-slate-50 text-slate-400 cursor-not-allowed'
                       }`}
                       disabled={!inStock}
                     >
-                      {inStock ? 'Voir le produit' : 'Indisponible'}
+                      {formatPrice(article.selling_price)}
                     </button>
                   </div>
                 </div>
