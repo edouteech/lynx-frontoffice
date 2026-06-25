@@ -99,7 +99,7 @@ export default function PublicStoreArticlesPage() {
       className="min-h-screen text-slate-800" 
       style={{ 
         fontFamily: "'Inter', sans-serif",
-        background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #f8fafc 100%)'
+        background: 'linear-gradient(180deg, #dfdfdf 0%, #ffffff 40%, #f8fafc 100%)'
       }}
     >
       {/* 1. Header & Cover Image */}
