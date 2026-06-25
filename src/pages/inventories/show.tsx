@@ -53,7 +53,7 @@ export default function InventoryShowPage() {
   // Extract unique categories (must be before conditional returns)
   const categories = useMemo(() => {
     const items = inventory?.items ?? []
-    const cats = new Set(items.map(item => item.product_category).filter(Boolean))
+    const cats = new Set(items.map(item => item.product_category).filter((cat): cat is string => Boolean(cat)))
     return Array.from(cats).sort()
   }, [inventory?.items])
 

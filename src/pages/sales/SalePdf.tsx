@@ -210,7 +210,7 @@ export default function SalePdf({ sale, organization, receiptSetting }: Props) {
               <View style={[s.thColLast, s.colTotal]}><Text style={s.thTextRight}>Total TTC</Text></View>
             </View>
 
-            {items.map((item, idx) => (
+            {items.map((item) => (
               <View key={item.id} style={s.row} wrap={false}>
                 <View style={[s.tdCol, s.colArticle]}>
                   <Text style={s.productName}>{item.product_name}</Text>
