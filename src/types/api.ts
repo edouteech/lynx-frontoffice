@@ -410,6 +410,7 @@ export interface CashRegisterSession {
   sales_total?: number
   expected_closing_balance?: number
   difference?: number | null
+  closing_report_data?: Record<string, any> | null
   cash_register?: CashRegister
   created_at: string
   updated_at: string

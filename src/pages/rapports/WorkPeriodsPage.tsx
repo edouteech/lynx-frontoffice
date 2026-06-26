@@ -8,7 +8,9 @@ import {
   Wallet,
   Scale,
   History,
-  Loader2
+  Loader2,
+  Eye,
+  X
 } from 'lucide-react'
 import DataTable, { type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
@@ -125,6 +127,9 @@ export default function WorkPeriodsPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  /* ================= MODAL DE DÉTAIL ================= */
+  const [selectedSession, setSelectedSession] = useState<Row | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -269,6 +274,21 @@ export default function WorkPeriodsPage() {
           )
         },
       },
+      {
+        key: 'actions',
+        label: '',
+        sortable: false,
+        align: 'right',
+        render: (_, row) => (
+          <button
+            onClick={() => setSelectedSession(row)}
+            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+            title="Voir les détails complets"
+          >
+            <Eye className="h-5 w-5" />
+          </button>
+        )
+      }
     ],
     []
   )
@@ -399,6 +419,180 @@ export default function WorkPeriodsPage() {
           />
         )}
       </div>
+
+      {/* MODAL DE DÉTAILS */}
+      {selectedSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Détails de la session</h2>
+                <p className="text-sm text-gray-500">
+                  POINT DE VENTE : {selectedSession.cash_register_name} - {selectedSession.store_name}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedSession(null)} 
+                className="rounded-lg p-2 hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {!selectedSession.closing_report_data ? (
+                <div className="text-center text-gray-500 py-8">
+                  Aucun rapport détaillé n'a été généré pour cette session.
+                </div>
+              ) : (() => {
+                const d = selectedSession.closing_report_data
+                const n = (v: unknown) => Number(v ?? 0)
+                return (
+                  <div className="space-y-6">
+
+                    {/* Période / Opérateur */}
+                    {(d.period || d.operator_name) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {d.period && (
+                          <div className="rounded-xl bg-gray-50 p-4">
+                            <div className="text-xs font-semibold text-gray-500 uppercase">Période</div>
+                            <div className="mt-1 font-medium text-gray-900">{d.period}</div>
+                          </div>
+                        )}
+                        {d.operator_name && (
+                          <div className="rounded-xl bg-gray-50 p-4">
+                            <div className="text-xs font-semibold text-gray-500 uppercase">Opérateur</div>
+                            <div className="mt-1 font-medium text-gray-900">{d.operator_name}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* CHIFFRE D'AFFAIRES */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-bold text-gray-800 uppercase tracking-wide">Chiffre d'affaires</h3>
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="grid grid-cols-2 gap-px bg-gray-200">
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">CA TTC</span>
+                            <span className="font-bold text-gray-900">{formatFcfa(n(d.sales_total_ttc))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">CA HT</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.sales_total_ht))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Commission</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.commission))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">TVA</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.total_vat))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Nb. transactions</span>
+                            <span className="font-medium text-gray-900">{n(d.transaction_count)} vente{n(d.transaction_count) !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Total réductions</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.total_discounts))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Nb. rachats</span>
+                            <span className="font-medium text-gray-900">{n(d.buyback_count ?? 0)} rachat{n(d.buyback_count ?? 0) !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Total rachats</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.buyback_total ?? 0))}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ENCAISSEMENTS */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-bold text-gray-800 uppercase tracking-wide">Encaissements</h3>
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="grid grid-cols-2 gap-px bg-gray-200">
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Espèces</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.cash))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Mobile Money</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.mobile_money))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Compte client</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.customer_account))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Autres moyens</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.other_payments))}</span>
+                          </div>
+                          <div className="bg-blue-50 p-3 flex justify-between items-center col-span-2">
+                            <span className="text-sm font-semibold text-blue-900">Total encaissé</span>
+                            <span className="font-bold text-blue-700">{formatFcfa(n(d.total_collected))}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CONTRÔLE DE CAISSE */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-bold text-gray-800 uppercase tracking-wide">Contrôle de caisse</h3>
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="grid grid-cols-2 gap-px bg-gray-200">
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Fonds initial</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.opening_balance))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Remboursements</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.refunds_total))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center col-span-2">
+                            <span className="text-sm text-gray-600">Sorties de caisse</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.cash_out ?? 0))}</span>
+                          </div>
+                          <div className="bg-gray-50 p-3 flex justify-between items-center col-span-2 border-t border-gray-200">
+                            <span className="text-sm font-semibold text-gray-700">Solde théorique</span>
+                            <span className="font-bold text-gray-900">{formatFcfa(n(d.expected_balance))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center col-span-2">
+                            <span className="text-sm text-gray-600">Solde réel</span>
+                            <span className="font-medium text-gray-900">{formatFcfa(n(d.actual_balance))}</span>
+                          </div>
+                          <div className="bg-white p-3 flex justify-between items-center col-span-2">
+                            <span className="text-sm font-semibold text-gray-700">Écart constaté</span>
+                            <span className={`font-bold px-2.5 py-1 rounded-md text-sm ${
+                              n(d.difference) < 0 ? 'bg-red-100 text-red-700' :
+                              n(d.difference) > 0 ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {n(d.difference) > 0 ? '+' : ''}{formatFcfa(n(d.difference))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )
+              })()}
+            </div>
+            
+            <div className="border-t border-gray-100 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setSelectedSession(null)}
+                className="rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
