@@ -384,13 +384,19 @@ export interface SaleItem {
   product_name: string
   product_sku: string | null
   product_category: string | null
+  product_category_id?: number | null
   track_inventory?: boolean
   product_type?: string
+  product_vat_rate?: number | null
+  product_tax_name?: string | null
+  sold_by?: string | null
+  discount?: number
   current_stock: number | null
   stock_store_at_sale?: number | null
   stock_global_at_sale?: number | null
   quantity: number
   unit_price: number
+  unit_price_ht?: number | null
   total: number
 }
 
@@ -419,27 +425,39 @@ export interface CashRegisterSession {
 export interface Sale {
   id: number
   invoice_number: string | null
+  last_invoice_number?: string | null
   server_id: number | null
   server_name: string | null
   organization_id: number
   store_id: number
   cash_register_id: number | null
+  cash_register_name?: string | null
   payment_method_id: number | null
+  payment_method_name?: string | null
   customer_id: number | null
   sale_date: string | null
   note: string | null
   order_type: string | null
   status: 'draft' | 'confirmed' | 'cancelled'
+  type_facture?: string | null
+  code_dgi?: string | null
+  periode_w?: string | null
   discount_percentage: number
   extra_fees: number
+  total?: number
+  total_ht?: number
+  paid_amount?: number
+  change_amount?: number
   subtotal?: number
   // Customer snapshot fields (captured at sale time)
   customer_name?: string | null
   customer_email?: string | null
   customer_phone?: string | null
   customer_tax_id?: string | null
+  customer_ifu?: string | null
   customer_aib?: boolean | null
   seller_name?: string | null
+  cashier_name?: string | null
   store?: Store
   cash_register?: CashRegister
   payment_method?: PaymentMethod

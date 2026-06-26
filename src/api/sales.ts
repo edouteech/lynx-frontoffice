@@ -26,25 +26,58 @@ export async function fetchSale(id: number | string): Promise<Sale> {
   return data
 }
 
+export interface CreateSaleItemPayload {
+  product_id: number
+  quantity: number
+  unit_price: number
+  unit_price_ht?: number | null
+  discount?: number
+  sold_by?: string | null
+  product_category_id?: number | null
+  product_vat_rate?: number | null
+  product_tax_name?: string | null
+}
+
 export interface CreateSalePayload {
   store_id: number
   customer_id?: number | null
+  customer_name?: string | null
+  customer_phone?: string | null
+  customer_tax_id?: string | null
+  customer_ifu?: string | null
   cash_register_id?: number | null
+  cash_register_name?: string | null
   payment_method_id?: number | null
+  payment_method_name?: string | null
   sale_date?: string | null
   note?: string | null
   order_type?: string | null
   invoice_number?: string | null
+  last_invoice_number?: string | null
   server_id?: number | null
   server_name?: string | null
+  cashier_name?: string | null
+  type_facture?: string | null
+  code_dgi?: string | null
+  periode_w?: string | null
   discount_percentage?: number
   extra_fees?: number
-  items?: { product_id: number; quantity: number; unit_price: number }[]
+  total?: number | null
+  total_ht?: number | null
+  paid_amount?: number | null
+  change_amount?: number | null
+  items?: CreateSaleItemPayload[]
 }
 
 export async function createSale(body: CreateSalePayload): Promise<Sale> {
   const { data } = await api.post<Sale>('/sales', body)
   return data
+}
+
+// Création multiple : envoie plusieurs ventes en une seule requête POST
+export async function createSales(sales: CreateSalePayload[]): Promise<Sale[]> {
+  const { data } = await api.post<{ sales: Sale[] }>('/sales', { sales })
+  return data.sales
 }
 
 export async function updateSale(
