@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import { fetchSales } from '../../api/sales'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Customer, Sale } from '../../types/api'
 import { CustomerCreateModal } from './create'
+import { DateRangePicker } from '../../components/DateRangePicker'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
@@ -53,6 +54,19 @@ export default function CustomerShowPage() {
   const [lastPage, setLastPage] = useState(1)
   const [total, setTotal] = useState(0)
 
+  // Date range filter — default to current month
+  const [dateFrom, setDateFrom] = useState(() => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01T00:00`
+  })
+  const [dateTo, setDateTo] = useState(() => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return `${last.getFullYear()}-${pad(last.getMonth() + 1)}-${pad(last.getDate())}T23:59`
+  })
+
   const [editOpen, setEditOpen] = useState(false)
 
   // Load customer info
@@ -78,7 +92,10 @@ export default function CustomerShowPage() {
     if (!id) return
     setSalesLoading(true)
     setSalesError(null)
-    fetchSales({ page, customer_id: Number(id) })
+    // Extract just the date part (YYYY-MM-DD) from datetime strings
+    const from = dateFrom.slice(0, 10)
+    const to = dateTo.slice(0, 10)
+    fetchSales({ page, customer_id: Number(id), from, to })
       .then((res) => {
         setSales(res.data)
         setLastPage(res.last_page)
@@ -86,7 +103,16 @@ export default function CustomerShowPage() {
       })
       .catch((e) => setSalesError(getApiErrorMessage(e)))
       .finally(() => setSalesLoading(false))
-  }, [id, page])
+  }, [id, page, dateFrom, dateTo])
+
+  // Compute total amount of visible sales
+  const totalAmount = useMemo(() => {
+    return sales.reduce((sum, sale) => {
+      const sub = (sale as Sale & { subtotal?: number }).subtotal ?? 0
+      const disc = sub * ((sale.discount_percentage ?? 0) / 100)
+      return sum + (sub - disc + (sale.extra_fees ?? 0))
+    }, 0)
+  }, [sales])
 
   return (
     <div className="space-y-6">
@@ -158,6 +184,9 @@ export default function CustomerShowPage() {
                 <InfoRow icon={Hash} label="Numéro IFU">
                   {customer.tax_id ?? <span className="text-gray-400">—</span>}
                 </InfoRow>
+                <InfoRow icon={Hash} label="Réduction">
+                  {customer.discount_percentage ?? <span className="text-gray-400">—</span>}
+                </InfoRow>  
                 <InfoRow icon={FileCheck2} label="Statut AIB">
                   {customer.aib ? (
                     <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">
@@ -181,20 +210,36 @@ export default function CustomerShowPage() {
           {/* Quick stats */}
           <div className="mt-4 grid grid-cols-1 gap-3">
             <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">Total transactions</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">Nombre de Transactions</p>
               <p className="mt-1 text-2xl font-bold text-blue-700">{total}</p>
             </div>
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-emerald-100/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Total</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{totalAmount.toLocaleString('fr-FR')} CFA</p>
+            </div>
+            {customer?.discount_percentage ? (
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-orange-50 to-orange-100/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-orange-500">Réduction client</p>
+                <p className="mt-1 text-2xl font-bold text-orange-700">{customer.discount_percentage}%</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
         {/* ── RIGHT — Transactions history ── */}
         <div className="lg:col-span-2">
           <div className="rounded-2xl border border-gray-200 bg-white shadow-xs">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
               <div>
                 <h2 className="font-semibold text-gray-800">Historique des transactions</h2>
-                <p className="text-xs text-gray-400">{total} vente(s) enregistrée(s)</p>
+                <p className="text-xs text-gray-400">{total} vente(s) — {totalAmount.toLocaleString('fr-FR')} CFA au total</p>
               </div>
+              {/* Date range picker */}
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                onRangeChange={(f, t) => { setDateFrom(f); setDateTo(t); setPage(1) }}
+              />
             </div>
 
             {salesError && (

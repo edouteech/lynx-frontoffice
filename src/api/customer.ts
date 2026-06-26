@@ -24,6 +24,7 @@ export async function createCustomer(body: {
   phone?: string | null
   note?: string | null
   tax_id?: string | null
+  discount_percentage?: number | null
   aib?: boolean
 }): Promise<Customer> {
   const { data } = await api.post<Customer>('/customers', {
@@ -32,6 +33,7 @@ export async function createCustomer(body: {
     phone: body.phone,
     note: body.note,
     tax_id: body.tax_id,
+    discount_percentage: body.discount_percentage,
     aib: body.aib,
   })
   return data
@@ -45,6 +47,7 @@ export async function updateCustomer(
     phone?: string | null
     note?: string | null
     tax_id?: string | null
+    discount_percentage?: number | null
     aib?: boolean
   }
 ): Promise<Customer> {
@@ -54,6 +57,7 @@ export async function updateCustomer(
     phone: body.phone,
     note: body.note,
     tax_id: body.tax_id,
+    discount_percentage: body.discount_percentage,
     aib: body.aib,
   })
   return data

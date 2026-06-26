@@ -25,6 +25,7 @@ export function CustomerCreateModal({
   const [email, setEmail] = useState('')
   const [telephone, setTelephone] = useState('')
   const [ifu, setIfu] = useState('')
+  const [discountPercentage, setDiscountPercentage] = useState<number | ''>('')
   const [note, setNote] = useState('')
   const [aib, setAib] = useState(false)
 
@@ -49,6 +50,7 @@ export function CustomerCreateModal({
     setEmail(customer.email ?? '')
     setTelephone(customer.phone ?? '')
     setIfu(customer.tax_id ?? '')
+    setDiscountPercentage(customer.discount_percentage ?? '')
     setNote(customer.note ?? '')
     setAib(customer.aib)
   }, [open, customer])
@@ -70,6 +72,7 @@ export function CustomerCreateModal({
       email: email.trim() || null,
       phone: telephoneForApi(telephone),
       tax_id: ifu.trim() || null,
+      discount_percentage: discountPercentage !== '' ? Number(discountPercentage) : null,
       note: note.trim() || null,
       aib,
     }
@@ -148,36 +151,59 @@ export function CustomerCreateModal({
           </div>
 
           <div>
-            <label
-              htmlFor="customer-form-phone"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Téléphone
-            </label>
-            <PhoneInput
-              id="customer-form-phone"
-              value={telephone}
-              onChange={setTelephone}
-              placeholder="01 97 …"
-              className="rounded-lg"
-            />
-          </div>
+              <label
+                htmlFor="customer-form-phone"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Téléphone
+              </label>
+              <PhoneInput
+                id="customer-form-phone"
+                value={telephone}
+                onChange={setTelephone}
+                placeholder="01 97 …"
+                className="rounded-lg"
+              />
+            </div>
 
-          <div>
-            <label
-              htmlFor="customer-form-tax-id"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              IFU
-            </label>
-            <input
-              id="customer-form-tax-id"
-              maxLength={13}
-              value={ifu}
-              onChange={(e) => setIfu(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
-              placeholder="IFU…"
-            />
+          <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
+
+            <div>
+              <label
+                htmlFor="customer-form-tax-id"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                IFU
+              </label>
+              <input
+                id="customer-form-tax-id"
+                maxLength={13}
+                value={ifu}
+                onChange={(e) => setIfu(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="IFU…"
+              />
+            </div>
+            
+            <div>
+              <label
+                htmlFor="customer-form-discount"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Réduction (%)
+              </label>
+              <input
+                id="customer-form-discount"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(e.target.value ? Number(e.target.value) : '')}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="Ex. 10"
+              />
+            </div>
           </div>
 
           <div className="sm:col-span-2">

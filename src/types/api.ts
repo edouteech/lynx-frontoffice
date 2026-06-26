@@ -62,6 +62,18 @@ export interface ItemCategory {
   updated_at: string
 }
 
+export interface Discount {
+  id: number
+  organization_id: number
+  stores?: Store[]
+  name: string
+  type: 'percentage' | 'amount' | 'variant'
+  value: number
+  requires_password: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Store {
   id: number
   name: string
@@ -172,6 +184,7 @@ export interface Customer {
   phone: string | null
   note: string | null
   tax_id: string | null
+  discount_percentage: number | null
   aib: boolean
   created_at: string
   updated_at: string

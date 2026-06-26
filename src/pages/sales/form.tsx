@@ -251,6 +251,7 @@ export default function SaleForm() {
   const [newCustomerPhone, setNewCustomerPhone] = useState('')
   const [newCustomerEmail, setNewCustomerEmail] = useState('')
   const [newCustomerIfu, setNewCustomerIfu] = useState('')
+  const [newCustomerDiscount, setNewCustomerDiscount] = useState<number | ''>('')
   const [newCustomerNote, setNewCustomerNote] = useState('')
   const [newCustomerAib, setNewCustomerAib] = useState(false)
   const [creatingCustomer, setCreatingCustomer] = useState(false)
@@ -1063,6 +1064,8 @@ export default function SaleForm() {
 
         tax_id: newCustomerIfu.trim() || null,
 
+        discount_percentage: newCustomerDiscount !== '' ? Number(newCustomerDiscount) : null,
+
         note: newCustomerNote.trim() || null,
 
         aib: newCustomerAib,
@@ -1094,6 +1097,8 @@ export default function SaleForm() {
       setNewCustomerEmail('')
 
       setNewCustomerIfu('')
+
+      setNewCustomerDiscount('')
 
       setNewCustomerNote('')
 
@@ -1891,6 +1896,23 @@ export default function SaleForm() {
                 onChange={(e) => setNewCustomerIfu(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
                 placeholder="IFU…"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="sale-customer-form-discount" className="mb-1 block text-sm font-medium text-gray-700">
+                Réduction (%)
+              </label>
+              <input
+                id="sale-customer-form-discount"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={newCustomerDiscount}
+                onChange={(e) => setNewCustomerDiscount(e.target.value ? Number(e.target.value) : '')}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                placeholder="Ex. 10"
               />
             </div>
 

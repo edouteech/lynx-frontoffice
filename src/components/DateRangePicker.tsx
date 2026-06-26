@@ -52,6 +52,7 @@ const isBetween = (date: Date, start: Date, end: Date) => {
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRangeChange }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownAlign, setDropdownAlign] = useState<'left' | 'right'>('left');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Temporary selection state
@@ -71,6 +72,19 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Compute dropdown alignment when it opens
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    // Approximate dropdown width (sidebar 192 + 2 calendars ~560 + padding)
+    const estimatedWidth = 760;
+    if (rect.left + estimatedWidth > window.innerWidth) {
+      setDropdownAlign('right');
+    } else {
+      setDropdownAlign('left');
+    }
+  }, [isOpen]);
 
   const handleDayClick = (date: Date) => {
     if (!startDate || (startDate && endDate)) {
@@ -248,7 +262,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
 
       {/* Picker Popover */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 z-50 flex flex-col rounded-3xl border border-gray-200 bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 lg:flex-row lg:w-auto w-[95vw]">
+        <div className={`absolute ${dropdownAlign === 'right' ? 'right-0' : 'left-0'} mt-2 z-50 flex flex-col rounded-3xl border border-gray-200 bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 lg:flex-row lg:w-auto w-[95vw]`}>
           {/* Sidebar */}
           <div className="w-48 border-r border-gray-100 bg-gray-50/50 p-4 flex flex-col gap-1 shrink-0">
             {[

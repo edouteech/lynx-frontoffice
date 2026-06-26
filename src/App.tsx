@@ -12,6 +12,7 @@ import { subscribeToSuspension } from './api/subscriptionEvents'
 import SuspendedPage from './pages/SuspendedPage'
 
 import ItemCategoriesIndex from './pages/item-categories'
+import DiscountsIndex from './pages/discounts'
 import StoresIndex from './pages/stores/index'
 import StoreShow from './pages/stores/show'
 import CashRegistersIndex from './pages/cash-registers/index'
@@ -202,6 +203,16 @@ export default function App() {
             <ProtectedRoute>
               <RequirePermission code="admin_panel.items.manage">
                 {withLayout(<ItemCategoriesIndex />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discounts"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.items.manage">
+                {withLayout(<DiscountsIndex />)}
               </RequirePermission>
             </ProtectedRoute>
           }

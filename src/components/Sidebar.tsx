@@ -8,6 +8,7 @@ import {
   UserRoundPlus,
   Wallet,
   Percent,
+  Tag,
   Banknote,
   Settings,
   SlidersHorizontal,
@@ -121,6 +122,7 @@ const navItems: NavItem[] = [
     children: [
       { id: 'items', label: 'Liste des articles', icon: List },
       { id: 'item-categories', label: 'Catégories', icon: FolderTree },
+      { id: 'discounts', label: 'Réductions', icon: Tag },
       { id: 'favorites', label: 'Favoris', icon: Star },
     ],
   },
@@ -235,12 +237,12 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
       )
     )
     if (activeSection) {
-      setOpenSections((prev) => ({ ...prev, [activeSection.id]: true }))
+      setOpenSections({ [activeSection.id]: true })
     }
   }, [activeTab])
 
   const toggleSection = (id: string) => {
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
+    setOpenSections((prev) => (prev[id] ? {} : { [id]: true }))
   }
 
 
