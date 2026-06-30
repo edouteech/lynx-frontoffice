@@ -38,6 +38,7 @@ import {
   PieChart,
   Printer,
   Trash2,
+  Settings2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { resolveBackendUrl } from '../lib/url'
@@ -124,6 +125,7 @@ const navItems: NavItem[] = [
       { id: 'item-categories', label: 'Catégories', icon: FolderTree },
       { id: 'discounts', label: 'Réductions', icon: Tag },
       { id: 'favorites', label: 'Favoris', icon: Star },
+      { id: 'options', label: 'Options', icon: Settings2 },
     ],
   },
   {

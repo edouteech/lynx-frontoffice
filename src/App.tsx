@@ -41,6 +41,7 @@ import UsersIndex from './pages/users'
 import UserShow from './pages/users/show'
 import UserProfilePage from './pages/userprofile/UserProfilePage'
 import FavoritesIndex from './pages/favorites'
+import OptionsIndex from './pages/options'
 import SuppliersIndex from './pages/suppliers'
 import PurchaseOrdersIndex from './pages/purchase-orders'
 import PurchaseOrderForm from './pages/purchase-orders/form'
@@ -621,6 +622,16 @@ export default function App() {
             <ProtectedRoute>
               <RequirePermission code="admin_panel.items.manage">
                 {withLayout(<FavoritesIndex />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/options"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.items.manage">
+                {withLayout(<OptionsIndex />)}
               </RequirePermission>
             </ProtectedRoute>
           }

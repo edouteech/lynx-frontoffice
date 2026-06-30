@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductStoreSetting } from '../types/api'
+import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductStoreSetting, Option } from '../types/api'
 
 export interface CreateProductPayload extends Partial<Product> {
   store_stocks?: { store_id: number; quantity: number }[]
@@ -158,4 +158,20 @@ export async function removeProductComponent(
   componentId: number
 ): Promise<void> {
   await api.delete(`/items/${itemId}/components/${componentId}`)
+}
+
+// ── Options ────────────────────────────────────────────────────────────────
+export async function fetchProductOptions(itemId: string | number): Promise<Option[]> {
+  const { data } = await api.get<Option[]>(`/items/${itemId}/options`)
+  return data
+}
+
+export async function syncProductOptions(
+  itemId: string | number,
+  optionIds: number[]
+): Promise<{ option_ids: number[] }> {
+  const { data } = await api.post<{ option_ids: number[] }>(`/items/${itemId}/sync-options`, {
+    option_ids: optionIds,
+  })
+  return data
 }

@@ -257,6 +257,16 @@ export interface Favorite {
   updated_at: string
 }
 
+export interface Option {
+  id: number
+  organization_id: number
+  name: string
+  status: 'active' | 'inactive'
+  products?: Array<Pick<Product, 'id' | 'name'>>
+  created_at: string
+  updated_at: string
+}
+
 export interface VatRate {
   id: number
   organization_id: number | null

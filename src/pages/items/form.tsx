@@ -11,14 +11,16 @@ import {
   fetchProductStoreSettings, bulkSaveProductStores,
   fetchProductComponents, addProductComponent, removeProductComponent,
   fetchProducts, uploadProductImage,
+  fetchProductOptions, syncProductOptions,
 } from '../../api/products'
+import { fetchOptions } from '../../api/options'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchVatRates } from '../../api/vatRates'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type {
   ItemCategory, VatRate, Product, Store,
-  ProductStockEntry, ProductStorePrice, ProductComponent,
+  ProductStockEntry, ProductStorePrice, ProductComponent, Option,
 } from '../../types/api'
 
 // ─── tiny UI primitives ───────────────────────────────────────────────────────
@@ -83,7 +85,7 @@ const SOLD_BY_OPTIONS: { value: 'unit' | 'weight' | 'surface'; label: string }[]
 
 // ─── Tab names ─────────────────────────────────────────────────────────────
 
-type Tab = 'article' | 'stores' | 'components'
+type Tab = 'article' | 'stores' | 'components' | 'options'
 
 // ─── Composant en attente (mode création) ─────────────────────────────────
 
@@ -171,6 +173,14 @@ export default function ItemFormPage() {
   // composants en attente (mode création uniquement)
   const [pendingComponents, setPendingComponents] = useState<PendingComponent[]>([])
   const tempIdRef = useRef(0)
+
+  // options
+  const [allOptions, setAllOptions] = useState<Option[]>([])
+  const [linkedOptionIds, setLinkedOptionIds] = useState<number[]>([])
+  const [optionsLoading, setOptionsLoading] = useState(false)
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
+  const [optionsSaving, setOptionsSaving] = useState(false)
+  const [optionSearch, setOptionSearch] = useState('')
 
   const currentId = isEdit ? id! : null
 
@@ -275,7 +285,21 @@ export default function ItemFormPage() {
         .catch(console.error)
         .finally(() => setCompLoading(false))
     }
-  }, [tab, currentId, storesLoaded])
+    if (tab === 'options' && !optionsLoaded) {
+      setOptionsLoading(true)
+      Promise.all([
+        fetchOptions(1),
+        currentId ? fetchProductOptions(currentId) : Promise.resolve<Option[]>([]),
+      ])
+        .then(([optData, linked]) => {
+          setAllOptions(optData.data)
+          setLinkedOptionIds(linked.map((o: Option) => o.id))
+          setOptionsLoaded(true)
+        })
+        .catch(console.error)
+        .finally(() => setOptionsLoading(false))
+    }
+  }, [tab, currentId, storesLoaded, optionsLoaded])
 
   // ── Valeurs dérivées ──────────────────────────────────────────────────────────
   const defaultSellingPrice = parseFloat(sellingPrice) || 0
@@ -433,6 +457,7 @@ export default function ItemFormPage() {
         })
 
         if (imageFile) await handleUploadNow(p.id)
+        if (linkedOptionIds.length > 0) await syncProductOptions(p.id, linkedOptionIds)
         navigate('/items', { state: { flash: `Article « ${payload.name} » créé avec succès.` } })
       }
     } catch (err) {
@@ -471,6 +496,20 @@ export default function ItemFormPage() {
       setError(getApiErrorMessage(err))
     } finally {
       setStoresSaving(false)
+    }
+  }
+
+  // ── Save options (mode édition) ─────────────────────────────────────────────
+  async function saveOptions() {
+    if (!currentId) return
+    setOptionsSaving(true)
+    setError(null)
+    try {
+      await syncProductOptions(currentId, linkedOptionIds)
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setOptionsSaving(false)
     }
   }
 
@@ -714,11 +753,19 @@ export default function ItemFormPage() {
             )}
             <button
               type="button"
-              onClick={() => void (isEdit && tab === 'stores' ? saveAllStores() : handleSave())}
-              disabled={isEdit && tab === 'stores' ? storesSaving : saving}
+              onClick={() => void (
+                isEdit && tab === 'stores' ? saveAllStores() :
+                isEdit && tab === 'options' ? saveOptions() :
+                handleSave()
+              )}
+              disabled={
+                (isEdit && tab === 'stores' && storesSaving) ||
+                (isEdit && tab === 'options' && optionsSaving) ||
+                ((!isEdit || (tab !== 'stores' && tab !== 'options')) && saving)
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
             >
-              {(isEdit && tab === 'stores' ? storesSaving : saving)
+              {(isEdit && tab === 'stores' ? storesSaving : isEdit && tab === 'options' ? optionsSaving : saving)
                 ? <Loader2 className="h-4 w-4 animate-spin" />
                 : <Save className="h-4 w-4" />}
               Enregistrer
@@ -732,6 +779,7 @@ export default function ItemFormPage() {
             ['article', 'Article'],
             ['stores', 'Magasins'],
             ...(type === 'composite' ? [['components', 'Composants'] as const] : []),
+            ['options', 'Options'],
           ] as [Tab, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -1118,6 +1166,73 @@ export default function ItemFormPage() {
                   Ces totaux sont reportés automatiquement dans les champs Coûts et Prix de l'onglet Article si ceux-ci sont vides.
                 </p>
               </>
+            )}
+          </Card>
+        )}
+
+        {/* ════════════════════════════ OPTIONS TAB ═══════════════════════════ */}
+        {tab === 'options' && (
+          <Card title="Options liées à cet article">
+            {!isEdit && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+                Les options sélectionnées seront liées à l'article lors de l'enregistrement.
+              </div>
+            )}
+
+            <div className="mb-3">
+              <input
+                type="text"
+                value={optionSearch}
+                onChange={e => setOptionSearch(e.target.value)}
+                placeholder="Rechercher une option..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+              />
+            </div>
+
+            {optionsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" />
+              </div>
+            ) : allOptions.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400">
+                Aucune option disponible.{' '}
+                <a href="/options" className="text-[#3B82F6] hover:underline">
+                  Créez des options ici.
+                </a>
+              </p>
+            ) : (
+              <div className="max-h-96 space-y-2 overflow-auto pr-1">
+                {allOptions
+                  .filter(o =>
+                    !optionSearch ||
+                    o.name.toLowerCase().includes(optionSearch.toLowerCase())
+                  )
+                  .map(o => (
+                    <label
+                      key={o.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-2.5 transition-colors hover:bg-blue-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={linkedOptionIds.includes(o.id)}
+                        onChange={e => {
+                          setLinkedOptionIds(prev =>
+                            e.target.checked
+                              ? [...prev, o.id]
+                              : prev.filter(id => id !== o.id)
+                          )
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-[#3B82F6] focus:ring-[#3B82F6]"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-800">{o.name}</span>
+                        <span className={`ml-2 text-xs ${o.status === 'active' ? 'text-green-600' : 'text-gray-400'}`}>
+                          {o.status}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+              </div>
             )}
           </Card>
         )}
