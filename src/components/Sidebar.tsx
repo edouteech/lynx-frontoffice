@@ -1,4 +1,3 @@
-import { useState, useEffect, type ComponentType } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -39,10 +38,14 @@ import {
   Printer,
   Trash2,
   Settings2,
+  Globe,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { resolveBackendUrl } from '../lib/url'
 import { hasPermissionCode } from '../lib/permissions'
+import { fetchGeneralSetting } from '../api/generalSettings'
+import type { GeneralSetting } from '../types/generalSetting'
+import { useEffect, useState, type ComponentType } from 'react'
 
 interface NavSubItem {
   id: string
@@ -191,6 +194,11 @@ const navItems: NavItem[] = [
         icon: Printer,
       },
       {
+        id: 'settings/public-links',
+        label: 'Liens publics',
+        icon: Globe,
+      },
+      {
         id: 'settings/subscription',
         label: 'Licences',
         icon: Crown,
@@ -218,8 +226,12 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
     user,
     currentOrganization,
     activeOrganizationId,
-  } =
-    useAuth()
+  } = useAuth()
+  const [generalSetting, setGeneralSetting] = useState<GeneralSetting | null>(null)
+
+  useEffect(() => {
+    void fetchGeneralSetting().then(setGeneralSetting).catch(() => {})
+  }, [])
   const location = useLocation()
   const navigate = useNavigate()
   const pathWithoutSlash = location.pathname.replace(/^\//, '')
@@ -339,6 +351,11 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.restoration')
           case 'settings/kitchen-printers':
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.kitchen_printer')
+          case 'settings/public-links':
+            return (
+              hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.general') &&
+              (generalSetting?.online_articles ?? false)
+            )
           case 'settings/subscription':
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.licenses')
           default:

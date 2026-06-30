@@ -62,14 +62,34 @@ export interface ItemCategory {
   updated_at: string
 }
 
+export type ValidityMode = 'ponctuelle' | 'recurrente'
+export type ValidityFrequency = 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'annuelle'
+
+export interface ValiditySlot {
+  date?: string
+  day?: string
+  start_time: string
+  end_time: string
+}
+
+export interface ValidityConfig {
+  mode: ValidityMode
+  frequency?: ValidityFrequency
+  slots: ValiditySlot[]
+}
+
 export interface Discount {
   id: number
   organization_id: number
   stores?: Store[]
+  products?: Array<{ id: number; name: string }>
   name: string
   type: 'percentage' | 'amount' | 'variant'
   value: number
   requires_password: boolean
+  scope: 'global' | 'specific'
+  is_active: boolean
+  validity_slots: ValidityConfig | null
   created_at: string
   updated_at: string
 }
@@ -186,8 +206,23 @@ export interface Customer {
   tax_id: string | null
   discount_percentage: number | null
   aib: boolean
+  account_balance?: number
   created_at: string
   updated_at: string
+}
+
+export interface CustomerTransaction {
+  id: number
+  organization_id: number
+  customer_id: number
+  user_id: number | null
+  type: 'deposit' | 'withdrawal'
+  amount: number
+  balance_after: number
+  description: string | null
+  created_at: string
+  updated_at: string
+  user?: Pick<User, 'id' | 'name' | 'first_name' | 'last_name'> & { first_name?: string, last_name?: string }
 }
 
 export interface PaymentMethodCategory {

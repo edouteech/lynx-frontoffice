@@ -10,6 +10,7 @@ export interface CreateProductPayload extends Partial<Product> {
 export interface FetchProductsParams {
   page?: number
   store_id?: number | null
+  store_ids?: number[]
   category_id?: number | null
   stock_alert?: 'low' | 'out' | null
   only_trashed?: boolean
@@ -21,6 +22,7 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
     params: {
       page: p.page ?? 1,
       ...(p.store_id    ? { store_id: p.store_id }       : {}),
+      ...(p.store_ids?.length ? { store_ids: p.store_ids } : {}),
       ...(p.category_id ? { category_id: p.category_id } : {}),
       ...(p.stock_alert ? { stock_alert: p.stock_alert }  : {}),
       ...(p.only_trashed ? { only_trashed: true } : {}),

@@ -1,4 +1,4 @@
-import type { Discount, Paginated } from '../types/api'
+import type { Discount, Paginated, ValidityConfig } from '../types/api'
 import { api } from './apiClient'
 
 export async function fetchDiscounts(page = 1, store_id?: number): Promise<Paginated<Discount>> {
@@ -14,6 +14,10 @@ export async function createDiscount(body: {
   type: 'percentage' | 'amount' | 'variant'
   value: number
   requires_password?: boolean
+  scope: 'global' | 'specific'
+  is_active?: boolean
+  product_ids?: number[]
+  validity_slots?: ValidityConfig | null
 }): Promise<Discount> {
   const { data } = await api.post<Discount>('/discounts', body)
   return data
@@ -27,6 +31,10 @@ export async function updateDiscount(
     type?: 'percentage' | 'amount' | 'variant'
     value?: number
     requires_password?: boolean
+    scope?: 'global' | 'specific'
+    is_active?: boolean
+    product_ids?: number[]
+    validity_slots?: ValidityConfig | null
   }
 ): Promise<Discount> {
   const { data } = await api.patch<Discount>(`/discounts/${id}`, body)
