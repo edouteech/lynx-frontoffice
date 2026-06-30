@@ -313,13 +313,11 @@ export default function SaleForm() {
 
     if (!selectedCashRegister) return null
 
-    const ref     = selectedCashRegister.reference || String(selectedCashRegister.id)
-
     const nextSeq = (selectedCashRegister.open_session?.invoice_count ?? 0) + 1
 
-    const seq     = String(nextSeq).padStart(5, '0')
+    const seq     = String(nextSeq).padStart(6, '0')
 
-    return `${ref}W-${seq}`
+    return `FAC-${selectedCashRegister.id}W-${seq}`
 
   }, [selectedCashRegister])
 
