@@ -13,7 +13,7 @@ import {
   fetchProducts, uploadProductImage,
   fetchProductOptions, syncProductOptions,
 } from '../../api/products'
-import { fetchOptions } from '../../api/options'
+import { fetchOptions, createOption } from '../../api/options'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchVatRates } from '../../api/vatRates'
 import { fetchStores } from '../../api/stores'
@@ -181,6 +181,10 @@ export default function ItemFormPage() {
   const [optionsLoaded, setOptionsLoaded] = useState(false)
   const [optionsSaving, setOptionsSaving] = useState(false)
   const [optionSearch, setOptionSearch] = useState('')
+  const [showNewOptionForm, setShowNewOptionForm] = useState(false)
+  const [newOptionName, setNewOptionName] = useState('')
+  const [newOptionStatus, setNewOptionStatus] = useState<'active' | 'inactive'>('active')
+  const [newOptionSubmitting, setNewOptionSubmitting] = useState(false)
 
   const currentId = isEdit ? id! : null
 
@@ -510,6 +514,30 @@ export default function ItemFormPage() {
       setError(getApiErrorMessage(err))
     } finally {
       setOptionsSaving(false)
+    }
+  }
+
+  // ── Créer une option depuis l'onglet article ────────────────────────────────
+  async function handleCreateInlineOption() {
+    if (!newOptionName.trim()) return
+    setNewOptionSubmitting(true)
+    setError(null)
+    try {
+      const productIds = currentId ? [parseInt(currentId)] : []
+      const created = await createOption({
+        name: newOptionName.trim(),
+        status: newOptionStatus,
+        product_ids: productIds,
+      })
+      setAllOptions(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setLinkedOptionIds(prev => prev.includes(created.id) ? prev : [...prev, created.id])
+      setNewOptionName('')
+      setNewOptionStatus('active')
+      setShowNewOptionForm(false)
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setNewOptionSubmitting(false)
     }
   }
 
@@ -1179,15 +1207,66 @@ export default function ItemFormPage() {
               </div>
             )}
 
-            <div className="mb-3">
+            {/* Barre recherche + bouton nouvelle option */}
+            <div className="mb-3 flex gap-2">
               <input
                 type="text"
                 value={optionSearch}
                 onChange={e => setOptionSearch(e.target.value)}
                 placeholder="Rechercher une option..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
               />
+              <button
+                type="button"
+                onClick={() => { setShowNewOptionForm(v => !v); setNewOptionName(''); setNewOptionStatus('active') }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#3B82F6] px-3 py-2 text-sm font-medium text-white hover:bg-[#2563EB] transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Nouvelle option
+              </button>
             </div>
+
+            {/* Formulaire inline de création */}
+            {showNewOptionForm && (
+              <div className="mb-4 rounded-xl border border-dashed border-[#3B82F6]/40 bg-blue-50/40 p-4">
+                <p className="mb-3 text-xs font-semibold text-gray-600">Créer une nouvelle option</p>
+                <div className="flex flex-wrap gap-3">
+                  <input
+                    type="text"
+                    value={newOptionName}
+                    onChange={e => setNewOptionName(e.target.value)}
+                    placeholder="Nom de l'option *"
+                    className="flex-1 min-w-[180px] rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleCreateInlineOption() } }}
+                  />
+                  <select
+                    aria-label="Statut"
+                    value={newOptionStatus}
+                    onChange={e => setNewOptionStatus(e.target.value as 'active' | 'inactive')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                  >
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateInlineOption()}
+                    disabled={!newOptionName.trim() || newOptionSubmitting}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB] disabled:opacity-50"
+                  >
+                    {newOptionSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Créer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewOptionForm(false)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
 
             {optionsLoading ? (
               <div className="flex justify-center py-8">
@@ -1195,10 +1274,7 @@ export default function ItemFormPage() {
               </div>
             ) : allOptions.length === 0 ? (
               <p className="py-8 text-center text-sm text-gray-400">
-                Aucune option disponible.{' '}
-                <a href="/options" className="text-[#3B82F6] hover:underline">
-                  Créez des options ici.
-                </a>
+                Aucune option disponible. Créez-en une avec le bouton ci-dessus.
               </p>
             ) : (
               <div className="max-h-96 space-y-2 overflow-auto pr-1">
