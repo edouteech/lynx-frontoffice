@@ -41,10 +41,9 @@ import {
   Globe,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
+import { useGeneralSetting } from '../contexts/useGeneralSetting'
 import { resolveBackendUrl } from '../lib/url'
 import { hasPermissionCode } from '../lib/permissions'
-import { fetchGeneralSetting } from '../api/generalSettings'
-import type { GeneralSetting } from '../types/generalSetting'
 import { useEffect, useState, type ComponentType } from 'react'
 
 interface NavSubItem {
@@ -227,11 +226,7 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
     currentOrganization,
     activeOrganizationId,
   } = useAuth()
-  const [generalSetting, setGeneralSetting] = useState<GeneralSetting | null>(null)
-
-  useEffect(() => {
-    void fetchGeneralSetting().then(setGeneralSetting).catch(() => {})
-  }, [])
+  const { generalSetting } = useGeneralSetting()
   const location = useLocation()
   const navigate = useNavigate()
   const pathWithoutSlash = location.pathname.replace(/^\//, '')

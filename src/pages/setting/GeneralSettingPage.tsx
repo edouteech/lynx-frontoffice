@@ -15,6 +15,7 @@ import { updateOrganization, updateOrganizationWithLogo } from '../../api/organi
 import { fetchGeneralSetting, updateGeneralSetting } from '../../api/generalSettings'
 import { fetchStores } from '../../api/stores'
 import { useAuth } from '../../contexts/useAuth'
+import { useGeneralSetting } from '../../contexts/useGeneralSetting'
 import { resolveBackendUrl } from '../../lib/url'
 import { CountrySelect } from '../../components/CountrySelect'
 import { PhoneInput } from '../../components/PhoneInput'
@@ -92,6 +93,7 @@ function organizationValue(e: Organization | undefined, key: keyof Organization)
 
 export default function GeneralSettingPage() {
   const { refreshUser, currentOrganization } = useAuth()
+  const { setSetting: setSharedSetting } = useGeneralSetting()
   const organization = currentOrganization ?? undefined
 
   const [loading, setLoading] = useState(true)
@@ -319,6 +321,7 @@ export default function GeneralSettingPage() {
         >
       >)
       setData(updated)
+      setSharedSetting(updated)
       Swal.fire({
         title: 'Paramètre mis à jour !',
         text: `La fonctionnalité "${featureTitle}" a été ${next ? 'activée' : 'désactivée'} avec succès.`,

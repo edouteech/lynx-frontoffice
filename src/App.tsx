@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
+import { GeneralSettingProvider } from './contexts/GeneralSettingContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePermission from './components/RequirePermission'
 import Layout from './components/Layout'
@@ -129,6 +130,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <GeneralSettingProvider>
         <SuspensionListener />
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -915,6 +917,7 @@ export default function App() {
           }
         />
       </Routes>
+        </GeneralSettingProvider>
       </AuthProvider>
     </BrowserRouter>
   )
