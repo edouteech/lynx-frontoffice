@@ -440,7 +440,7 @@ export default function ItemFormPage() {
       track_inventory: trackInventory,
       allow_negative_stock: allowNegativeStock,
       has_supplements: hasSupplements,
-      supplement_qte_min: hasSupplements && supplementMin !== '' ? parseInt(supplementMin) : null,
+      supplement_qte_min: hasSupplements && supplementMin !== '' ? parseInt(supplementMin) : 0,
       supplement_qte_max: hasSupplements && supplementMax !== '' ? parseInt(supplementMax) : null,
       color: color || null,
     }
