@@ -185,6 +185,8 @@ export default function ItemFormPage() {
 
   // suppléments
   const [hasSupplements, setHasSupplements] = useState(false)
+  const [supplementMin, setSupplementMin] = useState('')
+  const [supplementMax, setSupplementMax] = useState('')
   const [supplements, setSupplements] = useState<ProductSupplement[]>([])
   const [suppLoading, setSuppLoading] = useState(false)
   const [newSuppId, setNewSuppId] = useState('')
@@ -245,6 +247,8 @@ export default function ItemFormPage() {
         setTrackInventory(p.track_inventory)
         setAllowNegativeStock(p.allow_negative_stock)
         setHasSupplements(p.has_supplements)
+        setSupplementMin(p.supplement_qte_min != null ? String(p.supplement_qte_min) : '')
+        setSupplementMax(p.supplement_qte_max != null ? String(p.supplement_qte_max) : '')
         if (p.color) setColor(p.color)
         if (p.image_url) {
           const { resolveBackendUrl } = await import('../../lib/url')
@@ -436,6 +440,8 @@ export default function ItemFormPage() {
       track_inventory: trackInventory,
       allow_negative_stock: allowNegativeStock,
       has_supplements: hasSupplements,
+      supplement_qte_min: hasSupplements && supplementMin !== '' ? parseInt(supplementMin) : null,
+      supplement_qte_max: hasSupplements && supplementMax !== '' ? parseInt(supplementMax) : null,
       color: color || null,
     }
 
@@ -1012,23 +1018,47 @@ export default function ItemFormPage() {
                     </label>
                   ))}
                 </div>
-                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    id="has-supplements"
-                    checked={hasSupplements}
-                    onChange={e => {
-                      setHasSupplements(e.target.checked)
-                      if (!e.target.checked && tab === 'supplements') setTab('article')
-                    }}
-                    className="h-4 w-4 cursor-pointer rounded accent-[#0F2E4A]"
-                  />
-                  <div>
-                    <label htmlFor="has-supplements" className="cursor-pointer select-none text-sm font-medium text-gray-700">
-                      Ce produit a des suppléments
-                    </label>
-                    <p className="text-xs text-gray-400">Permet d'associer des articles optionnels avec un prix lors de la vente</p>
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="has-supplements"
+                      checked={hasSupplements}
+                      onChange={e => {
+                        setHasSupplements(e.target.checked)
+                        if (!e.target.checked && tab === 'supplements') setTab('article')
+                      }}
+                      className="h-4 w-4 cursor-pointer rounded accent-[#0F2E4A]"
+                    />
+                    <div>
+                      <label htmlFor="has-supplements" className="cursor-pointer select-none text-sm font-medium text-gray-700">
+                        Ce produit a des suppléments
+                      </label>
+                      <p className="text-xs text-gray-400">Permet d'associer des articles optionnels avec un prix lors de la vente</p>
+                    </div>
                   </div>
+                  {hasSupplements && (
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <Field label="Min. suppléments" hint="0 = aucun minimum">
+                        <Inp
+                          type="number"
+                          min="0"
+                          value={supplementMin}
+                          onChange={e => setSupplementMin(e.target.value)}
+                          placeholder="0"
+                        />
+                      </Field>
+                      <Field label="Max. suppléments" hint="Laisser vide = illimité">
+                        <Inp
+                          type="number"
+                          min="0"
+                          value={supplementMax}
+                          onChange={e => setSupplementMax(e.target.value)}
+                          placeholder="—"
+                        />
+                      </Field>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

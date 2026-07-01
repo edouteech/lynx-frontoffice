@@ -378,6 +378,8 @@ export interface Product {
   specific_tax: boolean
   is_composite: boolean
   has_supplements: boolean
+  supplement_qte_min: number | null
+  supplement_qte_max: number | null
   track_inventory: boolean
   allow_negative_stock: boolean
   tax_inclusive: boolean
