@@ -223,7 +223,7 @@ export interface CustomerTransaction {
   description: string | null
   created_at: string
   updated_at: string
-  user?: Pick<User, 'id' | 'name' | 'first_name' | 'last_name'> & { first_name?: string, last_name?: string }
+  user?: Pick<User, 'id' | 'name'> & { first_name?: string; last_name?: string }
 }
 
 export interface PaymentMethodCategory {

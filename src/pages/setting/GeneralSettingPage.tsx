@@ -8,15 +8,11 @@ import {
   TriangleAlert,
   //UserCheck,
   Wallet,
-  Link,
-  ExternalLink,
-  Download,
 } from 'lucide-react'
-import { QRCodeCanvas } from 'qrcode.react'
 import type { Organization, Store } from '../../types/api'
 import type { GeneralSetting } from '../../types/generalSetting'
 import { updateOrganization, updateOrganizationWithLogo } from '../../api/organization'
-import { fetchGeneralSetting, updateGeneralSetting, updateGeneralSettingWithCover } from '../../api/generalSettings'
+import { fetchGeneralSetting, updateGeneralSetting } from '../../api/generalSettings'
 import { fetchStores } from '../../api/stores'
 import { useAuth } from '../../contexts/useAuth'
 import { resolveBackendUrl } from '../../lib/url'
@@ -106,10 +102,7 @@ export default function GeneralSettingPage() {
   const [savingOrganization, setSavingOrganization] = useState(false)
   const [organizationDraft, setOrganizationDraft] = useState<Partial<Organization>>({})
   const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [savingCover, setSavingCover] = useState(false)  
   const [stores, setStores] = useState<Store[]>([])
-  const [storesLoading, setStoresLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -136,15 +129,12 @@ export default function GeneralSettingPage() {
     async function loadStores() {
       if (!data?.online_articles || stores.length > 0) return
       try {
-        setStoresLoading(true)
-        const res = await fetchStores(1) // Fetch first page of stores
+        const res = await fetchStores(1)
         if (!cancelled) {
           setStores(res.data)
         }
       } catch (e) {
-        // Handle silently or show toast
-      } finally {
-        if (!cancelled) setStoresLoading(false)
+        // silencieux
       }
     }
     void loadStores()
