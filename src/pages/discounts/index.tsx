@@ -14,19 +14,21 @@ import {
 import { fetchStores } from '../../api/stores'
 import { fetchProducts } from '../../api/products'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { Discount, Product, Store, ValidityConfig, ValidityFrequency, ValiditySlot } from '../../types/api'
+import type { Discount, Product, Store, ValidityConfig, ValidityFrequency } from '../../types/api'
 import Swal from 'sweetalert2'
 
-const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+const DAYS: { label: string; iso: number }[] = [
+  { label: 'Lundi', iso: 1 }, { label: 'Mardi', iso: 2 }, { label: 'Mercredi', iso: 3 },
+  { label: 'Jeudi', iso: 4 }, { label: 'Vendredi', iso: 5 }, { label: 'Samedi', iso: 6 },
+  { label: 'Dimanche', iso: 7 },
+]
+const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 const FREQUENCIES: { value: ValidityFrequency; label: string }[] = [
   { value: 'quotidienne', label: 'Quotidienne' },
   { value: 'hebdomadaire', label: 'Hebdomadaire' },
   { value: 'mensuelle', label: 'Mensuelle' },
   { value: 'annuelle', label: 'Annuelle' },
 ]
-
-const EMPTY_SLOT_PONCTUELLE: ValiditySlot = { date: '', start_time: '', end_time: '' }
-const EMPTY_SLOT_RECURRENTE: ValiditySlot = { day: '', start_time: '', end_time: '' }
 
 export default function DiscountsIndex() {
   const [page, setPage] = useState(1)
@@ -64,8 +66,19 @@ export default function DiscountsIndex() {
   // Validity
   const [showValidity, setShowValidity] = useState(false)
   const [validityMode, setValidityMode] = useState<'ponctuelle' | 'recurrente'>('ponctuelle')
-  const [validityFrequency, setValidityFrequency] = useState<ValidityFrequency>('hebdomadaire')
-  const [validitySlots, setValiditySlots] = useState<ValiditySlot[]>([EMPTY_SLOT_PONCTUELLE])
+  // ponctuelle
+  const [ponctuellStartsAt, setPonctuellStartsAt] = useState('')
+  const [ponctuellEndsAt, setPonctuellEndsAt] = useState('')
+  // recurrente - commun
+  const [validityFrequency, setValidityFrequency] = useState<ValidityFrequency>('quotidienne')
+  const [recurGlobalStart, setRecurGlobalStart] = useState('')
+  const [recurGlobalEnd, setRecurGlobalEnd] = useState('')
+  const [recurTimeFrom, setRecurTimeFrom] = useState('')
+  const [recurTimeTo, setRecurTimeTo] = useState('')
+  // recurrente - fréquence spécifique
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
+  const [daysOfMonth, setDaysOfMonth] = useState<number[]>([])
+  const [annualDates, setAnnualDates] = useState<{ month: number; day: number }[]>([])
 
   useEffect(() => {
     fetchStores(1).then((res) => setStores(res.data)).catch(() => {})
@@ -129,8 +142,16 @@ export default function DiscountsIndex() {
     setProductSearch('')
     setShowValidity(false)
     setValidityMode('ponctuelle')
-    setValidityFrequency('hebdomadaire')
-    setValiditySlots([EMPTY_SLOT_PONCTUELLE])
+    setPonctuellStartsAt('')
+    setPonctuellEndsAt('')
+    setValidityFrequency('quotidienne')
+    setRecurGlobalStart('')
+    setRecurGlobalEnd('')
+    setRecurTimeFrom('')
+    setRecurTimeTo('')
+    setDaysOfWeek([])
+    setDaysOfMonth([])
+    setAnnualDates([])
   }
 
   function openCreateModal() {
@@ -151,13 +172,24 @@ export default function DiscountsIndex() {
     if (d.validity_slots) {
       setShowValidity(true)
       setValidityMode(d.validity_slots.mode)
-      setValidityFrequency(d.validity_slots.frequency ?? 'hebdomadaire')
-      setValiditySlots(d.validity_slots.slots.length > 0 ? d.validity_slots.slots : [EMPTY_SLOT_PONCTUELLE])
+      if (d.validity_slots.mode === 'ponctuelle') {
+        setPonctuellStartsAt(d.validity_slots.starts_at ?? '')
+        setPonctuellEndsAt(d.validity_slots.ends_at ?? '')
+      } else {
+        setValidityFrequency(d.validity_slots.frequency ?? 'quotidienne')
+        setRecurGlobalStart(d.validity_slots.starts_at ?? '')
+        setRecurGlobalEnd(d.validity_slots.ends_at ?? '')
+        setRecurTimeFrom(d.validity_slots.time_from ?? '')
+        setRecurTimeTo(d.validity_slots.time_to ?? '')
+        setDaysOfWeek(d.validity_slots.days_of_week ?? [])
+        setDaysOfMonth(d.validity_slots.days_of_month ?? [])
+        setAnnualDates(d.validity_slots.annual_dates ?? [])
+      }
     } else {
       setShowValidity(false)
       setValidityMode('ponctuelle')
-      setValidityFrequency('hebdomadaire')
-      setValiditySlots([EMPTY_SLOT_PONCTUELLE])
+      setPonctuellStartsAt('')
+      setPonctuellEndsAt('')
     }
     setShowModal(true)
   }, [])
@@ -171,13 +203,28 @@ export default function DiscountsIndex() {
     setSaving(true)
     setError(null)
 
-    const validityPayload: ValidityConfig | null = showValidity
-      ? {
-          mode: validityMode,
-          ...(validityMode === 'recurrente' ? { frequency: validityFrequency } : {}),
-          slots: validitySlots,
+    let validityPayload: ValidityConfig | null = null
+    if (showValidity) {
+      if (validityMode === 'ponctuelle') {
+        validityPayload = {
+          mode: 'ponctuelle',
+          starts_at: ponctuellStartsAt || null,
+          ends_at: ponctuellEndsAt || null,
         }
-      : null
+      } else {
+        validityPayload = {
+          mode: 'recurrente',
+          frequency: validityFrequency,
+          starts_at: recurGlobalStart || null,
+          ends_at: recurGlobalEnd || null,
+          time_from: recurTimeFrom || null,
+          time_to: recurTimeTo || null,
+          ...(validityFrequency === 'hebdomadaire' ? { days_of_week: daysOfWeek } : {}),
+          ...(validityFrequency === 'mensuelle'    ? { days_of_month: daysOfMonth } : {}),
+          ...(validityFrequency === 'annuelle'     ? { annual_dates: annualDates } : {}),
+        }
+      }
+    }
 
     const payload = {
       store_ids: selectedStoreIds,
@@ -295,21 +342,16 @@ export default function DiscountsIndex() {
     [page, editing?.id]
   )
 
-  function updateSlot(idx: number, patch: Partial<ValiditySlot>) {
-    setValiditySlots(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s))
+  function toggleDayOfWeek(iso: number) {
+    setDaysOfWeek(prev => prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso])
   }
 
-  function addSlot() {
-    setValiditySlots(prev => [...prev, validityMode === 'ponctuelle' ? { ...EMPTY_SLOT_PONCTUELLE } : { ...EMPTY_SLOT_RECURRENTE }])
-  }
-
-  function removeSlot(idx: number) {
-    setValiditySlots(prev => prev.filter((_, i) => i !== idx))
+  function toggleDayOfMonth(day: number) {
+    setDaysOfMonth(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])
   }
 
   function switchValidityMode(m: 'ponctuelle' | 'recurrente') {
     setValidityMode(m)
-    setValiditySlots([m === 'ponctuelle' ? { ...EMPTY_SLOT_PONCTUELLE } : { ...EMPTY_SLOT_RECURRENTE }])
   }
 
   const columns: Column<Discount>[] = useMemo(
@@ -685,25 +727,18 @@ export default function DiscountsIndex() {
             </button>
 
             {showValidity && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-4">
 
+                {/* Mode */}
                 <div>
-                  <p className="mb-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Mode</p>
+                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">Mode</p>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { value: 'ponctuelle', label: 'Ponctuelle', desc: 'Créneaux précis' },
-                      { value: 'recurrente', label: 'Récurrente', desc: 'Quotidienne, hebdo...' },
+                      { value: 'ponctuelle', label: 'Ponctuelle', desc: 'Du … au …' },
+                      { value: 'recurrente', label: 'Récurrente', desc: 'Quotidien, hebdo…' },
                     ] as const).map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => switchValidityMode(opt.value)}
-                        className={`flex flex-col items-start gap-0.5 rounded-lg border-2 px-3 py-2.5 text-left transition ${
-                          validityMode === opt.value
-                            ? 'border-[#3B82F6] bg-blue-50 text-[#1D4ED8]'
-                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
+                      <button key={opt.value} type="button" onClick={() => switchValidityMode(opt.value)}
+                        className={`flex flex-col items-start gap-0.5 rounded-lg border-2 px-3 py-2.5 text-left transition ${validityMode === opt.value ? 'border-[#3B82F6] bg-blue-50 text-[#1D4ED8]' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>
                         <span className="text-xs font-semibold">{opt.label}</span>
                         <span className="text-xs opacity-70">{opt.desc}</span>
                       </button>
@@ -711,87 +746,135 @@ export default function DiscountsIndex() {
                   </div>
                 </div>
 
-                {validityMode === 'recurrente' && (
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Fréquence</p>
-                    <select
-                      value={validityFrequency}
-                      onChange={(e) => setValidityFrequency(e.target.value as ValidityFrequency)}
-                      aria-label="Fréquence de récurrence"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
-                    >
-                      {FREQUENCIES.map((f) => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </select>
+                {/* ── PONCTUELLE ── */}
+                {validityMode === 'ponctuelle' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Période</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Du</label>
+                        <input type="datetime-local" value={ponctuellStartsAt}
+                          onChange={(e) => setPonctuellStartsAt(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-500">Au</label>
+                        <input type="datetime-local" value={ponctuellEndsAt}
+                          onChange={(e) => setPonctuellEndsAt(e.target.value)}
+                          min={ponctuellStartsAt}
+                          className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Créneaux</p>
-                  <div className="space-y-2">
-                    {validitySlots.map((slot, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        {validityMode === 'ponctuelle' ? (
-                          <input
-                            type="date"
-                            aria-label={`Date du créneau ${idx + 1}`}
-                            value={slot.date ?? ''}
-                            onChange={(e) => updateSlot(idx, { date: e.target.value })}
-                            className="min-w-0 flex-[1.2] rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
-                          />
-                        ) : (
-                          <select
-                            aria-label={`Jour du créneau ${idx + 1}`}
-                            value={slot.day ?? ''}
-                            onChange={(e) => updateSlot(idx, { day: e.target.value })}
-                            className="min-w-0 flex-[1.2] rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
-                          >
-                            <option value="">—</option>
-                            {DAYS.map((d) => (
-                              <option key={d} value={d.toLowerCase()}>{d}</option>
-                            ))}
-                          </select>
-                        )}
-                        <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus-within:border-[#3B82F6] focus-within:ring-2 focus-within:ring-[#3B82F6]/30">
-                          <input
-                            type="time"
-                            aria-label={`Heure de début du créneau ${idx + 1}`}
-                            value={slot.start_time}
-                            onChange={(e) => updateSlot(idx, { start_time: e.target.value })}
-                            className="w-auto shrink-0 border-none p-0 text-sm focus:outline-none focus:ring-0"
-                          />
-                          <span className="shrink-0 text-xs text-gray-400">à</span>
-                          <input
-                            type="time"
-                            aria-label={`Heure de fin du créneau ${idx + 1}`}
-                            value={slot.end_time}
-                            onChange={(e) => updateSlot(idx, { end_time: e.target.value })}
-                            className="w-auto shrink-0 border-none p-0 text-sm focus:outline-none focus:ring-0"
-                          />
+                {/* ── RECURRENTE ── */}
+                {validityMode === 'recurrente' && (
+                  <div className="space-y-4">
+
+                    {/* Fréquence */}
+                    <div>
+                      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">Fréquence</p>
+                      <select value={validityFrequency} onChange={(e) => setValidityFrequency(e.target.value as ValidityFrequency)}
+                        aria-label="Fréquence de récurrence"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30">
+                        {FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Période globale */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Période globale <span className="font-normal normal-case text-gray-400">(optionnel)</span></p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="mb-1 block text-xs text-gray-500">Du</label>
+                          <input type="date" value={recurGlobalStart} onChange={(e) => setRecurGlobalStart(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
                         </div>
-                        {validitySlots.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSlot(idx)}
-                            aria-label="Supprimer le créneau"
-                            className="shrink-0 rounded-lg p-1.5 text-red-400 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <div>
+                          <label className="mb-1 block text-xs text-gray-500">Au</label>
+                          <input type="date" value={recurGlobalEnd} min={recurGlobalStart} onChange={(e) => setRecurGlobalEnd(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
+                        </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Plage horaire */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Plage horaire <span className="font-normal normal-case text-gray-400">(vide = toute la journée)</span></p>
+                      <div className="flex items-center gap-2">
+                        <input type="time" value={recurTimeFrom} onChange={(e) => setRecurTimeFrom(e.target.value)} aria-label="Heure de début"
+                          className="flex-1 rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
+                        <span className="text-xs text-gray-400">à</span>
+                        <input type="time" value={recurTimeTo} onChange={(e) => setRecurTimeTo(e.target.value)} aria-label="Heure de fin"
+                          className="flex-1 rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30" />
+                      </div>
+                    </div>
+
+                    {/* Jours de la semaine (hebdomadaire) */}
+                    {validityFrequency === 'hebdomadaire' && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Jours</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {DAYS.map(({ label, iso }) => (
+                            <button key={iso} type="button" onClick={() => toggleDayOfWeek(iso)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${daysOfWeek.includes(iso) ? 'border-[#3B82F6] bg-[#3B82F6] text-white' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Jours du mois (mensuelle) */}
+                    {validityFrequency === 'mensuelle' && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Jours du mois</p>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                            <button key={day} type="button" onClick={() => toggleDayOfMonth(day)}
+                              className={`h-7 w-7 rounded-md border text-xs font-medium transition ${daysOfMonth.includes(day) ? 'border-[#3B82F6] bg-[#3B82F6] text-white' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dates annuelles (annuelle) */}
+                    {validityFrequency === 'annuelle' && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Dates</p>
+                        <div className="space-y-2">
+                          {annualDates.map((entry, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <select value={entry.month} onChange={(e) => setAnnualDates(prev => prev.map((d, i) => i === idx ? { ...d, month: Number(e.target.value) } : d))}
+                                aria-label={`Mois de la date ${idx + 1}`}
+                                className="flex-1 rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30">
+                                {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                              </select>
+                              <select value={entry.day} onChange={(e) => setAnnualDates(prev => prev.map((d, i) => i === idx ? { ...d, day: Number(e.target.value) } : d))}
+                                aria-label={`Jour de la date ${idx + 1}`}
+                                className="w-20 rounded-lg border border-gray-300 px-2.5 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30">
+                                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                              <button type="button" onClick={() => setAnnualDates(prev => prev.filter((_, i) => i !== idx))}
+                                aria-label="Supprimer cette date" className="shrink-0 rounded-lg p-1.5 text-red-400 hover:bg-red-50">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <button type="button" onClick={() => setAnnualDates(prev => [...prev, { month: 1, day: 1 }])}
+                            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700">
+                            <Plus className="h-3.5 w-3.5" />
+                            Ajouter une date
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
-                  <button
-                    type="button"
-                    onClick={addSlot}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs text-gray-500 hover:border-gray-400 hover:text-gray-700"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Ajouter un créneau
-                  </button>
-                </div>
+                )}
 
               </div>
             )}

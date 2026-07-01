@@ -65,17 +65,18 @@ export interface ItemCategory {
 export type ValidityMode = 'ponctuelle' | 'recurrente'
 export type ValidityFrequency = 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'annuelle'
 
-export interface ValiditySlot {
-  date?: string
-  day?: string
-  start_time: string
-  end_time: string
-}
-
 export interface ValidityConfig {
   mode: ValidityMode
+  // ponctuelle
+  starts_at?: string | null
+  ends_at?: string | null
+  // recurrente
   frequency?: ValidityFrequency
-  slots: ValiditySlot[]
+  time_from?: string | null
+  time_to?: string | null
+  days_of_week?: number[]
+  days_of_month?: number[]
+  annual_dates?: { month: number; day: number }[]
 }
 
 export interface Discount {
