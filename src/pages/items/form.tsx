@@ -1026,7 +1026,7 @@ export default function ItemFormPage() {
                       checked={hasSupplements}
                       onChange={e => {
                         setHasSupplements(e.target.checked)
-                        if (!e.target.checked && tab === 'supplements') setTab('article')
+                        if (!e.target.checked) setTab(prev => prev === 'supplements' ? 'article' : prev)
                       }}
                       className="h-4 w-4 cursor-pointer rounded accent-[#0F2E4A]"
                     />
