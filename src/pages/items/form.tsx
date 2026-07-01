@@ -10,6 +10,7 @@ import {
   fetchProductStorePrices,
   fetchProductStoreSettings, bulkSaveProductStores,
   fetchProductComponents, addProductComponent, removeProductComponent,
+  fetchProductSupplements, addProductSupplement, removeProductSupplement,
   fetchProducts, uploadProductImage,
   fetchProductOptions, syncProductOptions,
 } from '../../api/products'
@@ -20,7 +21,7 @@ import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type {
   ItemCategory, VatRate, Product, Store,
-  ProductStockEntry, ProductStorePrice, ProductComponent, Option,
+  ProductStockEntry, ProductStorePrice, ProductComponent, ProductSupplement, Option,
 } from '../../types/api'
 
 // ─── tiny UI primitives ───────────────────────────────────────────────────────
@@ -85,9 +86,9 @@ const SOLD_BY_OPTIONS: { value: 'unit' | 'weight' | 'surface'; label: string }[]
 
 // ─── Tab names ─────────────────────────────────────────────────────────────
 
-type Tab = 'article' | 'stores' | 'components' | 'options'
+type Tab = 'article' | 'stores' | 'components' | 'options' | 'supplements'
 
-// ─── Composant en attente (mode création) ─────────────────────────────────
+// ─── Composant / Supplément en attente (mode création) ───────────────────
 
 interface PendingComponent {
   tempId: number
@@ -99,6 +100,14 @@ interface PendingComponent {
   total: number
   unitPurchasePrice: number
   purchaseTotal: number
+}
+
+interface PendingSupplement {
+  tempId: number
+  supplementProductId: number
+  supplementName: string
+  supplementSku: string | null
+  price: number
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -174,6 +183,16 @@ export default function ItemFormPage() {
   const [pendingComponents, setPendingComponents] = useState<PendingComponent[]>([])
   const tempIdRef = useRef(0)
 
+  // suppléments
+  const [hasSupplements, setHasSupplements] = useState(false)
+  const [supplements, setSupplements] = useState<ProductSupplement[]>([])
+  const [suppLoading, setSuppLoading] = useState(false)
+  const [newSuppId, setNewSuppId] = useState('')
+  const [newSuppPrice, setNewSuppPrice] = useState('0')
+  const [suppSaving, setSuppSaving] = useState(false)
+  const [pendingSupplements, setPendingSupplements] = useState<PendingSupplement[]>([])
+  const suppTempIdRef = useRef(0)
+
   // options
   const [allOptions, setAllOptions] = useState<Option[]>([])
   const [linkedOptionIds, setLinkedOptionIds] = useState<number[]>([])
@@ -225,6 +244,7 @@ export default function ItemFormPage() {
         setSpecificTax(p.specific_tax)
         setTrackInventory(p.track_inventory)
         setAllowNegativeStock(p.allow_negative_stock)
+        setHasSupplements(p.has_supplements)
         if (p.color) setColor(p.color)
         if (p.image_url) {
           const { resolveBackendUrl } = await import('../../lib/url')
@@ -288,6 +308,13 @@ export default function ItemFormPage() {
         .then(setComponents)
         .catch(console.error)
         .finally(() => setCompLoading(false))
+    }
+    if (tab === 'supplements') {
+      setSuppLoading(true)
+      fetchProductSupplements(currentId)
+        .then(setSupplements)
+        .catch(console.error)
+        .finally(() => setSuppLoading(false))
     }
     if (tab === 'options' && !optionsLoaded) {
       setOptionsLoading(true)
@@ -408,6 +435,7 @@ export default function ItemFormPage() {
       specific_tax: specificTax,
       track_inventory: trackInventory,
       allow_negative_stock: allowNegativeStock,
+      has_supplements: hasSupplements,
       color: color || null,
     }
 
@@ -462,6 +490,9 @@ export default function ItemFormPage() {
 
         if (imageFile) await handleUploadNow(p.id)
         if (linkedOptionIds.length > 0) await syncProductOptions(p.id, linkedOptionIds)
+        for (const s of pendingSupplements) {
+          await addProductSupplement(p.id, s.supplementProductId, s.price)
+        }
         navigate('/items', { state: { flash: `Article « ${payload.name} » créé avec succès.` } })
       }
     } catch (err) {
@@ -584,6 +615,45 @@ export default function ItemFormPage() {
     }
     await removeProductComponent(currentId, idOrTempId)
     setComponents(prev => prev.filter(c => c.id !== idOrTempId))
+  }
+
+  // ── Supplement add/remove ──────────────────────────────────────────────────
+  async function handleAddSupplement() {
+    if (!newSuppId) return
+    const product = allProducts.find(p => String(p.id) === newSuppId)
+    if (!product) return
+    const price = parseFloat(newSuppPrice) || 0
+
+    if (!currentId) {
+      setPendingSupplements(prev => [...prev, {
+        tempId: ++suppTempIdRef.current,
+        supplementProductId: product.id,
+        supplementName: product.name,
+        supplementSku: product.sku,
+        price,
+      }])
+      setNewSuppId('')
+      setNewSuppPrice('0')
+      return
+    }
+
+    setSuppSaving(true)
+    try {
+      const supp = await addProductSupplement(currentId, product.id, price)
+      setSupplements(prev => [...prev, supp])
+      setNewSuppId('')
+      setNewSuppPrice('0')
+    } catch (err) { setError(getApiErrorMessage(err)) }
+    finally { setSuppSaving(false) }
+  }
+
+  async function handleRemoveSupplement(idOrTempId: number) {
+    if (!currentId) {
+      setPendingSupplements(prev => prev.filter(s => s.tempId !== idOrTempId))
+      return
+    }
+    await removeProductSupplement(currentId, idOrTempId)
+    setSupplements(prev => prev.filter(s => s.id !== idOrTempId))
   }
 
   // ── Image helpers ───────────────────────────────────────────────────────────
@@ -808,6 +878,7 @@ export default function ItemFormPage() {
             ['stores', 'Magasins'],
             ...(type === 'composite' ? [['components', 'Composants'] as const] : []),
             ['options', 'Options'],
+            ...(hasSupplements ? [['supplements', 'Suppléments'] as const] : []),
           ] as [Tab, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -932,13 +1003,33 @@ export default function ItemFormPage() {
             </Card>
 
             <Card title="Type de produit">
-              <div className="flex gap-6">
-                {([['simple', 'Simple'], ['composite', 'Composé (assemblage)']] as const).map(([v, l]) => (
-                  <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                    <input type="radio" name="ptype" value={v} checked={type === v} onChange={() => setType(v)} className="h-4 w-4 accent-[#0F2E4A]" />
-                    {l}
-                  </label>
-                ))}
+              <div className="space-y-3">
+                <div className="flex gap-6">
+                  {([['simple', 'Simple'], ['composite', 'Composé (assemblage)']] as const).map(([v, l]) => (
+                    <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                      <input type="radio" name="ptype" value={v} checked={type === v} onChange={() => setType(v)} className="h-4 w-4 accent-[#0F2E4A]" />
+                      {l}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    id="has-supplements"
+                    checked={hasSupplements}
+                    onChange={e => {
+                      setHasSupplements(e.target.checked)
+                      if (!e.target.checked && tab === 'supplements') setTab('article')
+                    }}
+                    className="h-4 w-4 cursor-pointer rounded accent-[#0F2E4A]"
+                  />
+                  <div>
+                    <label htmlFor="has-supplements" className="cursor-pointer select-none text-sm font-medium text-gray-700">
+                      Ce produit a des suppléments
+                    </label>
+                    <p className="text-xs text-gray-400">Permet d'associer des articles optionnels avec un prix lors de la vente</p>
+                  </div>
+                </div>
               </div>
             </Card>
 
@@ -1310,6 +1401,120 @@ export default function ItemFormPage() {
                   ))}
               </div>
             )}
+          </Card>
+        )}
+
+        {/* ════════════════════════ SUPPLÉMENTS TAB ═══════════════════════════ */}
+        {tab === 'supplements' && (
+          <Card title="Suppléments de cet article">
+            {!isEdit && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+                Les suppléments ajoutés ici seront enregistrés avec l'article en une seule opération.
+              </div>
+            )}
+            <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">Article supplément</label>
+                <Sel value={newSuppId} onChange={e => {
+                  setNewSuppId(e.target.value)
+                  const p = allProducts.find(p => String(p.id) === e.target.value)
+                  if (p) setNewSuppPrice(String(parseFloat(String(p.selling_price)) || 0))
+                  else setNewSuppPrice('0')
+                }}>
+                  <option value="">Sélectionner un article</option>
+                  {allProducts
+                    .filter(p => String(p.id) !== id)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.sku ? ` (${p.sku})` : ''}
+                      </option>
+                    ))}
+                </Sel>
+              </div>
+              <div className="w-40">
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">Prix unitaire (CFA)</label>
+                <div className="relative">
+                  <Inp
+                    type="number"
+                    min="0"
+                    value={newSuppPrice}
+                    onChange={e => setNewSuppPrice(e.target.value)}
+                    placeholder="0"
+                    className="pr-12"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleAddSupplement()}
+                disabled={!newSuppId || suppSaving}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+              >
+                {suppSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Ajouter
+              </button>
+            </div>
+
+            {(() => {
+              const activeSupplements: ProductSupplement[] = isEdit
+                ? supplements
+                : pendingSupplements.map(s => ({
+                    id: s.tempId,
+                    supplement_product_id: s.supplementProductId,
+                    supplement_name: s.supplementName,
+                    supplement_sku: s.supplementSku,
+                    price: s.price,
+                  }))
+
+              if (isEdit && suppLoading) {
+                return <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" /></div>
+              }
+              if (activeSupplements.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Package className="mb-2 h-10 w-10 text-gray-300" />
+                    <p className="text-sm text-gray-400">Aucun supplément ajouté.</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prix unitaire</th>
+                        <th className="w-12 px-4 py-3 sr-only">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {activeSupplements.map(supp => (
+                        <tr key={supp.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900">{supp.supplement_name}</p>
+                            {supp.supplement_sku && <p className="text-xs text-gray-400">{supp.supplement_sku}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-700">
+                            {supp.price.toLocaleString('fr-FR')} CFA
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              aria-label={`Supprimer ${supp.supplement_name}`}
+                              onClick={() => void handleRemoveSupplement(supp.id)}
+                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })()}
           </Card>
         )}
 

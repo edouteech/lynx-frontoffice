@@ -377,6 +377,7 @@ export interface Product {
   sales_vat_rate_id: number | null
   specific_tax: boolean
   is_composite: boolean
+  has_supplements: boolean
   track_inventory: boolean
   allow_negative_stock: boolean
   tax_inclusive: boolean
@@ -398,6 +399,7 @@ export interface Product {
   images?: ProductImage[]
   stocks?: ProductStock[]
   composite_items?: CompositeProductItem[]
+  supplements?: ProductSupplement[]
 }
 
 export interface ProductStorePrice {
@@ -434,6 +436,14 @@ export interface ProductComponent {
   total: number
   unit_purchase_price?: number
   purchase_total?: number
+}
+
+export interface ProductSupplement {
+  id: number
+  supplement_product_id: number
+  supplement_name: string
+  supplement_sku: string | null
+  price: number
 }
 
 export interface SaleItem {

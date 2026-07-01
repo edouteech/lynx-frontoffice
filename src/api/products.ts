@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductStoreSetting, Option } from '../types/api'
+import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductSupplement, ProductStoreSetting, Option } from '../types/api'
 
 export interface CreateProductPayload extends Partial<Product> {
   store_stocks?: { store_id: number; quantity: number }[]
@@ -160,6 +160,40 @@ export async function removeProductComponent(
   componentId: number
 ): Promise<void> {
   await api.delete(`/items/${itemId}/components/${componentId}`)
+}
+
+// ── Suppléments ─────────────────────────────────────────────────────────────
+export async function fetchProductSupplements(itemId: string | number): Promise<ProductSupplement[]> {
+  const { data } = await api.get<ProductSupplement[]>(`/items/${itemId}/supplements`)
+  return data
+}
+
+export async function addProductSupplement(
+  itemId: string | number,
+  supplementProductId: number,
+  price: number
+): Promise<ProductSupplement> {
+  const { data } = await api.post<ProductSupplement>(`/items/${itemId}/supplements`, {
+    supplement_product_id: supplementProductId,
+    price,
+  })
+  return data
+}
+
+export async function updateProductSupplement(
+  itemId: string | number,
+  supplementId: number,
+  price: number
+): Promise<ProductSupplement> {
+  const { data } = await api.put<ProductSupplement>(`/items/${itemId}/supplements/${supplementId}`, { price })
+  return data
+}
+
+export async function removeProductSupplement(
+  itemId: string | number,
+  supplementId: number
+): Promise<void> {
+  await api.delete(`/items/${itemId}/supplements/${supplementId}`)
 }
 
 // ── Options ────────────────────────────────────────────────────────────────
