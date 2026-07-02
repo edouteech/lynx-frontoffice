@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, FileText, Plus, Trash2 } from 'lucide-react'
+import { Eye, FileText, Filter, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { DateRangePicker } from '../../components/DateRangePicker'
 import { deleteSale, fetchSales } from '../../api/sales'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Sale } from '../../types/api'
@@ -10,6 +11,16 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
   confirmed: { label: 'Confirmée', className: 'bg-green-100 text-green-700' },
   cancelled: { label: 'Annulée',   className: 'bg-red-100 text-red-600' },
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function firstOfMonthISO() {
+  const d = new Date()
+  d.setDate(1)
+  return d.toISOString().slice(0, 10)
 }
 
 export default function SalesIndex() {
@@ -24,20 +35,43 @@ export default function SalesIndex() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  /* Plage de dates : `from`/`to` alimentent le sélecteur, `applied*` déclenchent le filtre.
+     Tant qu'aucun filtre n'est appliqué (applied* === null), toutes les ventes sont affichées. */
+  const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
+  const [to, setTo] = useState(todayISO() + 'T23:59')
+  const [appliedFrom, setAppliedFrom] = useState<string | null>(null)
+  const [appliedTo, setAppliedTo] = useState<string | null>(null)
+
   const load = useCallback(async (p: number) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchSales({ page: p })
+      const res = await fetchSales({ page: p, from: appliedFrom, to: appliedTo })
       setPaginated({ data: res.data, current_page: res.current_page, last_page: res.last_page, total: res.total })
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [appliedFrom, appliedTo])
 
   useEffect(() => { void load(page) }, [page, load])
+
+  const applyDateFilter = useCallback(() => {
+    setAppliedFrom(from)
+    setAppliedTo(to)
+    setPage(1)
+  }, [from, to])
+
+  const clearDateFilter = useCallback(() => {
+    setAppliedFrom(null)
+    setAppliedTo(null)
+    setFrom(firstOfMonthISO() + 'T00:00')
+    setTo(todayISO() + 'T23:59')
+    setPage(1)
+  }, [])
+
+  const filterActive = appliedFrom !== null || appliedTo !== null
 
   const handleDelete = useCallback(async (s: Sale) => {
     const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
@@ -132,6 +166,40 @@ export default function SalesIndex() {
           Nouvelle vente
         </button>
       </header>
+
+      {/* Filtre par plage de dates */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Période</div>
+            <DateRangePicker
+              from={from}
+              to={to}
+              onRangeChange={(f, t) => { setFrom(f); setTo(t) }}
+            />
+          </div>
+          <div className="flex gap-2">
+            {filterActive && (
+              <button
+                type="button"
+                onClick={clearDateFilter}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Réinitialiser
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={applyDateFilter}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2563EB]"
+            >
+              <Filter className="h-4 w-4" />
+              Filtrer
+            </button>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">

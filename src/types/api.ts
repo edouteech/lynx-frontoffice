@@ -468,6 +468,7 @@ export interface SaleItem {
   quantity: number
   unit_price: number
   unit_price_ht?: number | null
+  description?: string | null
   total: number
 }
 
