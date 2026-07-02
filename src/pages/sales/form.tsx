@@ -16,7 +16,7 @@ import {
 
   fetchSale, createSale, updateSale,
 
-  addSaleItem, removeSaleItem,
+  addSaleItem, updateSaleItem, removeSaleItem,
 
 } from '../../api/sales'
 
@@ -219,7 +219,7 @@ export default function SaleForm() {
 
   const [items, setItems] = useState<SaleItem[]>([])
 
-  const [itemEdits, setItemEdits] = useState<Record<number, { quantity: string; unit_price: string }>>({})
+  const [itemEdits, setItemEdits] = useState<Record<number, { quantity: string; unit_price: string; description?: string }>>({})
 
 
 
@@ -227,7 +227,7 @@ export default function SaleForm() {
 
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
 
-  const [pendingEdits, setPendingEdits] = useState<Record<number, { quantity: string; unit_price: string }>>({})
+  const [pendingEdits, setPendingEdits] = useState<Record<number, { quantity: string; unit_price: string; description?: string }>>({})
 
   const tempIdRef = useRef(0)
 
@@ -824,6 +824,8 @@ export default function SaleForm() {
 
         ...i,
 
+        description: itemEdits[i.id]?.description ?? i.description ?? null,
+
         quantity:   parseFloat(itemEdits[i.id]?.quantity   ?? String(i.quantity)),
 
         unit_price: parseFloat(itemEdits[i.id]?.unit_price ?? String(i.unit_price)),
@@ -847,6 +849,8 @@ export default function SaleForm() {
         product_sku: pi.productSku,
 
         product_category: pi.productCategory,
+
+        description: pendingEdits[pi.tempId]?.description ?? null,
 
         current_stock: 0,
 
@@ -1175,6 +1179,8 @@ export default function SaleForm() {
             quantity:   parseFloat(pendingEdits[pi.tempId]?.quantity   ?? String(pi.quantity))   || pi.quantity,
 
             unit_price: parseFloat(pendingEdits[pi.tempId]?.unit_price ?? String(pi.unitPrice)) || pi.unitPrice,
+
+            description: pendingEdits[pi.tempId]?.description?.trim() || null,
 
           })),
 
@@ -2885,11 +2891,43 @@ export default function SaleForm() {
 
                             {isInsufficient && <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />}
 
-                            <div>
+                            <div className="min-w-[160px]">
 
                               <p className="font-medium text-gray-900">{item.product_name}</p>
 
                               {item.product_sku && <p className="text-xs text-gray-400">{item.product_sku}</p>}
+
+                              {isConfirmed ? (
+
+                                item.description && <p className="mt-0.5 text-xs italic text-gray-500">{item.description}</p>
+
+                              ) : (
+
+                                <input
+                                  type="text"
+                                  value={edits?.description ?? item.description ?? ''}
+                                  placeholder="Description (optionnel)…"
+                                  onChange={e => {
+                                    const value = e.target.value
+                                    if (isEditItem) {
+                                      setItemEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], description: value } }))
+                                    } else {
+                                      setPendingEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], description: value } }))
+                                    }
+                                  }}
+                                  onBlur={e => {
+                                    if (!isEditItem) return
+                                    const value = e.target.value.trim() || null
+                                    const original = items.find(i => i.id === item.id)?.description ?? null
+                                    if (value === original) return
+                                    updateSaleItem(id!, item.id, { description: value })
+                                      .then(updated => setItems(prev => prev.map(i => (i.id === item.id ? { ...i, description: updated.description ?? value } : i))))
+                                      .catch(err => setError(getApiErrorMessage(err)))
+                                  }}
+                                  className="mt-1 w-full rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 placeholder:text-gray-300 focus:border-[#3B82F6] focus:outline-none"
+                                />
+
+                              )}
 
                             </div>
 

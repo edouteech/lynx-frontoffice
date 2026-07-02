@@ -31,6 +31,7 @@ export interface CreateSaleItemPayload {
   quantity: number
   unit_price: number
   unit_price_ht?: number | null
+  description?: string | null
   discount?: number
   sold_by?: string | null
   product_category_id?: number | null
@@ -94,7 +95,7 @@ export async function deleteSale(id: number | string): Promise<void> {
 
 export async function addSaleItem(
   saleId: number | string,
-  body: { product_id: number; quantity: number; unit_price: number }
+  body: { product_id: number; quantity: number; unit_price: number; description?: string | null }
 ): Promise<SaleItem> {
   const { data } = await api.post<SaleItem>(`/sales/${saleId}/items`, body)
   return data
@@ -103,7 +104,7 @@ export async function addSaleItem(
 export async function updateSaleItem(
   saleId: number | string,
   itemId: number | string,
-  body: { quantity?: number; unit_price?: number }
+  body: { quantity?: number; unit_price?: number; description?: string | null }
 ): Promise<SaleItem> {
   const { data } = await api.patch<SaleItem>(`/sales/${saleId}/items/${itemId}`, body)
   return data
