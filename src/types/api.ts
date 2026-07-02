@@ -62,6 +62,39 @@ export interface ItemCategory {
   updated_at: string
 }
 
+export type ValidityMode = 'ponctuelle' | 'recurrente'
+export type ValidityFrequency = 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'annuelle'
+
+export interface ValidityConfig {
+  mode: ValidityMode
+  // ponctuelle
+  starts_at?: string | null
+  ends_at?: string | null
+  // recurrente
+  frequency?: ValidityFrequency
+  time_from?: string | null
+  time_to?: string | null
+  days_of_week?: number[]
+  days_of_month?: number[]
+  annual_dates?: { month: number; day: number }[]
+}
+
+export interface Discount {
+  id: number
+  organization_id: number
+  stores?: Store[]
+  products?: Array<{ id: number; name: string }>
+  name: string
+  type: 'percentage' | 'amount' | 'variant'
+  value: number
+  requires_password: boolean
+  scope: 'global' | 'specific'
+  is_active: boolean
+  validity_slots: ValidityConfig | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Store {
   id: number
   name: string
@@ -172,9 +205,25 @@ export interface Customer {
   phone: string | null
   note: string | null
   tax_id: string | null
+  discount_percentage: number | null
   aib: boolean
+  account_balance?: number
   created_at: string
   updated_at: string
+}
+
+export interface CustomerTransaction {
+  id: number
+  organization_id: number
+  customer_id: number
+  user_id: number | null
+  type: 'deposit' | 'withdrawal'
+  amount: number
+  balance_after: number
+  description: string | null
+  created_at: string
+  updated_at: string
+  user?: Pick<User, 'id' | 'name'> & { first_name?: string; last_name?: string }
 }
 
 export interface PaymentMethodCategory {
@@ -239,6 +288,16 @@ export interface Favorite {
   name: string
   status: 'active' | 'inactive'
   stores?: Array<Pick<Store, 'id' | 'name'>>
+  products?: Array<Pick<Product, 'id' | 'name'>>
+  created_at: string
+  updated_at: string
+}
+
+export interface Option {
+  id: number
+  organization_id: number
+  name: string
+  status: 'active' | 'inactive'
   products?: Array<Pick<Product, 'id' | 'name'>>
   created_at: string
   updated_at: string
@@ -318,6 +377,9 @@ export interface Product {
   sales_vat_rate_id: number | null
   specific_tax: boolean
   is_composite: boolean
+  has_supplements: boolean
+  supplement_qte_min: number | null
+  supplement_qte_max: number | null
   track_inventory: boolean
   allow_negative_stock: boolean
   tax_inclusive: boolean
@@ -339,6 +401,7 @@ export interface Product {
   images?: ProductImage[]
   stocks?: ProductStock[]
   composite_items?: CompositeProductItem[]
+  supplements?: ProductSupplement[]
 }
 
 export interface ProductStorePrice {
@@ -375,6 +438,14 @@ export interface ProductComponent {
   total: number
   unit_purchase_price?: number
   purchase_total?: number
+}
+
+export interface ProductSupplement {
+  id: number
+  supplement_product_id: number
+  supplement_name: string
+  supplement_sku: string | null
+  price: number
 }
 
 export interface SaleItem {

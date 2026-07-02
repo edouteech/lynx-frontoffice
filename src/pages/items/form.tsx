@@ -10,15 +10,18 @@ import {
   fetchProductStorePrices,
   fetchProductStoreSettings, bulkSaveProductStores,
   fetchProductComponents, addProductComponent, removeProductComponent,
+  fetchProductSupplements, addProductSupplement, removeProductSupplement,
   fetchProducts, uploadProductImage,
+  fetchProductOptions, syncProductOptions,
 } from '../../api/products'
+import { fetchOptions, createOption } from '../../api/options'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { fetchVatRates } from '../../api/vatRates'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type {
   ItemCategory, VatRate, Product, Store,
-  ProductStockEntry, ProductStorePrice, ProductComponent,
+  ProductStockEntry, ProductStorePrice, ProductComponent, ProductSupplement, Option,
 } from '../../types/api'
 
 // ─── tiny UI primitives ───────────────────────────────────────────────────────
@@ -83,9 +86,9 @@ const SOLD_BY_OPTIONS: { value: 'unit' | 'weight' | 'surface'; label: string }[]
 
 // ─── Tab names ─────────────────────────────────────────────────────────────
 
-type Tab = 'article' | 'stores' | 'components'
+type Tab = 'article' | 'stores' | 'components' | 'options' | 'supplements'
 
-// ─── Composant en attente (mode création) ─────────────────────────────────
+// ─── Composant / Supplément en attente (mode création) ───────────────────
 
 interface PendingComponent {
   tempId: number
@@ -97,6 +100,14 @@ interface PendingComponent {
   total: number
   unitPurchasePrice: number
   purchaseTotal: number
+}
+
+interface PendingSupplement {
+  tempId: number
+  supplementProductId: number
+  supplementName: string
+  supplementSku: string | null
+  price: number
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -172,6 +183,30 @@ export default function ItemFormPage() {
   const [pendingComponents, setPendingComponents] = useState<PendingComponent[]>([])
   const tempIdRef = useRef(0)
 
+  // suppléments
+  const [hasSupplements, setHasSupplements] = useState(false)
+  const [supplementMin, setSupplementMin] = useState('')
+  const [supplementMax, setSupplementMax] = useState('')
+  const [supplements, setSupplements] = useState<ProductSupplement[]>([])
+  const [suppLoading, setSuppLoading] = useState(false)
+  const [newSuppId, setNewSuppId] = useState('')
+  const [newSuppPrice, setNewSuppPrice] = useState('0')
+  const [suppSaving, setSuppSaving] = useState(false)
+  const [pendingSupplements, setPendingSupplements] = useState<PendingSupplement[]>([])
+  const suppTempIdRef = useRef(0)
+
+  // options
+  const [allOptions, setAllOptions] = useState<Option[]>([])
+  const [linkedOptionIds, setLinkedOptionIds] = useState<number[]>([])
+  const [optionsLoading, setOptionsLoading] = useState(false)
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
+  const [optionsSaving, setOptionsSaving] = useState(false)
+  const [optionSearch, setOptionSearch] = useState('')
+  const [showNewOptionForm, setShowNewOptionForm] = useState(false)
+  const [newOptionName, setNewOptionName] = useState('')
+  const [newOptionStatus, setNewOptionStatus] = useState<'active' | 'inactive'>('active')
+  const [newOptionSubmitting, setNewOptionSubmitting] = useState(false)
+
   const currentId = isEdit ? id! : null
 
   // ── Load meta ───────────────────────────────────────────────────────────────
@@ -211,6 +246,9 @@ export default function ItemFormPage() {
         setSpecificTax(p.specific_tax)
         setTrackInventory(p.track_inventory)
         setAllowNegativeStock(p.allow_negative_stock)
+        setHasSupplements(p.has_supplements)
+        setSupplementMin(p.supplement_qte_min != null ? String(p.supplement_qte_min) : '')
+        setSupplementMax(p.supplement_qte_max != null ? String(p.supplement_qte_max) : '')
         if (p.color) setColor(p.color)
         if (p.image_url) {
           const { resolveBackendUrl } = await import('../../lib/url')
@@ -275,7 +313,28 @@ export default function ItemFormPage() {
         .catch(console.error)
         .finally(() => setCompLoading(false))
     }
-  }, [tab, currentId, storesLoaded])
+    if (tab === 'supplements') {
+      setSuppLoading(true)
+      fetchProductSupplements(currentId)
+        .then(setSupplements)
+        .catch(console.error)
+        .finally(() => setSuppLoading(false))
+    }
+    if (tab === 'options' && !optionsLoaded) {
+      setOptionsLoading(true)
+      Promise.all([
+        fetchOptions(1),
+        currentId ? fetchProductOptions(currentId) : Promise.resolve<Option[]>([]),
+      ])
+        .then(([optData, linked]) => {
+          setAllOptions(optData.data)
+          setLinkedOptionIds(linked.map((o: Option) => o.id))
+          setOptionsLoaded(true)
+        })
+        .catch(console.error)
+        .finally(() => setOptionsLoading(false))
+    }
+  }, [tab, currentId, storesLoaded, optionsLoaded])
 
   // ── Valeurs dérivées ──────────────────────────────────────────────────────────
   const defaultSellingPrice = parseFloat(sellingPrice) || 0
@@ -380,6 +439,9 @@ export default function ItemFormPage() {
       specific_tax: specificTax,
       track_inventory: trackInventory,
       allow_negative_stock: allowNegativeStock,
+      has_supplements: hasSupplements,
+      supplement_qte_min: hasSupplements && supplementMin !== '' ? parseInt(supplementMin) : 0,
+      supplement_qte_max: hasSupplements && supplementMax !== '' ? parseInt(supplementMax) : null,
       color: color || null,
     }
 
@@ -433,6 +495,10 @@ export default function ItemFormPage() {
         })
 
         if (imageFile) await handleUploadNow(p.id)
+        if (linkedOptionIds.length > 0) await syncProductOptions(p.id, linkedOptionIds)
+        for (const s of pendingSupplements) {
+          await addProductSupplement(p.id, s.supplementProductId, s.price)
+        }
         navigate('/items', { state: { flash: `Article « ${payload.name} » créé avec succès.` } })
       }
     } catch (err) {
@@ -471,6 +537,44 @@ export default function ItemFormPage() {
       setError(getApiErrorMessage(err))
     } finally {
       setStoresSaving(false)
+    }
+  }
+
+  // ── Save options (mode édition) ─────────────────────────────────────────────
+  async function saveOptions() {
+    if (!currentId) return
+    setOptionsSaving(true)
+    setError(null)
+    try {
+      await syncProductOptions(currentId, linkedOptionIds)
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setOptionsSaving(false)
+    }
+  }
+
+  // ── Créer une option depuis l'onglet article ────────────────────────────────
+  async function handleCreateInlineOption() {
+    if (!newOptionName.trim()) return
+    setNewOptionSubmitting(true)
+    setError(null)
+    try {
+      const productIds = currentId ? [parseInt(currentId)] : []
+      const created = await createOption({
+        name: newOptionName.trim(),
+        status: newOptionStatus,
+        product_ids: productIds,
+      })
+      setAllOptions(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+      setLinkedOptionIds(prev => prev.includes(created.id) ? prev : [...prev, created.id])
+      setNewOptionName('')
+      setNewOptionStatus('active')
+      setShowNewOptionForm(false)
+    } catch (err) {
+      setError(getApiErrorMessage(err))
+    } finally {
+      setNewOptionSubmitting(false)
     }
   }
 
@@ -517,6 +621,45 @@ export default function ItemFormPage() {
     }
     await removeProductComponent(currentId, idOrTempId)
     setComponents(prev => prev.filter(c => c.id !== idOrTempId))
+  }
+
+  // ── Supplement add/remove ──────────────────────────────────────────────────
+  async function handleAddSupplement() {
+    if (!newSuppId) return
+    const product = allProducts.find(p => String(p.id) === newSuppId)
+    if (!product) return
+    const price = parseFloat(newSuppPrice) || 0
+
+    if (!currentId) {
+      setPendingSupplements(prev => [...prev, {
+        tempId: ++suppTempIdRef.current,
+        supplementProductId: product.id,
+        supplementName: product.name,
+        supplementSku: product.sku,
+        price,
+      }])
+      setNewSuppId('')
+      setNewSuppPrice('0')
+      return
+    }
+
+    setSuppSaving(true)
+    try {
+      const supp = await addProductSupplement(currentId, product.id, price)
+      setSupplements(prev => [...prev, supp])
+      setNewSuppId('')
+      setNewSuppPrice('0')
+    } catch (err) { setError(getApiErrorMessage(err)) }
+    finally { setSuppSaving(false) }
+  }
+
+  async function handleRemoveSupplement(idOrTempId: number) {
+    if (!currentId) {
+      setPendingSupplements(prev => prev.filter(s => s.tempId !== idOrTempId))
+      return
+    }
+    await removeProductSupplement(currentId, idOrTempId)
+    setSupplements(prev => prev.filter(s => s.id !== idOrTempId))
   }
 
   // ── Image helpers ───────────────────────────────────────────────────────────
@@ -714,11 +857,19 @@ export default function ItemFormPage() {
             )}
             <button
               type="button"
-              onClick={() => void (isEdit && tab === 'stores' ? saveAllStores() : handleSave())}
-              disabled={isEdit && tab === 'stores' ? storesSaving : saving}
+              onClick={() => void (
+                isEdit && tab === 'stores' ? saveAllStores() :
+                isEdit && tab === 'options' ? saveOptions() :
+                handleSave()
+              )}
+              disabled={
+                (isEdit && tab === 'stores' && storesSaving) ||
+                (isEdit && tab === 'options' && optionsSaving) ||
+                ((!isEdit || (tab !== 'stores' && tab !== 'options')) && saving)
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
             >
-              {(isEdit && tab === 'stores' ? storesSaving : saving)
+              {(isEdit && tab === 'stores' ? storesSaving : isEdit && tab === 'options' ? optionsSaving : saving)
                 ? <Loader2 className="h-4 w-4 animate-spin" />
                 : <Save className="h-4 w-4" />}
               Enregistrer
@@ -732,6 +883,8 @@ export default function ItemFormPage() {
             ['article', 'Article'],
             ['stores', 'Magasins'],
             ...(type === 'composite' ? [['components', 'Composants'] as const] : []),
+            ['options', 'Options'],
+            ...(hasSupplements ? [['supplements', 'Suppléments'] as const] : []),
           ] as [Tab, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -856,13 +1009,57 @@ export default function ItemFormPage() {
             </Card>
 
             <Card title="Type de produit">
-              <div className="flex gap-6">
-                {([['simple', 'Simple'], ['composite', 'Composé (assemblage)']] as const).map(([v, l]) => (
-                  <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                    <input type="radio" name="ptype" value={v} checked={type === v} onChange={() => setType(v)} className="h-4 w-4 accent-[#0F2E4A]" />
-                    {l}
-                  </label>
-                ))}
+              <div className="space-y-3">
+                <div className="flex gap-6">
+                  {([['simple', 'Simple'], ['composite', 'Composé (assemblage)']] as const).map(([v, l]) => (
+                    <label key={v} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                      <input type="radio" name="ptype" value={v} checked={type === v} onChange={() => setType(v)} className="h-4 w-4 accent-[#0F2E4A]" />
+                      {l}
+                    </label>
+                  ))}
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="has-supplements"
+                      checked={hasSupplements}
+                      onChange={e => {
+                        setHasSupplements(e.target.checked)
+                        if (!e.target.checked) setTab(prev => prev === 'supplements' ? 'article' : prev)
+                      }}
+                      className="h-4 w-4 cursor-pointer rounded accent-[#0F2E4A]"
+                    />
+                    <div>
+                      <label htmlFor="has-supplements" className="cursor-pointer select-none text-sm font-medium text-gray-700">
+                        Ce produit a des suppléments
+                      </label>
+                      <p className="text-xs text-gray-400">Permet d'associer des articles optionnels avec un prix lors de la vente</p>
+                    </div>
+                  </div>
+                  {hasSupplements && (
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <Field label="Min. suppléments" hint="0 = aucun minimum">
+                        <Inp
+                          type="number"
+                          min="0"
+                          value={supplementMin}
+                          onChange={e => setSupplementMin(e.target.value)}
+                          placeholder="0"
+                        />
+                      </Field>
+                      <Field label="Max. suppléments" hint="Laisser vide = illimité">
+                        <Inp
+                          type="number"
+                          min="0"
+                          value={supplementMax}
+                          onChange={e => setSupplementMax(e.target.value)}
+                          placeholder="—"
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
 
@@ -1119,6 +1316,235 @@ export default function ItemFormPage() {
                 </p>
               </>
             )}
+          </Card>
+        )}
+
+        {/* ════════════════════════════ OPTIONS TAB ═══════════════════════════ */}
+        {tab === 'options' && (
+          <Card title="Options liées à cet article">
+            {!isEdit && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+                Les options sélectionnées seront liées à l'article lors de l'enregistrement.
+              </div>
+            )}
+
+            {/* Barre recherche + bouton nouvelle option */}
+            <div className="mb-3 flex gap-2">
+              <input
+                type="text"
+                value={optionSearch}
+                onChange={e => setOptionSearch(e.target.value)}
+                placeholder="Rechercher une option..."
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+              />
+              <button
+                type="button"
+                onClick={() => { setShowNewOptionForm(v => !v); setNewOptionName(''); setNewOptionStatus('active') }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#3B82F6] px-3 py-2 text-sm font-medium text-white hover:bg-[#2563EB] transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Nouvelle option
+              </button>
+            </div>
+
+            {/* Formulaire inline de création */}
+            {showNewOptionForm && (
+              <div className="mb-4 rounded-xl border border-dashed border-[#3B82F6]/40 bg-blue-50/40 p-4">
+                <p className="mb-3 text-xs font-semibold text-gray-600">Créer une nouvelle option</p>
+                <div className="flex flex-wrap gap-3">
+                  <input
+                    type="text"
+                    value={newOptionName}
+                    onChange={e => setNewOptionName(e.target.value)}
+                    placeholder="Nom de l'option *"
+                    className="flex-1 min-w-[180px] rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleCreateInlineOption() } }}
+                  />
+                  <select
+                    aria-label="Statut"
+                    value={newOptionStatus}
+                    onChange={e => setNewOptionStatus(e.target.value as 'active' | 'inactive')}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+                  >
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateInlineOption()}
+                    disabled={!newOptionName.trim() || newOptionSubmitting}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB] disabled:opacity-50"
+                  >
+                    {newOptionSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Créer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewOptionForm(false)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {optionsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" />
+              </div>
+            ) : allOptions.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400">
+                Aucune option disponible. Créez-en une avec le bouton ci-dessus.
+              </p>
+            ) : (
+              <div className="max-h-96 space-y-2 overflow-auto pr-1">
+                {allOptions
+                  .filter(o =>
+                    !optionSearch ||
+                    o.name.toLowerCase().includes(optionSearch.toLowerCase())
+                  )
+                  .map(o => (
+                    <label
+                      key={o.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-2.5 transition-colors hover:bg-blue-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={linkedOptionIds.includes(o.id)}
+                        onChange={e => {
+                          setLinkedOptionIds(prev =>
+                            e.target.checked
+                              ? [...prev, o.id]
+                              : prev.filter(id => id !== o.id)
+                          )
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-[#3B82F6] focus:ring-[#3B82F6]"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-800">{o.name}</span>
+                        <span className={`ml-2 text-xs ${o.status === 'active' ? 'text-green-600' : 'text-gray-400'}`}>
+                          {o.status}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* ════════════════════════ SUPPLÉMENTS TAB ═══════════════════════════ */}
+        {tab === 'supplements' && (
+          <Card title="Suppléments de cet article">
+            {!isEdit && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+                Les suppléments ajoutés ici seront enregistrés avec l'article en une seule opération.
+              </div>
+            )}
+            <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">Article supplément</label>
+                <Sel value={newSuppId} onChange={e => {
+                  setNewSuppId(e.target.value)
+                  const p = allProducts.find(p => String(p.id) === e.target.value)
+                  if (p) setNewSuppPrice(String(parseFloat(String(p.selling_price)) || 0))
+                  else setNewSuppPrice('0')
+                }}>
+                  <option value="">Sélectionner un article</option>
+                  {allProducts
+                    .filter(p => String(p.id) !== id)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.sku ? ` (${p.sku})` : ''}
+                      </option>
+                    ))}
+                </Sel>
+              </div>
+              <div className="w-40">
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">Prix unitaire (CFA)</label>
+                <div className="relative">
+                  <Inp
+                    type="number"
+                    min="0"
+                    value={newSuppPrice}
+                    onChange={e => setNewSuppPrice(e.target.value)}
+                    placeholder="0"
+                    className="pr-12"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">CFA</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleAddSupplement()}
+                disabled={!newSuppId || suppSaving}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+              >
+                {suppSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Ajouter
+              </button>
+            </div>
+
+            {(() => {
+              const activeSupplements: ProductSupplement[] = isEdit
+                ? supplements
+                : pendingSupplements.map(s => ({
+                    id: s.tempId,
+                    supplement_product_id: s.supplementProductId,
+                    supplement_name: s.supplementName,
+                    supplement_sku: s.supplementSku,
+                    price: s.price,
+                  }))
+
+              if (isEdit && suppLoading) {
+                return <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" /></div>
+              }
+              if (activeSupplements.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Package className="mb-2 h-10 w-10 text-gray-300" />
+                    <p className="text-sm text-gray-400">Aucun supplément ajouté.</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Article</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prix unitaire</th>
+                        <th className="w-12 px-4 py-3 sr-only">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {activeSupplements.map(supp => (
+                        <tr key={supp.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900">{supp.supplement_name}</p>
+                            {supp.supplement_sku && <p className="text-xs text-gray-400">{supp.supplement_sku}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-700">
+                            {supp.price.toLocaleString('fr-FR')} CFA
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              aria-label={`Supprimer ${supp.supplement_name}`}
+                              onClick={() => void handleRemoveSupplement(supp.id)}
+                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })()}
           </Card>
         )}
 

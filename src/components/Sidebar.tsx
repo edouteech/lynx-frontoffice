@@ -1,4 +1,3 @@
-import { useState, useEffect, type ComponentType } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -8,6 +7,7 @@ import {
   UserRoundPlus,
   Wallet,
   Percent,
+  Tag,
   Banknote,
   Settings,
   SlidersHorizontal,
@@ -37,10 +37,14 @@ import {
   PieChart,
   Printer,
   Trash2,
+  Settings2,
+  Globe,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
+import { useGeneralSetting } from '../contexts/useGeneralSetting'
 import { resolveBackendUrl } from '../lib/url'
 import { hasPermissionCode } from '../lib/permissions'
+import { useEffect, useState, type ComponentType } from 'react'
 
 interface NavSubItem {
   id: string
@@ -121,7 +125,9 @@ const navItems: NavItem[] = [
     children: [
       { id: 'items', label: 'Liste des articles', icon: List },
       { id: 'item-categories', label: 'Catégories', icon: FolderTree },
+      { id: 'discounts', label: 'Réductions', icon: Tag },
       { id: 'favorites', label: 'Favoris', icon: Star },
+      { id: 'options', label: 'Options', icon: Settings2 },
     ],
   },
   {
@@ -187,6 +193,11 @@ const navItems: NavItem[] = [
         icon: Printer,
       },
       {
+        id: 'settings/public-links',
+        label: 'Liens publics',
+        icon: Globe,
+      },
+      {
         id: 'settings/subscription',
         label: 'Licences',
         icon: Crown,
@@ -214,8 +225,8 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
     user,
     currentOrganization,
     activeOrganizationId,
-  } =
-    useAuth()
+  } = useAuth()
+  const { generalSetting } = useGeneralSetting()
   const location = useLocation()
   const navigate = useNavigate()
   const pathWithoutSlash = location.pathname.replace(/^\//, '')
@@ -235,12 +246,12 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
       )
     )
     if (activeSection) {
-      setOpenSections((prev) => ({ ...prev, [activeSection.id]: true }))
+      setOpenSections({ [activeSection.id]: true })
     }
   }, [activeTab])
 
   const toggleSection = (id: string) => {
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
+    setOpenSections((prev) => (prev[id] ? {} : { [id]: true }))
   }
 
 
@@ -335,6 +346,11 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.restoration')
           case 'settings/kitchen-printers':
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.kitchen_printer')
+          case 'settings/public-links':
+            return (
+              hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.general') &&
+              (generalSetting?.online_articles ?? false)
+            )
           case 'settings/subscription':
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.licenses')
           default:

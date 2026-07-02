@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Pencil, Plus, Trash2, Eye } from 'lucide-react'
+import { Pencil, Plus, Trash2, Eye, Upload } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deleteCustomer, fetchCustomers } from '../../api/customer'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Customer } from '../../types/api'
 import { CustomerCreateModal } from './create'
+import { CustomerImportModal } from './import'
 import Swal from 'sweetalert2'
 
 export default function CustomersIndex() {
@@ -21,6 +22,7 @@ export default function CustomersIndex() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalCustomer, setModalCustomer] = useState<Customer | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const refreshList = useCallback(async () => {
     setError(null)
@@ -196,17 +198,28 @@ export default function CustomersIndex() {
             Gestion des clients (création, modification, suppression).
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setModalCustomer(null)
-            setModalOpen(true)
-          }}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau client
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setImportModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Upload className="h-4 w-4" />
+            Importer Excel
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setModalCustomer(null)
+              setModalOpen(true)
+            }}
+            className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau client
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -245,6 +258,12 @@ export default function CustomersIndex() {
         customer={modalCustomer}
         onClose={() => setModalOpen(false)}
         onSaved={() => void refreshList()}
+      />
+
+      <CustomerImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => void refreshList()}
       />
     </div>
   )

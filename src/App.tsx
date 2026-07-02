@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
+import { GeneralSettingProvider } from './contexts/GeneralSettingContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequirePermission from './components/RequirePermission'
 import Layout from './components/Layout'
@@ -12,6 +13,7 @@ import { subscribeToSuspension } from './api/subscriptionEvents'
 import SuspendedPage from './pages/SuspendedPage'
 
 import ItemCategoriesIndex from './pages/item-categories'
+import DiscountsIndex from './pages/discounts'
 import StoresIndex from './pages/stores/index'
 import StoreShow from './pages/stores/show'
 import CashRegistersIndex from './pages/cash-registers/index'
@@ -32,6 +34,7 @@ import ReceiptSettingPage from './pages/setting/ReceiptSettingPage'
 import SubscriptionPage from './pages/setting/SubscriptionPage'
 import RestaurantOptionPage from './pages/setting/RestaurantOptionPage'
 import KitchenPrinterPage from './pages/setting/KitchenPrinterPage'
+import PublicLinksPage from './pages/setting/PublicLinksPage'
 import PaymentMethodsIndex from './pages/payment-methods'
 import PaymentMethodShow from './pages/payment-methods/show'
 import VatRatesIndex from './pages/vat-rates'
@@ -40,6 +43,7 @@ import UsersIndex from './pages/users'
 import UserShow from './pages/users/show'
 import UserProfilePage from './pages/userprofile/UserProfilePage'
 import FavoritesIndex from './pages/favorites'
+import OptionsIndex from './pages/options'
 import SuppliersIndex from './pages/suppliers'
 import PurchaseOrdersIndex from './pages/purchase-orders'
 import PurchaseOrderForm from './pages/purchase-orders/form'
@@ -126,6 +130,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <GeneralSettingProvider>
         <SuspensionListener />
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -202,6 +207,16 @@ export default function App() {
             <ProtectedRoute>
               <RequirePermission code="admin_panel.items.manage">
                 {withLayout(<ItemCategoriesIndex />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discounts"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.items.manage">
+                {withLayout(<DiscountsIndex />)}
               </RequirePermission>
             </ProtectedRoute>
           }
@@ -615,6 +630,16 @@ export default function App() {
           }
         />
         <Route
+          path="/options"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.items.manage">
+                {withLayout(<OptionsIndex />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/cash-registers"
           element={
             <ProtectedRoute>
@@ -805,6 +830,16 @@ export default function App() {
           }
         />
         <Route
+          path="/settings/public-links"
+          element={
+            <ProtectedRoute>
+              <RequirePermission code="admin_panel.settings.general">
+                {withLayout(<PublicLinksPage />)}
+              </RequirePermission>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/roles"
           element={
             <ProtectedRoute>
@@ -882,6 +917,7 @@ export default function App() {
           }
         />
       </Routes>
+        </GeneralSettingProvider>
       </AuthProvider>
     </BrowserRouter>
   )

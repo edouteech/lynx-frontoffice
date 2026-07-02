@@ -1,5 +1,5 @@
 import { api } from './apiClient'
-import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductStoreSetting } from '../types/api'
+import type { Paginated, Product, ProductStorePrice, ProductStockEntry, ProductComponent, ProductSupplement, ProductStoreSetting, Option } from '../types/api'
 
 export interface CreateProductPayload extends Partial<Product> {
   store_stocks?: { store_id: number; quantity: number }[]
@@ -10,6 +10,7 @@ export interface CreateProductPayload extends Partial<Product> {
 export interface FetchProductsParams {
   page?: number
   store_id?: number | null
+  store_ids?: number[]
   category_id?: number | null
   stock_alert?: 'low' | 'out' | null
   only_trashed?: boolean
@@ -21,6 +22,7 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
     params: {
       page: p.page ?? 1,
       ...(p.store_id    ? { store_id: p.store_id }       : {}),
+      ...(p.store_ids?.length ? { store_ids: p.store_ids } : {}),
       ...(p.category_id ? { category_id: p.category_id } : {}),
       ...(p.stock_alert ? { stock_alert: p.stock_alert }  : {}),
       ...(p.only_trashed ? { only_trashed: true } : {}),
@@ -158,4 +160,54 @@ export async function removeProductComponent(
   componentId: number
 ): Promise<void> {
   await api.delete(`/items/${itemId}/components/${componentId}`)
+}
+
+// ── Suppléments ─────────────────────────────────────────────────────────────
+export async function fetchProductSupplements(itemId: string | number): Promise<ProductSupplement[]> {
+  const { data } = await api.get<ProductSupplement[]>(`/items/${itemId}/supplements`)
+  return data
+}
+
+export async function addProductSupplement(
+  itemId: string | number,
+  supplementProductId: number,
+  price: number
+): Promise<ProductSupplement> {
+  const { data } = await api.post<ProductSupplement>(`/items/${itemId}/supplements`, {
+    supplement_product_id: supplementProductId,
+    price,
+  })
+  return data
+}
+
+export async function updateProductSupplement(
+  itemId: string | number,
+  supplementId: number,
+  price: number
+): Promise<ProductSupplement> {
+  const { data } = await api.put<ProductSupplement>(`/items/${itemId}/supplements/${supplementId}`, { price })
+  return data
+}
+
+export async function removeProductSupplement(
+  itemId: string | number,
+  supplementId: number
+): Promise<void> {
+  await api.delete(`/items/${itemId}/supplements/${supplementId}`)
+}
+
+// ── Options ────────────────────────────────────────────────────────────────
+export async function fetchProductOptions(itemId: string | number): Promise<Option[]> {
+  const { data } = await api.get<Option[]>(`/items/${itemId}/options`)
+  return data
+}
+
+export async function syncProductOptions(
+  itemId: string | number,
+  optionIds: number[]
+): Promise<{ option_ids: number[] }> {
+  const { data } = await api.post<{ option_ids: number[] }>(`/items/${itemId}/sync-options`, {
+    option_ids: optionIds,
+  })
+  return data
 }
