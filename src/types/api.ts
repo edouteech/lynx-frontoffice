@@ -204,6 +204,7 @@ export interface Customer {
   email: string | null
   phone: string | null
   note: string | null
+  special_info: string | null
   tax_id: string | null
   discount_percentage: number | null
   aib: boolean

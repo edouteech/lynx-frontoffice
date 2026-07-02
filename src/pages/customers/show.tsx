@@ -8,6 +8,7 @@ import {
   Hash,
   FileCheck2,
   StickyNote,
+  AlertTriangle,
   Eye,
   FileText,
   Pencil,
@@ -257,6 +258,24 @@ export default function CustomerShowPage() {
               </div>
             ) : null}
           </div>
+
+          {customer?.special_info && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 shrink-0 rounded-md bg-amber-100 p-1.5 text-amber-700">
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                    Informations particulières
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-amber-900">
+                    {customer.special_info}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick stats */}
           <div className="mt-4 grid grid-cols-1 gap-3">

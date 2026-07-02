@@ -23,6 +23,7 @@ export async function createCustomer(body: {
   email?: string | null
   phone?: string | null
   note?: string | null
+  special_info?: string | null
   tax_id?: string | null
   discount_percentage?: number | null
   aib?: boolean
@@ -32,6 +33,7 @@ export async function createCustomer(body: {
     email: body.email,
     phone: body.phone,
     note: body.note,
+    special_info: body.special_info,
     tax_id: body.tax_id,
     discount_percentage: body.discount_percentage,
     aib: body.aib,
@@ -46,6 +48,7 @@ export async function updateCustomer(
     email?: string | null
     phone?: string | null
     note?: string | null
+    special_info?: string | null
     tax_id?: string | null
     discount_percentage?: number | null
     aib?: boolean
@@ -56,6 +59,7 @@ export async function updateCustomer(
     email: body.email,
     phone: body.phone,
     note: body.note,
+    special_info: body.special_info,
     tax_id: body.tax_id,
     discount_percentage: body.discount_percentage,
     aib: body.aib,

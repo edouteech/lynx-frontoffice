@@ -27,6 +27,7 @@ export function CustomerCreateModal({
   const [ifu, setIfu] = useState('')
   const [discountPercentage, setDiscountPercentage] = useState<number | ''>('')
   const [note, setNote] = useState('')
+  const [specialInfo, setSpecialInfo] = useState('')
   const [aib, setAib] = useState(false)
 
   const isEdit = customer !== null
@@ -43,6 +44,7 @@ export function CustomerCreateModal({
       setTelephone('')
       setIfu('')
       setNote('')
+      setSpecialInfo('')
       setAib(false)
       return
     }
@@ -52,6 +54,7 @@ export function CustomerCreateModal({
     setIfu(customer.tax_id ?? '')
     setDiscountPercentage(customer.discount_percentage ?? '')
     setNote(customer.note ?? '')
+    setSpecialInfo(customer.special_info ?? '')
     setAib(customer.aib)
   }, [open, customer])
 
@@ -74,6 +77,7 @@ export function CustomerCreateModal({
       tax_id: ifu.trim() || null,
       discount_percentage: discountPercentage !== '' ? Number(discountPercentage) : null,
       note: note.trim() || null,
+      special_info: specialInfo.trim() || null,
       aib,
     }
     setError(null)
@@ -220,6 +224,23 @@ export function CustomerCreateModal({
               onChange={(e) => setNote(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
               placeholder="Remarques…"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label
+              htmlFor="customer-form-special-info"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Informations particulières
+            </label>
+            <textarea
+              id="customer-form-special-info"
+              rows={3}
+              value={specialInfo}
+              onChange={(e) => setSpecialInfo(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/30"
+              placeholder="Ex. allergies, préférences, informations à connaître sur ce client…"
             />
           </div>
 
