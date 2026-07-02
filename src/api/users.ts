@@ -111,3 +111,13 @@ export async function detachUserStoreRole(
 ): Promise<void> {
   await api.delete(`/users/${userId}/store-roles/${storeId}`)
 }
+
+/** Regenerates the user's password and re-sends the login credentials by email. */
+export async function resendUserCredentials(
+  userId: number | string
+): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>(
+    `/users/${userId}/resend-credentials`
+  )
+  return data
+}

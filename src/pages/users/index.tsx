@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Pencil, Plus, Search } from 'lucide-react'
+import { Eye, Mail, Pencil, Plus, Search } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
-import { fetchUsers } from '../../api/users'
+import { fetchUsers, resendUserCredentials } from '../../api/users'
 import { fetchAllRoles } from '../../api/roles'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { scopedRole, scopedRoleId } from '../../lib/scopedOrganization'
@@ -42,6 +42,8 @@ export default function UsersIndex() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalUser, setModalUser] = useState<User | null>(null)
   const [rolesCatalog, setRolesCatalog] = useState<Role[] | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -152,6 +154,27 @@ export default function UsersIndex() {
     [rolesCatalog, roleById, activeOrganizationId]
   )
 
+  const handleResendCredentials = useCallback(async (u: User) => {
+    if (resendingId !== null) return
+    if (
+      !window.confirm(
+        `Renvoyer les identifiants de connexion à « ${u.name} » (${u.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
+      )
+    )
+      return
+    setNotice(null)
+    setError(null)
+    setResendingId(u.id)
+    try {
+      await resendUserCredentials(u.id)
+      setNotice(`Identifiants renvoyés par e-mail à ${u.email}.`)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setResendingId(null)
+    }
+  }, [resendingId])
+
   const actions: Action<User>[] = useMemo(
     () => [
       {
@@ -168,8 +191,13 @@ export default function UsersIndex() {
           setModalOpen(true)
         },
       },
+      {
+        label: 'Renvoyer les identifiants',
+        icon: Mail,
+        onClick: (u) => void handleResendCredentials(u),
+      },
     ],
-    [navigate]
+    [navigate, handleResendCredentials]
   )
 
   const searchFilter = (
@@ -207,6 +235,22 @@ export default function UsersIndex() {
           Nouvel utilisateur
         </button>
       </header>
+
+      {notice && (
+        <div
+          className="mb-6 flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+          role="status"
+        >
+          <span>{notice}</span>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            className="shrink-0 text-emerald-800 underline hover:text-emerald-950"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
 
       {error && (
         <div

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Mail, Pencil, Trash2 } from 'lucide-react'
 import {
   attachUserStoreRole,
   detachUserStoreRole,
   fetchUser,
+  resendUserCredentials,
   updateUser,
   type UserStoreRoleRow,
 } from '../../api/users'
@@ -48,6 +49,7 @@ export default function UserShow() {
   const [savingAccess, setSavingAccess] = useState(false)
   const [detachingKey, setDetachingKey] = useState<string | null>(null)
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
+  const [resendingCredentials, setResendingCredentials] = useState(false)
 
   const loadUser = useCallback(async (options?: { silent?: boolean }) => {
     if (!id) return
@@ -366,6 +368,27 @@ export default function UserShow() {
     }
   }
 
+  async function handleResendCredentials() {
+    if (!id || !user) return
+    if (
+      !window.confirm(
+        `Renvoyer les identifiants de connexion à « ${user.name} » (${user.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
+      )
+    )
+      return
+    setResendingCredentials(true)
+    setError(null)
+    setAttachNotice(null)
+    try {
+      await resendUserCredentials(id)
+      setAttachNotice(`Identifiants renvoyés par e-mail à ${user.email}.`)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setResendingCredentials(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex-1 bg-[#EFF6FF] px-6 py-10 lg:px-10">
@@ -406,14 +429,25 @@ export default function UserShow() {
           <ArrowLeft className="h-4 w-4" />
           Utilisateurs
         </Link>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
-        >
-          <Pencil className="h-4 w-4" />
-          Modifier le profil
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleResendCredentials()}
+            disabled={resendingCredentials}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Mail className="h-4 w-4" />
+            {resendingCredentials ? 'Envoi…' : 'Renvoyer les identifiants'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
+          >
+            <Pencil className="h-4 w-4" />
+            Modifier le profil
+          </button>
+        </div>
       </div>
 
       {attachNotice && (
