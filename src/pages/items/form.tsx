@@ -999,9 +999,7 @@ export default function ItemFormPage() {
 
                 <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50 px-4">
                   <Toggle checked={specificTax} onChange={setSpecificTax} label="Taxe spécifique (T.S)" />
-                  {/* 
-                    <Toggle checked={taxInclusive} onChange={setTaxInclusive} label="Prix affiché TTC (taxes incluses)" />
-                  */}
+                  <Toggle checked={taxInclusive} onChange={setTaxInclusive} label="Prix affiché TTC (taxes incluses)" />
                   <Toggle checked={trackInventory} onChange={setTrackInventory} label="Gérer le stock de cet article" disabled={type === 'composite'} />
                   <Toggle checked={allowNegativeStock} onChange={setAllowNegativeStock} label="Autoriser le stock négatif (vente sans stock)" />
                 </div>
