@@ -3,6 +3,7 @@ import { UserRound, Printer, Store, Filter, RotateCcw, TrendingUp, ShoppingBag, 
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { fetchSalesByItem, type SalesByItem } from "../../api/salesByItem";
+import { fetchSalesByEmployee } from "../../api/salesByEmployee";
 import { fetchUsers } from "../../api/users";
 import { fetchStores } from "../../api/stores";
 
@@ -200,7 +201,7 @@ export default function SalesByItemsPage() {
           start_date: appliedFrom,
           end_date: appliedTo,
           store_id: appliedStoreId !== "all" ? Number(appliedStoreId) : undefined,
-          employee_id: appliedEmployeeId !== "all" ? Number(appliedEmployeeId) : undefined,
+          seller_name: appliedEmployeeId !== "all" ? appliedEmployeeId : undefined,
         });
 
         const mapped = res.data.map(item => ({ ...item, employeeId: "all", storeId: "all", soldAt: new Date().toISOString() }));
@@ -223,14 +224,19 @@ export default function SalesByItemsPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const [usersRes, storesRes] = await Promise.all([
+        const [usersRes, employeesRes, storesRes] = await Promise.all([
           fetchUsers(1),
+          fetchSalesByEmployee(),
           fetchStores(1),
         ]);
 
+        const names = new Set<string>();
+        usersRes.data.forEach((u) => names.add(u.name));
+        employeesRes.data.forEach((e) => names.add(e.employee));
+
         setEmployees([
           { id: "all", name: "Tous les employés" },
-          ...usersRes.data.map((u) => ({ id: String(u.id), name: u.name })),
+          ...Array.from(names).sort((a, b) => a.localeCompare(b)).map((name) => ({ id: name, name })),
         ]);
 
         setStores([

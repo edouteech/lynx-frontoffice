@@ -34,7 +34,7 @@ export interface SalesByPaymentMethodParams {
   start_date?: string;
   end_date?: string;
   store_id?: number;
-  employee_id?: number;
+  seller_name?: string;
   payment_method_id?: number;
 }
 
@@ -50,7 +50,7 @@ export async function fetchSalesByPaymentMethod(
         start_date: params?.start_date,
         end_date: params?.end_date,
         store_id: params?.store_id,
-        employee_id: params?.employee_id,
+        seller_name: params?.seller_name,
         payment_method_id: params?.payment_method_id,
       },
     },

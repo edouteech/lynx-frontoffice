@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
 import { fetchSalesSummary, fetchSalesTrend } from "../../api/salesSummary";
+import { fetchSalesByEmployee } from "../../api/salesByEmployee";
 import { fetchUsers } from "../../api/users";
 import { fetchStores } from "../../api/stores";
 import { DateRangePicker } from "../../components/DateRangePicker";
@@ -165,16 +166,21 @@ export default function SalesRecapPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const [usersRes, storesRes] = await Promise.all([
+        const [usersRes, employeesRes, storesRes] = await Promise.all([
           fetchUsers(1),
+          fetchSalesByEmployee(),
           fetchStores(1),
         ]);
 
+        const names = new Set<string>();
+        usersRes.data.forEach((u) => names.add(u.name));
+        employeesRes.data.forEach((e) => names.add(e.employee));
+
         setEmployees([
           { id: "all", name: "Tous les employés" },
-          ...usersRes.data.map((u: any) => ({
-            id: String(u.id),
-            name: u.name,
+          ...Array.from(names).sort((a, b) => a.localeCompare(b)).map((name) => ({
+            id: name,
+            name,
           })),
         ]);
 
@@ -204,14 +210,14 @@ export default function SalesRecapPage() {
             start_date: applied.from,
             end_date: applied.to,
             store_id: applied.storeId !== "all" ? Number(applied.storeId) : undefined,
-            employee_id: applied.employeeId !== "all" ? Number(applied.employeeId) : undefined,
+            seller_name: applied.employeeId !== "all" ? applied.employeeId : undefined,
           }),
 
           fetchSalesTrend({
             start_date: applied.from,
             end_date: applied.to,
             store_id: applied.storeId !== "all" ? Number(applied.storeId) : undefined,
-            employee_id: applied.employeeId !== "all" ? Number(applied.employeeId) : undefined,
+            seller_name: applied.employeeId !== "all" ? applied.employeeId : undefined,
           }),
         ]);
 

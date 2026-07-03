@@ -12,6 +12,7 @@ import {
 import DataTable, { type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
 import { fetchSalesByTax, type SalesByTax } from '../../api/salesByTax'
+import { fetchSalesByEmployee } from '../../api/salesByEmployee'
 import { fetchUsers } from '../../api/users'
 import { fetchStores } from '../../api/stores'
 
@@ -127,11 +128,15 @@ export default function SalesByTaxPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const [usersRes, storesRes] = await Promise.all([
+        const [usersRes, employeesRes, storesRes] = await Promise.all([
           fetchUsers(1),
+          fetchSalesByEmployee(),
           fetchStores(1),
         ])
-        setEmployees([{ id: 'all', name: 'Tous les employés' }, ...usersRes.data.map(u => ({ id: String(u.id), name: u.name }))])
+        const names = new Set<string>()
+        usersRes.data.forEach(u => names.add(u.name))
+        employeesRes.data.forEach(e => names.add(e.employee))
+        setEmployees([{ id: 'all', name: 'Tous les employés' }, ...Array.from(names).sort((a, b) => a.localeCompare(b)).map(name => ({ id: name, name }))])
         setStores([{ id: 'all', name: 'Tous les magasins' }, ...storesRes.data.map(s => ({ id: String(s.id), name: s.name }))])
       } catch (e) {
         console.error(e)
@@ -149,7 +154,7 @@ export default function SalesByTaxPage() {
           start_date: appliedFrom,
           end_date: appliedTo,
           store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : undefined,
-          employee_id: appliedEmployeeId !== 'all' ? Number(appliedEmployeeId) : undefined,
+          seller_name: appliedEmployeeId !== 'all' ? appliedEmployeeId : undefined,
         })
         setRows(res.data)
       } catch (e) {

@@ -31,7 +31,7 @@ export interface SalesSummaryParams {
   start_date?: string;
   end_date?: string;
   store_id?: number;
-  employee_id?: number;
+  seller_name?: string;
 }
 
 /* ================= TYPES TREND (GRAPHE) ================= */
@@ -50,7 +50,7 @@ export interface SalesTrendParams {
   start_date?: string;
   end_date?: string;
   store_id?: number;
-  employee_id?: number;
+  seller_name?: string;
 }
 
 /* ================= TYPES DETAILED (TABLEAU CROISÉ) ================= */
@@ -84,7 +84,7 @@ export async function fetchSalesSummary(
         start_date: params?.start_date,
         end_date: params?.end_date,
         store_id: params?.store_id,
-        employee_id: params?.employee_id,
+        seller_name: params?.seller_name,
       },
     },
   );
@@ -122,7 +122,7 @@ export async function fetchSalesTrend(
         start_date: params?.start_date,
         end_date: params?.end_date,
         store_id: params?.store_id,
-        employee_id: params?.employee_id,
+        seller_name: params?.seller_name,
       },
     },
   );
