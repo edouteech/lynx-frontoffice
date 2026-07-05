@@ -515,6 +515,13 @@ export interface Sale {
   type_facture?: string | null
   code_dgi?: string | null
   periode_w?: string | null
+  dgi_status?: 'sent' | 'failed' | null
+  dgi_uid?: string | null
+  dgi_date?: string | null
+  dgi_mecef_code?: string | null
+  dgi_min?: string | null
+  dgi_counters?: string | null
+  dgi_error?: string | null
   discount_percentage: number
   extra_fees: number
   total?: number

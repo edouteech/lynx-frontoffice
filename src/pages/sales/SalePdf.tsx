@@ -82,6 +82,10 @@ const s = StyleSheet.create({
   noteBox: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 16 },
   noteText: { fontSize: 10, color: '#475569', fontStyle: 'italic' },
 
+  // DGI (facture normalisée)
+  dgiRow: { flexDirection: 'row', gap: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 16, marginBottom: 16 },
+  dgiQr: { width: 70, height: 70 },
+
   // footer
   footer: {
     position: 'absolute', bottom: 24, left: 36, right: 36,
@@ -105,13 +109,25 @@ function fmtDateOnly(d: string | null | undefined) {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// Date/heure MECeF renvoyée par la DGI, stockée telle quelle ("YYYY-MM-DD HH:mm:ss")
+// — reformatée en jj/mm/aaaa hh:mm:ss sans passer par un fuseau horaire local.
+function fmtDgiDateTime(d: string | null | undefined): string | null {
+  if (!d) return null
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/)
+  if (!m) return d
+  const [, y, mo, day, h, mi, s] = m
+  return `${day}/${mo}/${y} ${h}:${mi}:${s}`
+}
+
 interface Props {
   sale: Sale
   organization: Organization | null
   receiptSetting?: ReceiptSetting | null
+  /** Data URL (PNG) du QR code DGI, généré au préalable via `qrcode` (voir handlePrint dans form.tsx). */
+  dgiQrDataUrl?: string | null
 }
 
-export default function SalePdf({ sale, organization, receiptSetting }: Props) {
+export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataUrl }: Props) {
   const items = sale.items ?? []
   const invoiceNumber = sale.invoice_number ?? `FAC-${String(sale.id).padStart(6, '0')}`
 
@@ -124,9 +140,7 @@ export default function SalePdf({ sale, organization, receiptSetting }: Props) {
 
   const logoUrl = receiptSetting?.printed_receipt_logo
     ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
-    : organization?.logo
-      ? resolveBackendUrl(organization.logo)
-      : null
+    : null
   
   return (
     <Document title={invoiceNumber} author={organization?.name ?? 'Lynx'}>
@@ -283,6 +297,27 @@ export default function SalePdf({ sale, organization, receiptSetting }: Props) {
             {sale.note && (
               <View style={s.noteBox}>
                 <Text style={s.noteText}>{sale.note}</Text>
+              </View>
+            )}
+
+            {sale.code_dgi && (
+              <View style={s.dgiRow}>
+                {dgiQrDataUrl && <Image src={dgiQrDataUrl} style={s.dgiQr} />}
+                <View>
+                  <Text style={[s.paymentLabel, { textTransform: 'uppercase', marginBottom: 4 }]}>Facture normalisée — DGI</Text>
+                  {sale.dgi_mecef_code && (
+                    <View style={s.paymentTextRow}><Text style={s.paymentLabel}>Code MECeF/DGI : </Text><Text style={s.paymentValue}>{sale.dgi_mecef_code}</Text></View>
+                  )}
+                  {sale.dgi_min && (
+                    <View style={s.paymentTextRow}><Text style={s.paymentLabel}>MECeF NIM : </Text><Text style={s.paymentValue}>{sale.dgi_min}</Text></View>
+                  )}
+                  {sale.dgi_counters && (
+                    <View style={s.paymentTextRow}><Text style={s.paymentLabel}>MECeF Compteurs : </Text><Text style={s.paymentValue}>{sale.dgi_counters}</Text></View>
+                  )}
+                  {fmtDgiDateTime(sale.dgi_date) && (
+                    <View style={s.paymentTextRow}><Text style={s.paymentLabel}>MECeF Heure : </Text><Text style={s.paymentValue}>{fmtDgiDateTime(sale.dgi_date)}</Text></View>
+                  )}
+                </View>
               </View>
             )}
           </View>

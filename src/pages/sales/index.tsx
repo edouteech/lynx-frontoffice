@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, FileText, Filter, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Eye, FileText, Filter, Plus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import Swal from 'sweetalert2'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
-import { deleteSale, fetchSales } from '../../api/sales'
+import { confirmSale, deleteSale, fetchSales } from '../../api/sales'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Sale } from '../../types/api'
 
@@ -82,6 +83,35 @@ export default function SalesIndex() {
     } catch (err) { setError(getApiErrorMessage(err)) }
   }, [page, load])
 
+  const handleRetryDgi = useCallback(async (s: Sale) => {
+    void Swal.fire({
+      title: 'Normalisation DGI en cours…',
+      text: 'Merci de patienter, la vente est envoyée à la DGI.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
+    })
+
+    try {
+      const updated = await confirmSale(s.id)
+      void load(page)
+      await Swal.fire({
+        title: 'Normalisation DGI réussie',
+        text: `La vente ${updated.invoice_number ?? ''} a été normalisée et confirmée.`,
+        icon: 'success',
+        confirmButtonColor: '#0F2E4A',
+      })
+    } catch (err) {
+      await Swal.fire({
+        title: 'Échec de la normalisation DGI',
+        text: getApiErrorMessage(err),
+        icon: 'error',
+        confirmButtonColor: '#0F2E4A',
+      })
+    }
+  }, [page, load])
+
   const columns: Column<Sale>[] = useMemo(() => [
     {
       key: 'invoice_number',
@@ -112,9 +142,21 @@ export default function SalesIndex() {
     {
       key: 'status',
       label: 'Statut',
-      render: v => {
+      render: (v, row) => {
         const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.draft
-        return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
+            {row.dgi_status === 'failed' && (
+              <span
+                className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700"
+                title={row.dgi_error ?? 'Échec de la normalisation DGI'}
+              >
+                Échec DGI
+              </span>
+            )}
+          </div>
+        )
       },
     },
     {
@@ -143,12 +185,18 @@ export default function SalesIndex() {
       show: s => s.status === 'confirmed',
     },
     {
+      label: 'Réessayer DGI',
+      icon: RefreshCw,
+      onClick: s => void handleRetryDgi(s),
+      show: s => s.status === 'draft' && s.dgi_status === 'failed',
+    },
+    {
       label: 'Supprimer',
       icon: Trash2,
       variant: 'danger',
       onClick: s => void handleDelete(s),
     },
-  ], [navigate, handleDelete])
+  ], [navigate, handleDelete, handleRetryDgi])
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader2, Printer } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { fetchSale } from '../../api/sales'
 import { fetchReceiptSetting } from '../../api/receiptSetting'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -18,6 +19,16 @@ function fmtMoney(v: number): string {
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+// Date/heure MECeF renvoyée par la DGI, stockée telle quelle ("YYYY-MM-DD HH:mm:ss")
+// — reformatée en jj/mm/aaaa hh:mm:ss sans passer par un fuseau horaire local.
+function fmtDgiDateTime(d: string | null | undefined): string | null {
+  if (!d) return null
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/)
+  if (!m) return d
+  const [, y, mo, day, h, mi, s] = m
+  return `${day}/${mo}/${y} ${h}:${mi}:${s}`
 }
 
 const PRINT_STYLES = `
@@ -141,9 +152,7 @@ export default function InvoicePage() {
 
   const logoUrl = receiptSetting?.printed_receipt_logo
     ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
-    : currentOrganization?.logo
-      ? resolveBackendUrl(currentOrganization.logo)
-      : null
+    : null
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white pb-10">
@@ -306,6 +315,19 @@ export default function InvoicePage() {
               style={{ backgroundColor: '#F8FAFC' }}
             >
               {sale.note}
+            </div>
+          )}
+
+          {sale.code_dgi && (
+            <div className="mb-6 flex items-center gap-6 border-t border-[#E2E8F0] pt-6">
+              <QRCodeSVG value={sale.code_dgi} size={96} />
+              <div className="space-y-1 text-xs text-[#475569]">
+                <p className="font-bold uppercase tracking-wide text-[#1E293B]">Facture normalisée — DGI</p>
+                {sale.dgi_mecef_code && <p>Code MECeF/DGI : <span className="font-mono">{sale.dgi_mecef_code}</span></p>}
+                {sale.dgi_min && <p>MECeF NIM : <span className="font-mono">{sale.dgi_min}</span></p>}
+                {sale.dgi_counters && <p>MECeF Compteurs : <span className="font-mono">{sale.dgi_counters}</span></p>}
+                {fmtDgiDateTime(sale.dgi_date) && <p>MECeF Heure : <span className="font-mono">{fmtDgiDateTime(sale.dgi_date)}</span></p>}
+              </div>
             </div>
           )}
 

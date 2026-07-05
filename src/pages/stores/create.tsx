@@ -162,7 +162,7 @@ export function StoreCreateModal({
               htmlFor="store-form-token"
               className="mb-1 block text-sm font-medium text-gray-700"
             >
-              Token
+              Token (clé DGI)
             </label>
             <input
               id="store-form-token"
@@ -172,6 +172,9 @@ export function StoreCreateModal({
               placeholder="Ex. STORE_ABC_123"
               autoComplete="off"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Clé fournie par la DGI (facture normalisée) pour ce magasin. Laisser vide si la normalisation DGI n'est pas activée.
+            </p>
           </div>
           <div>
             <label
