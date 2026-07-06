@@ -231,6 +231,7 @@ export interface PaymentMethodCategory {
   id: number
   name: string
   is_available: boolean
+  deducts_customer_balance: boolean
   created_at: string
   updated_at: string
 }

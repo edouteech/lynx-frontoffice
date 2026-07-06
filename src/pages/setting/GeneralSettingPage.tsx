@@ -248,11 +248,11 @@ export default function GeneralSettingPage() {
       },
       */
       {
-        key: 'customer_account_payment' as const,
+        key: 'customer_account_payments' as const,
         title: 'Paiement compte client',
         description: "Fonctionnalité permettant aux clients de disposer d'un solde de compte pour effectuer des opérations (dépôt, achat à crédit etc...)",
         icon: <Wallet className="h-5 w-5" />,
-        checked: data.customer_account_payment,
+        checked: data.customer_account_payments,
       },
       {
         key: 'online_articles' as const,
@@ -315,7 +315,7 @@ export default function GeneralSettingPage() {
           | 'negative_stock_alerts'
           | 'item_buyback'
           | 'payment_methods'
-          | 'customer_account_payment'
+          | 'customer_account_payments'
           | 'commission'
           | 'online_articles'
         >

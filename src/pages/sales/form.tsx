@@ -41,6 +41,8 @@ import { openCashRegisterSession } from '../../api/cashRegisterSessions'
 
 import { getApiErrorMessage } from '../../lib/apiError'
 
+import { fetchGeneralSetting } from '../../api/generalSettings'
+
 import { useAuth } from '../../contexts/useAuth'
 
 import Swal from 'sweetalert2'
@@ -50,6 +52,7 @@ import QRCode from 'qrcode'
 import SalePdf from './SalePdf'
 
 import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, RestaurantOption, Sale, SaleItem, Store } from '../../types/api'
+import type { GeneralSetting } from '../../types/generalSetting'
 
 
 
@@ -164,6 +167,8 @@ export default function SaleForm() {
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])
 
   const [storePaymentMethods, setStorePaymentMethods] = useState<PaymentMethod[]>([])
+
+  const [generalSetting, setGeneralSetting] = useState<GeneralSetting | null>(null)
 
   const [restaurantOptions, setRestaurantOptions] = useState<RestaurantOption[]>([])
 
@@ -329,9 +334,9 @@ export default function SaleForm() {
 
   useEffect(() => {
 
-    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1)])
+    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1), fetchGeneralSetting()])
 
-      .then(async ([strs, prods, cats, custs]) => {
+      .then(async ([strs, prods, cats, custs, setting]) => {
 
         setStores(strs.data)
 
@@ -340,6 +345,8 @@ export default function SaleForm() {
         setCategories(cats.data)
 
         setCustomers(custs.data)
+
+        setGeneralSetting(setting)
 
 
 
@@ -891,6 +898,21 @@ export default function SaleForm() {
 
   const total    = subtotal - discount + (parseFloat(extraFees) || 0)
 
+  // ── Paiement par solde client ("Compte client") ───────────────────────────
+  const customerAccountPaymentsEnabled = generalSetting?.customer_account_payments ?? false
+
+  const availablePaymentMethods = storePaymentMethods.filter(
+    m => !m.category?.deducts_customer_balance || customerAccountPaymentsEnabled
+  )
+
+  const selectedPaymentMethod = storePaymentMethods.find(m => String(m.id) === paymentMethodId)
+
+  const requiresCustomerBalance = selectedPaymentMethod?.category?.deducts_customer_balance ?? false
+
+  const selectedCustomerBalance = customerId
+    ? customers.find(c => String(c.id) === customerId)?.account_balance ?? 0
+    : 0
+
 
 
   // ── Ajouter un article ─────────────────────────────────────────────────────
@@ -1129,6 +1151,8 @@ export default function SaleForm() {
     if (!storeId) { setError('Veuillez sélectionner un magasin.'); return }
 
     if (!isEdit && pendingItems.length === 0) { setError('Ajoutez au moins un article avant d\'enregistrer.'); return }
+
+    if (requiresCustomerBalance && !customerId) { setError('Veuillez sélectionner un client pour un paiement par compte client.'); return }
 
 
 
@@ -2521,13 +2545,27 @@ export default function SaleForm() {
 
                 >
 
-                  {storePaymentMethods.map(m => (
+                  {availablePaymentMethods.map(m => (
 
                     <option key={m.id} value={m.id}>{m.name}</option>
 
                   ))}
 
                 </Sel>
+
+                {requiresCustomerBalance && (
+
+                  <p className={`mt-1.5 text-xs ${selectedCustomerBalance < total ? 'text-red-500' : 'text-gray-500'}`}>
+
+                    {customerId
+
+                      ? `Solde du client : ${selectedCustomerBalance.toLocaleString('fr-FR')} CFA${selectedCustomerBalance < total ? ' (insuffisant)' : ''}`
+
+                      : 'Sélectionnez un client pour ce moyen de paiement.'}
+
+                  </p>
+
+                )}
 
               </div>
 

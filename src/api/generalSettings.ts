@@ -20,7 +20,7 @@ export async function updateGeneralSetting(
       | 'negative_stock_alerts'
       | 'item_buyback'
       | 'payment_methods'
-      | 'customer_account_payment'
+      | 'customer_account_payments'
       | 'commission'
     >
   >
