@@ -8,16 +8,26 @@ export interface FetchSalesParams {
   from?: string | null
   to?: string | null
   customer_id?: number | null
+  channel?: 'web' | 'pos' | null
 }
 
-export async function fetchSales(params: FetchSalesParams = {}): Promise<Paginated<Sale>> {
+export interface SalesStats {
+  count: number
+  total_subtotal: number
+  total_discount: number
+}
+
+export async function fetchSales(
+  params: FetchSalesParams = {}
+): Promise<Paginated<Sale> & { stats?: SalesStats }> {
   const p: Record<string, string | number> = { page: params.page ?? 1 }
   if (params.store_id) p.store_id = params.store_id
   if (params.status) p.status = params.status
   if (params.from) p.from = params.from
   if (params.to) p.to = params.to
   if (params.customer_id) p.customer_id = params.customer_id
-  const { data } = await api.get<Paginated<Sale>>('/sales', { params: p })
+  if (params.channel) p.channel = params.channel
+  const { data } = await api.get<Paginated<Sale> & { stats?: SalesStats }>('/sales', { params: p })
   return data
 }
 

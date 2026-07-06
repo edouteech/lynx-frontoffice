@@ -129,7 +129,7 @@ interface Props {
 
 export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataUrl }: Props) {
   const items = sale.items ?? []
-  const invoiceNumber = sale.invoice_number ?? `FAC-${String(sale.id).padStart(6, '0')}`
+  const invoiceNumber = sale.invoice_number ?? `#${String(sale.id).padStart(4, '0')}`
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
   const discountAmount = subtotal * ((sale.discount_percentage ?? 0) / 100)

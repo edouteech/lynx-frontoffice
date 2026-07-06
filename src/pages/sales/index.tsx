@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, FileText, Filter, Plus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react'
+import { Eye, FileText, Filter, Globe, Plus, RefreshCw, RotateCcw, Store as StoreIcon, Trash2 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
 import { confirmSale, deleteSale, fetchSales } from '../../api/sales'
+import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { Sale } from '../../types/api'
+import type { Sale, Store } from '../../types/api'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
@@ -43,36 +44,62 @@ export default function SalesIndex() {
   const [appliedFrom, setAppliedFrom] = useState<string | null>(null)
   const [appliedTo, setAppliedTo] = useState<string | null>(null)
 
+  // Canal déduit du n° de facture par le backend : "FAC-{caisse}W-..." = web, sinon POS.
+  // `channel` alimente le select, `appliedChannel` déclenche le filtre (au clic sur "Filtrer").
+  const [channel, setChannel] = useState<'' | 'web' | 'pos'>('')
+  const [appliedChannel, setAppliedChannel] = useState<'' | 'web' | 'pos'>('')
+
+  // Magasin : même mécanique brouillon/appliqué que le canal.
+  const [stores, setStores] = useState<Store[]>([])
+  const [storeId, setStoreId] = useState('')
+  const [appliedStoreId, setAppliedStoreId] = useState('')
+
+  useEffect(() => {
+    fetchStores(1).then(res => setStores(res.data)).catch(() => {})
+  }, [])
+
   const load = useCallback(async (p: number) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchSales({ page: p, from: appliedFrom, to: appliedTo })
+      const res = await fetchSales({
+        page: p,
+        from: appliedFrom,
+        to: appliedTo,
+        channel: appliedChannel || null,
+        store_id: appliedStoreId ? Number(appliedStoreId) : null,
+      })
       setPaginated({ data: res.data, current_page: res.current_page, last_page: res.last_page, total: res.total })
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
       setLoading(false)
     }
-  }, [appliedFrom, appliedTo])
+  }, [appliedFrom, appliedTo, appliedChannel, appliedStoreId])
 
   useEffect(() => { void load(page) }, [page, load])
 
-  const applyDateFilter = useCallback(() => {
+  const applyFilters = useCallback(() => {
     setAppliedFrom(from)
     setAppliedTo(to)
+    setAppliedChannel(channel)
+    setAppliedStoreId(storeId)
     setPage(1)
-  }, [from, to])
+  }, [from, to, channel, storeId])
 
-  const clearDateFilter = useCallback(() => {
+  const clearFilters = useCallback(() => {
     setAppliedFrom(null)
     setAppliedTo(null)
     setFrom(firstOfMonthISO() + 'T00:00')
     setTo(todayISO() + 'T23:59')
+    setChannel('')
+    setAppliedChannel('')
+    setStoreId('')
+    setAppliedStoreId('')
     setPage(1)
   }, [])
 
-  const filterActive = appliedFrom !== null || appliedTo !== null
+  const filterActive = appliedFrom !== null || appliedTo !== null || appliedChannel !== '' || appliedStoreId !== ''
 
   const handleDelete = useCallback(async (s: Sale) => {
     const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
@@ -215,10 +242,10 @@ export default function SalesIndex() {
         </button>
       </header>
 
-      {/* Filtre par plage de dates */}
+      {/* Filtres */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-4">
             <div className="mb-1 text-xs font-semibold text-gray-600">Période</div>
             <DateRangePicker
               from={from}
@@ -226,21 +253,55 @@ export default function SalesIndex() {
               onRangeChange={(f, t) => { setFrom(f); setTo(t) }}
             />
           </div>
-          <div className="flex gap-2">
+          <label className="lg:col-span-3">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
+            <div className="relative">
+              <StoreIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                aria-label="Magasin"
+                value={storeId}
+                onChange={e => setStoreId(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                <option value="">Tous les magasins</option>
+                {stores.map(s => (
+                  <option key={s.id} value={String(s.id)}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+          <label className="lg:col-span-3">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Canal</div>
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                aria-label="Canal"
+                value={channel}
+                onChange={e => setChannel(e.target.value as '' | 'web' | 'pos')}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                <option value="">Tous les canaux</option>
+                <option value="web">Web</option>
+                <option value="pos">Point de vente</option>
+              </select>
+            </div>
+          </label>
+          <div className="flex gap-2 lg:col-span-2">
             {filterActive && (
               <button
                 type="button"
-                onClick={clearDateFilter}
+                onClick={clearFilters}
+                title="Réinitialiser les filtres"
+                aria-label="Réinitialiser les filtres"
                 className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 <RotateCcw className="h-4 w-4" />
-                Réinitialiser
               </button>
             )}
             <button
               type="button"
-              onClick={applyDateFilter}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2563EB]"
+              onClick={applyFilters}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2563EB]"
             >
               <Filter className="h-4 w-4" />
               Filtrer

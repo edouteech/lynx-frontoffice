@@ -5,6 +5,7 @@ import {
   Eye,
   FileText,
   Filter,
+  Globe,
   Loader2,
   RotateCcw,
   Store,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
-import { fetchSales } from '../../api/sales'
+import { fetchSales, type SalesStats } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Sale, Store as StoreType } from '../../types/api'
@@ -84,12 +85,14 @@ export default function SalesInvoicesPage() {
   /* filters */
   const [storeId, setStoreId] = useState<string>('all')
   const [status, setStatus] = useState<string>('confirmed')
+  const [channel, setChannel] = useState<'' | 'web' | 'pos'>('')
   const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
   const [to, setTo] = useState(todayISO() + 'T23:59')
 
   /* applied (only changes when user clicks Filtrer) */
   const [appliedStoreId, setAppliedStoreId] = useState<string>('all')
   const [appliedStatus, setAppliedStatus] = useState<string>('confirmed')
+  const [appliedChannel, setAppliedChannel] = useState<'' | 'web' | 'pos'>('')
   const [appliedFrom, setAppliedFrom] = useState(firstOfMonthISO() + 'T00:00')
   const [appliedTo, setAppliedTo] = useState(todayISO() + 'T23:59')
 
@@ -98,6 +101,15 @@ export default function SalesInvoicesPage() {
   const [stores, setStores] = useState<StoreType[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  /* Totaux calculés côté serveur sur l'ensemble des ventes filtrées (pas juste la page affichée). */
+  const [stats, setStats] = useState<SalesStats | null>(null)
+
+  /* pagination serveur : ce rapport ne récupérait avant que la page 1 (max 50 lignes),
+     sans moyen d'aller plus loin — les factures plus anciennes étaient invisibles. */
+  const [page, setPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   /* load stores once */
   useEffect(() => {
@@ -109,43 +121,51 @@ export default function SalesInvoicesPage() {
     setError(null)
     try {
       const res = await fetchSales({
+        page,
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
         status: appliedStatus !== 'all' ? appliedStatus : null,
+        channel: appliedChannel || null,
         from: appliedFrom || null,
         to: appliedTo || null,
       })
       setSales(res.data)
+      setLastPage(res.last_page)
+      setTotal(res.total)
+      setStats(res.stats ?? null)
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
       setLoading(false)
     }
-  }, [appliedStoreId, appliedStatus, appliedFrom, appliedTo])
+  }, [page, appliedStoreId, appliedStatus, appliedChannel, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
 
   const applyFilters = () => {
     setAppliedStoreId(storeId)
     setAppliedStatus(status)
+    setAppliedChannel(channel)
     setAppliedFrom(from)
     setAppliedTo(to)
+    setPage(1)
   }
 
   const clearFilters = () => {
     const f = firstOfMonthISO() + 'T00:00'
     const t = todayISO() + 'T23:59'
-    setStoreId('all'); setStatus('confirmed'); setFrom(f); setTo(t)
-    setAppliedStoreId('all'); setAppliedStatus('confirmed'); setAppliedFrom(f); setAppliedTo(t)
+    setStoreId('all'); setStatus('confirmed'); setChannel(''); setFrom(f); setTo(t)
+    setAppliedStoreId('all'); setAppliedStatus('confirmed'); setAppliedChannel(''); setAppliedFrom(f); setAppliedTo(t)
+    setPage(1)
   }
 
-  const hasFilters = storeId !== 'all' || status !== 'confirmed' || from !== appliedFrom || to !== appliedTo
+  const hasFilters = storeId !== 'all' || status !== 'confirmed' || channel !== '' || from !== appliedFrom || to !== appliedTo
 
   /* KPIs */
-  const totals = useMemo(() => sales.reduce((acc, s) => ({
-    total: acc.total + (Number(s.subtotal) ?? 0),
-    count: acc.count + 1,
-    discount: acc.discount + ((Number(s.subtotal) ?? 0) * ((Number(s.discount_percentage) ?? 0) / 100)),
-  }), { total: 0, count: 0, discount: 0 }), [sales])
+  const totals = useMemo(() => ({
+    total: stats?.total_subtotal ?? 0,
+    count: stats?.count ?? 0,
+    discount: stats?.total_discount ?? 0,
+  }), [stats])
 
   /* columns */
   const columns: Column<Sale>[] = useMemo(() => [
@@ -159,7 +179,9 @@ export default function SalesInvoicesPage() {
           <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600">
             <FileText className="h-4 w-4" />
           </div>
-          <span className="font-bold text-gray-900">{String(v ?? `FAC-${String(row.id).padStart(6, '0')}`)}</span>
+          <span className="font-bold text-gray-900">
+            {v ? String(v) : `#${String(row.id).padStart(4, '0')}`}
+          </span>
         </div>
       ),
     },
@@ -255,7 +277,23 @@ export default function SalesInvoicesPage() {
             </select>
           </label>
 
-          <div className="lg:col-span-4">
+          <label className="lg:col-span-2">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Canal</div>
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                value={channel}
+                onChange={(e) => setChannel(e.target.value as '' | 'web' | 'pos')}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                <option value="">Tous les canaux</option>
+                <option value="web">Web</option>
+                <option value="pos">Point de vente</option>
+              </select>
+            </div>
+          </label>
+
+          <div className="lg:col-span-3">
             <div className="mb-1 text-xs font-semibold text-gray-600">Période</div>
             <DateRangePicker
               from={from}
@@ -264,11 +302,13 @@ export default function SalesInvoicesPage() {
             />
           </div>
 
-          <div className="lg:col-span-3 flex gap-2">
+          <div className="lg:col-span-2 flex gap-2">
             {hasFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
+                title="Réinitialiser les filtres"
+                aria-label="Réinitialiser les filtres"
                 className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -327,6 +367,13 @@ export default function SalesInvoicesPage() {
           searchPlaceholder="Rechercher une facture..."
           exportFilename="factures-ventes"
           getRowId={(r) => String(r.id)}
+          serverPagination={{
+            currentPage: page,
+            lastPage,
+            total,
+            onPageChange: setPage,
+            disabled: loading,
+          }}
         />
       )}
     </div>

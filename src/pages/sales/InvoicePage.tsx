@@ -148,7 +148,7 @@ export default function InvoicePage() {
   const discount = sale.discount_percentage ? subtotal * (sale.discount_percentage / 100) : 0
   const extraFees = sale.extra_fees ?? 0
   const total = subtotal - discount + extraFees
-  const invoiceNumber = sale.invoice_number ?? `FAC-${String(sale.id).padStart(6, '0')}`
+  const invoiceNumber = sale.invoice_number ?? `#${String(sale.id).padStart(4, '0')}`
 
   const logoUrl = receiptSetting?.printed_receipt_logo
     ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
