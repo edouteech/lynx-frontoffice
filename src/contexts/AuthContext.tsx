@@ -11,6 +11,8 @@ import { syncStoredOrganizationIdWithUser } from '../lib/syncStoredOrganization'
 import type { Organization, User } from '../types/api'
 import { AuthContext } from './authContextBase'
 
+const PUBLIC_AUTH_PATHS = ['/login', '/register-request', '/forgot-password', '/reset-password']
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedListener(() => {
       clearSession()
+      if (PUBLIC_AUTH_PATHS.includes(window.location.pathname)) return
       navigate('/login', { replace: true })
     })
     return () => setUnauthorizedListener(null)
