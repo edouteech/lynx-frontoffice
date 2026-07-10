@@ -4,6 +4,7 @@ import DataTable, {
   type Action,
   type Column,
 } from '../../components/DataTable'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import Modal from '../../components/Modal'
 import {
   createDiscount,
@@ -52,6 +53,7 @@ export default function DiscountsIndex() {
   const [editing, setEditing] = useState<Discount | null>(null)
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   // Status
   const [isActive, setIsActive] = useState(true)
@@ -342,6 +344,24 @@ export default function DiscountsIndex() {
     [page, editing?.id]
   )
 
+  const handleToggleStatus = useCallback(async (d: Discount, next: boolean) => {
+    if (togglingId !== null) return
+    setError(null)
+    setTogglingId(d.id)
+    try {
+      await updateDiscount(d.id, { is_active: next })
+      setPaginated((prev) =>
+        prev
+          ? { ...prev, data: prev.data.map((x) => (x.id === d.id ? { ...x, is_active: next } : x)) }
+          : prev
+      )
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId])
+
   function toggleDayOfWeek(iso: number) {
     setDaysOfWeek(prev => prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso])
   }
@@ -419,12 +439,17 @@ export default function DiscountsIndex() {
       {
         key: 'is_active',
         label: 'Statut',
-        render: (v) => v
-          ? <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">Actif</span>
-          : <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">Inactif</span>,
+        render: (_v, item) => (
+          <ToggleSwitch
+            checked={item.is_active ?? true}
+            disabled={togglingId === item.id}
+            onChange={(next) => void handleToggleStatus(item, next)}
+            label="Activer/désactiver cette réduction"
+          />
+        ),
       },
     ],
-    [stores]
+    [stores, togglingId, handleToggleStatus]
   )
 
   const actions: Action<Discount>[] = useMemo(

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import type { Favorite } from '../../types/api'
-import { deleteFavorite, fetchFavorites } from '../../api/favorites'
+import { deleteFavorite, fetchFavorites, updateFavorite } from '../../api/favorites'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { FavoriteCreateModal } from './create'
 
@@ -18,6 +19,7 @@ export default function FavoritesIndex() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalFavorite, setModalFavorite] = useState<Favorite | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const refreshList = useCallback(async () => {
     setError(null)
@@ -78,17 +80,28 @@ export default function FavoritesIndex() {
     [refreshList]
   )
 
+  const handleToggleStatus = useCallback(async (f: Favorite, next: boolean) => {
+    if (togglingId !== null) return
+    setError(null)
+    setTogglingId(f.id)
+    try {
+      const status = next ? 'active' : 'inactive'
+      await updateFavorite(f.id, { status })
+      setPaginated((prev) =>
+        prev
+          ? { ...prev, data: prev.data.map((x) => (x.id === f.id ? { ...x, status } : x)) }
+          : prev
+      )
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId])
+
   const columns: Column<Favorite>[] = useMemo(
     () => [
       { key: 'name', label: 'Nom', sortable: true },
-      {
-        key: 'status',
-        label: 'Statut',
-        sortable: true,
-        render: (v) => (
-          <span className="capitalize text-gray-700">{String(v)}</span>
-        ),
-      },
       {
         key: 'stores',
         label: 'Magasins',
@@ -107,8 +120,20 @@ export default function FavoritesIndex() {
           </span>
         ),
       },
+      {
+        key: 'status',
+        label: 'Statut',
+        render: (_v, row) => (
+          <ToggleSwitch
+            checked={row.status === 'active'}
+            disabled={togglingId === row.id}
+            onChange={(next) => void handleToggleStatus(row, next)}
+            label="Activer/désactiver ce favori"
+          />
+        ),
+      },
     ],
-    []
+    [togglingId, handleToggleStatus]
   )
 
   const actions: Action<Favorite>[] = useMemo(
