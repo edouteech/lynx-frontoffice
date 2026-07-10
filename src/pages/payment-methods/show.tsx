@@ -8,6 +8,7 @@ import {
 } from '../../api/paymentMethods'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import type { PaymentMethod, Store } from '../../types/api'
 import { PaymentMethodCreateModal } from './create'
 
@@ -23,6 +24,7 @@ export default function PaymentMethodShow() {
   const [loadingStores, setLoadingStores] = useState(false)
   const [savingStoreId, setSavingStoreId] = useState<number | null>(null)
   const [allowedStoreIds, setAllowedStoreIds] = useState<number[]>([])
+  const [togglingStatus, setTogglingStatus] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -80,6 +82,20 @@ export default function PaymentMethodShow() {
       cancelled = true
     }
   }, [paymentMethod])
+
+  async function handleToggleStatus(next: boolean) {
+    if (!id || !paymentMethod) return
+    setTogglingStatus(true)
+    setError(null)
+    try {
+      const updated = await updatePaymentMethod(id, { status: next ? 'active' : 'inactive' })
+      setPaymentMethod(updated)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingStatus(false)
+    }
+  }
 
   async function handleDelete() {
     if (!paymentMethod) return
@@ -189,6 +205,20 @@ export default function PaymentMethodShow() {
                 Détails
               </h2>
               <dl className="space-y-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <dt className="text-sm font-medium text-gray-500">Statut</dt>
+                  <dd className="flex items-center gap-3">
+                    <ToggleSwitch
+                      checked={paymentMethod.status === 'active'}
+                      disabled={togglingStatus}
+                      onChange={(next) => void handleToggleStatus(next)}
+                      label="Activer/désactiver ce moyen de paiement"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {paymentMethod.status === 'active' ? 'Actif' : 'Désactivé'}
+                    </span>
+                  </dd>
+                </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <dt className="text-sm font-medium text-gray-500">Catégorie</dt>
                   <dd className="text-base text-gray-900">

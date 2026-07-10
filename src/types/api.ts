@@ -244,6 +244,7 @@ export interface PaymentMethod {
   account_number: string | null
   token?: string | null
   payment_method_category_id: number
+  status: 'active' | 'inactive'
   category?: PaymentMethodCategory
   stores?: Array<Pick<Store, 'id' | 'name'>>
   created_at: string

@@ -5,7 +5,8 @@ import DataTable, {
   type Action,
   type Column,
 } from '../../components/DataTable'
-import { deleteStore, fetchStores } from '../../api/stores'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
+import { deleteStore, fetchStores, updateStore } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Store } from '../../types/api'
 import { STORE_STATUS_OPTIONS } from './constants'
@@ -25,6 +26,7 @@ export default function StoresIndex() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalStore, setModalStore] = useState<Store | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const refreshList = useCallback(async () => {
     setError(null)
@@ -91,6 +93,25 @@ export default function StoresIndex() {
     [page, statusFilter]
   )
 
+  const handleToggleStatus = useCallback(async (m: Store, next: boolean) => {
+    if (togglingId !== null) return
+    setError(null)
+    setTogglingId(m.id)
+    try {
+      const status = next ? 'active' : 'inactive'
+      await updateStore(m.id, { status })
+      setPaginated((prev) =>
+        prev
+          ? { ...prev, data: prev.data.map((s) => (s.id === m.id ? { ...s, status } : s)) }
+          : prev
+      )
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId])
+
   const columns: Column<Store>[] = useMemo(
     () => [
       { key: 'name', label: 'Nom', sortable: true },
@@ -126,12 +147,17 @@ export default function StoresIndex() {
         key: 'status',
         label: 'Statut',
         sortable: true,
-        render: (v) => (
-          <span className="capitalize text-gray-700">{String(v)}</span>
+        render: (_v, item) => (
+          <ToggleSwitch
+            checked={item.status === 'active'}
+            disabled={togglingId === item.id}
+            onChange={(next) => void handleToggleStatus(item, next)}
+            label="Activer/désactiver ce magasin"
+          />
         ),
       },
     ],
-    []
+    [togglingId, handleToggleStatus]
   )
 
   const actions: Action<Store>[] = useMemo(
