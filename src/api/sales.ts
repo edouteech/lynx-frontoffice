@@ -10,6 +10,7 @@ export interface FetchSalesParams {
   customer_id?: number | null
   channel?: 'web' | 'pos' | null
   type_facture?: 'FV' | 'FA' | 'RA' | null
+  seller_name?: string | null
 }
 
 export interface SalesStats {
@@ -29,6 +30,7 @@ export async function fetchSales(
   if (params.customer_id) p.customer_id = params.customer_id
   if (params.channel) p.channel = params.channel
   if (params.type_facture) p.type_facture = params.type_facture
+  if (params.seller_name) p.seller_name = params.seller_name
   const { data } = await api.get<Paginated<Sale> & { stats?: SalesStats }>('/sales', { params: p })
   return data
 }

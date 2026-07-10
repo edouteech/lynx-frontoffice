@@ -1,0 +1,306 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, Globe, RefreshCw, RotateCcw, Store as StoreIcon, Filter, Trash2 } from 'lucide-react'
+import Swal from 'sweetalert2'
+import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { DateRangePicker } from '../../components/DateRangePicker'
+import { confirmSale, deleteSale, fetchSales } from '../../api/sales'
+import { fetchStores } from '../../api/stores'
+import { getApiErrorMessage } from '../../lib/apiError'
+import type { Sale, Store } from '../../types/api'
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function firstOfMonthISO() {
+  const d = new Date()
+  d.setDate(1)
+  return d.toISOString().slice(0, 10)
+}
+
+export default function PendingOrdersPage() {
+  const navigate = useNavigate()
+  const [page, setPage] = useState(1)
+  const [paginated, setPaginated] = useState<{
+    data: Sale[]
+    current_page: number
+    last_page: number
+    total: number
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
+  const [to, setTo] = useState(todayISO() + 'T23:59')
+  const [appliedFrom, setAppliedFrom] = useState<string | null>(null)
+  const [appliedTo, setAppliedTo] = useState<string | null>(null)
+
+  const [channel, setChannel] = useState<'' | 'web' | 'pos'>('')
+  const [appliedChannel, setAppliedChannel] = useState<'' | 'web' | 'pos'>('')
+
+  const [stores, setStores] = useState<Store[]>([])
+  const [storeId, setStoreId] = useState('')
+  const [appliedStoreId, setAppliedStoreId] = useState('')
+
+  useEffect(() => {
+    fetchStores(1).then(res => setStores(res.data)).catch(() => {})
+  }, [])
+
+  const load = useCallback(async (p: number) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetchSales({
+        page: p,
+        status: 'draft',
+        from: appliedFrom,
+        to: appliedTo,
+        channel: appliedChannel || null,
+        store_id: appliedStoreId ? Number(appliedStoreId) : null,
+      })
+      setPaginated({ data: res.data, current_page: res.current_page, last_page: res.last_page, total: res.total })
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [appliedFrom, appliedTo, appliedChannel, appliedStoreId])
+
+  useEffect(() => { void load(page) }, [page, load])
+
+  const applyFilters = useCallback(() => {
+    setAppliedFrom(from)
+    setAppliedTo(to)
+    setAppliedChannel(channel)
+    setAppliedStoreId(storeId)
+    setPage(1)
+  }, [from, to, channel, storeId])
+
+  const clearFilters = useCallback(() => {
+    setAppliedFrom(null)
+    setAppliedTo(null)
+    setFrom(firstOfMonthISO() + 'T00:00')
+    setTo(todayISO() + 'T23:59')
+    setChannel('')
+    setAppliedChannel('')
+    setStoreId('')
+    setAppliedStoreId('')
+    setPage(1)
+  }, [])
+
+  const filterActive = appliedFrom !== null || appliedTo !== null || appliedChannel !== '' || appliedStoreId !== ''
+
+  const handleDelete = useCallback(async (s: Sale) => {
+    const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
+    if (!window.confirm(`Supprimer la commande ${label} ?`)) return
+    try {
+      await deleteSale(s.id)
+      void load(page)
+    } catch (err) { setError(getApiErrorMessage(err)) }
+  }, [page, load])
+
+  const handleRetryDgi = useCallback(async (s: Sale) => {
+    void Swal.fire({
+      title: 'Normalisation DGI en cours…',
+      text: 'Merci de patienter, la vente est envoyée à la DGI.',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
+    })
+
+    try {
+      const updated = await confirmSale(s.id)
+      void load(page)
+      await Swal.fire({
+        title: 'Normalisation DGI réussie',
+        text: `La vente ${updated.invoice_number ?? ''} a été normalisée et confirmée.`,
+        icon: 'success',
+        confirmButtonColor: '#0F2E4A',
+      })
+    } catch (err) {
+      await Swal.fire({
+        title: 'Échec de la normalisation DGI',
+        text: getApiErrorMessage(err),
+        icon: 'error',
+        confirmButtonColor: '#0F2E4A',
+      })
+    }
+  }, [page, load])
+
+  const columns: Column<Sale>[] = useMemo(() => [
+    {
+      key: 'invoice_number',
+      label: 'N° vente',
+      render: (v, row) => (
+        <span className="font-mono font-semibold text-gray-700">
+          {(v as string) ?? `#${String(row.id).padStart(4, '0')}`}
+        </span>
+      ),
+    },
+    {
+      key: 'store',
+      label: 'Magasin',
+      render: (_, row) => <span className="font-medium text-gray-800">{row.store?.name ?? '—'}</span>,
+    },
+    {
+      key: 'customer',
+      label: 'Client',
+      render: (_, row) => row.customer?.name
+        ? <span className="text-gray-700">{row.customer.name}</span>
+        : <span className="text-gray-400 italic">Anonyme</span>,
+    },
+    {
+      key: 'sale_date',
+      label: 'Date',
+      render: v => v ? new Date(String(v)).toLocaleDateString('fr-FR') : <span className="text-gray-400">—</span>,
+    },
+    {
+      key: 'dgi_status',
+      label: 'Statut',
+      render: (_, row) => (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">Brouillon</span>
+          {row.dgi_status === 'failed' && (
+            <span
+              className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700"
+              title={row.dgi_error ?? 'Échec de la normalisation DGI'}
+            >
+              Échec DGI
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'subtotal',
+      label: 'Total',
+      render: (_, row) => {
+        const sub = (row as Sale & { subtotal?: number }).subtotal ?? 0
+        const disc = sub * ((row.discount_percentage ?? 0) / 100)
+        const total = sub - disc + (row.extra_fees ?? 0)
+        return <span className="font-semibold text-gray-800">{total.toLocaleString('fr-FR')} CFA</span>
+      },
+    },
+  ], [])
+
+  const actions: Action<Sale>[] = useMemo(() => [
+    {
+      label: 'Voir / Modifier',
+      icon: Eye,
+      variant: 'primary',
+      onClick: s => navigate(`/sales/${s.id}/edit`),
+    },
+    {
+      label: 'Réessayer DGI',
+      icon: RefreshCw,
+      onClick: s => void handleRetryDgi(s),
+      show: s => s.dgi_status === 'failed',
+    },
+    {
+      label: 'Supprimer',
+      icon: Trash2,
+      variant: 'danger',
+      onClick: s => void handleDelete(s),
+    },
+  ], [navigate, handleDelete, handleRetryDgi])
+
+  return (
+    <div className="space-y-6">
+      <header className="mb-8">
+        <h1 className="text-3xl font-semibold text-gray-900">Commandes en attente</h1>
+        <p className="mt-1 text-gray-600">Ventes en brouillon (non confirmées), en attente de finalisation.</p>
+      </header>
+
+      {/* Filtres */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-4">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Période</div>
+            <DateRangePicker
+              from={from}
+              to={to}
+              onRangeChange={(f, t) => { setFrom(f); setTo(t) }}
+            />
+          </div>
+          <label className="lg:col-span-3">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
+            <div className="relative">
+              <StoreIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                aria-label="Magasin"
+                value={storeId}
+                onChange={e => setStoreId(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                <option value="">Tous les magasins</option>
+                {stores.map(s => (
+                  <option key={s.id} value={String(s.id)}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+          <label className="lg:col-span-3">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Canal</div>
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                aria-label="Canal"
+                value={channel}
+                onChange={e => setChannel(e.target.value as '' | 'web' | 'pos')}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                <option value="">Tous les canaux</option>
+                <option value="web">Web</option>
+                <option value="pos">Point de vente</option>
+              </select>
+            </div>
+          </label>
+          <div className="flex gap-2 lg:col-span-2">
+            {filterActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                title="Réinitialiser les filtres"
+                aria-label="Réinitialiser les filtres"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={applyFilters}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2563EB]"
+            >
+              <Filter className="h-4 w-4" />
+              Filtrer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {error}
+        </div>
+      )}
+
+      <DataTable<Sale>
+        data={paginated?.data ?? []}
+        columns={columns}
+        actions={actions}
+        loading={loading && !paginated}
+        searchable
+        searchPlaceholder="Rechercher une commande…"
+        serverPagination={
+          paginated
+            ? { currentPage: paginated.current_page, lastPage: paginated.last_page, total: paginated.total, onPageChange: p => setPage(p), disabled: loading }
+            : undefined
+        }
+        emptyMessage="Aucune commande en attente"
+      />
+    </div>
+  )
+}

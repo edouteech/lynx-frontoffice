@@ -9,11 +9,14 @@ import {
   Store,
   TrendingDown,
   Undo2,
+  UserRound,
 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
 import { fetchSales, type SalesStats } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
+import { fetchUsers } from '../../api/users'
+import { fetchSalesByEmployee } from '../../api/salesByEmployee'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Sale, Store as StoreType } from '../../types/api'
 
@@ -81,17 +84,22 @@ export default function ItemBuybacksPage() {
 
   /* filters */
   const [storeId, setStoreId] = useState<string>('all')
+  const [employeeId, setEmployeeId] = useState<string>('all')
   const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
   const [to, setTo] = useState(todayISO() + 'T23:59')
 
   /* applied (ne changent qu'au clic sur "Filtrer") */
   const [appliedStoreId, setAppliedStoreId] = useState<string>('all')
+  const [appliedEmployeeId, setAppliedEmployeeId] = useState<string>('all')
   const [appliedFrom, setAppliedFrom] = useState(firstOfMonthISO() + 'T00:00')
   const [appliedTo, setAppliedTo] = useState(todayISO() + 'T23:59')
 
   /* data */
   const [sales, setSales] = useState<Sale[]>([])
   const [stores, setStores] = useState<StoreType[]>([])
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([
+    { id: 'all', name: 'Tous les employés' },
+  ])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -106,6 +114,31 @@ export default function ItemBuybacksPage() {
     fetchStores(1).then((r) => setStores(r.data)).catch(() => { /* silent */ })
   }, [])
 
+  // Liste des employés : union des utilisateurs de l'organisation et des noms d'opérateur
+  // déjà vus sur des ventes (historique, y compris des noms qui ne correspondent plus à
+  // un compte actif) — même approche que les autres rapports (ex. Ventes par articles).
+  useEffect(() => {
+    async function loadEmployees() {
+      try {
+        const [usersRes, employeesRes] = await Promise.all([
+          fetchUsers(1),
+          fetchSalesByEmployee(),
+        ])
+
+        const names = new Set<string>()
+        usersRes.data.forEach((u) => names.add(u.name))
+        employeesRes.data.forEach((e) => names.add(e.employee))
+
+        setEmployees([
+          { id: 'all', name: 'Tous les employés' },
+          ...Array.from(names).sort((a, b) => a.localeCompare(b)).map((name) => ({ id: name, name })),
+        ])
+      } catch { /* silent */ }
+    }
+
+    void loadEmployees()
+  }, [])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -114,6 +147,7 @@ export default function ItemBuybacksPage() {
         page,
         type_facture: 'RA',
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
+        seller_name: appliedEmployeeId !== 'all' ? appliedEmployeeId : null,
         from: appliedFrom || null,
         to: appliedTo || null,
       })
@@ -126,12 +160,13 @@ export default function ItemBuybacksPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, appliedStoreId, appliedFrom, appliedTo])
+  }, [page, appliedStoreId, appliedEmployeeId, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
 
   const applyFilters = () => {
     setAppliedStoreId(storeId)
+    setAppliedEmployeeId(employeeId)
     setAppliedFrom(from)
     setAppliedTo(to)
     setPage(1)
@@ -140,12 +175,12 @@ export default function ItemBuybacksPage() {
   const clearFilters = () => {
     const f = firstOfMonthISO() + 'T00:00'
     const t = todayISO() + 'T23:59'
-    setStoreId('all'); setFrom(f); setTo(t)
-    setAppliedStoreId('all'); setAppliedFrom(f); setAppliedTo(t)
+    setStoreId('all'); setEmployeeId('all'); setFrom(f); setTo(t)
+    setAppliedStoreId('all'); setAppliedEmployeeId('all'); setAppliedFrom(f); setAppliedTo(t)
     setPage(1)
   }
 
-  const hasFilters = storeId !== 'all' || from !== appliedFrom || to !== appliedTo
+  const hasFilters = storeId !== 'all' || employeeId !== 'all' || from !== appliedFrom || to !== appliedTo
 
   /* KPIs */
   const totals = useMemo(() => {
@@ -223,13 +258,29 @@ export default function ItemBuybacksPage() {
     <div className="space-y-6">
       <header className="mb-1">
         <h1 className="text-2xl font-semibold text-gray-900">Rachats d'articles</h1>
-        <p className="mt-1 text-sm text-gray-500">Historique des rachats clients (stock réincrémenté, sans facture)</p>
+        <p className="mt-1 text-sm text-gray-500">Historique des rachats clients</p>
       </header>
 
       {/* Filters */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
-          <label className="lg:col-span-4">
+          <label className="lg:col-span-3">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Employés</div>
+            <div className="relative">
+              <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
+              >
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+
+          <label className="lg:col-span-3">
             <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
             <div className="relative">
               <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -246,7 +297,7 @@ export default function ItemBuybacksPage() {
             </div>
           </label>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <div className="mb-1 text-xs font-semibold text-gray-600">Période</div>
             <DateRangePicker
               from={from}
@@ -255,7 +306,7 @@ export default function ItemBuybacksPage() {
             />
           </div>
 
-          <div className="lg:col-span-4 flex gap-2">
+          <div className="lg:col-span-3 flex gap-2">
             {hasFilters && (
               <button
                 type="button"
