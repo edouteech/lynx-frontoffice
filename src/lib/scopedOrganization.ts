@@ -25,3 +25,11 @@ export function scopedRole(
 ): Role | null | undefined {
   return scopedOrganizationMembership(u, activeOrganizationId)?.role ?? null
 }
+
+/** Statut actif/désactivé de l'utilisateur dans l'organisation courante (défaut: actif). */
+export function scopedIsActive(
+  u: User | null | undefined,
+  activeOrganizationId?: number | null
+): boolean {
+  return scopedOrganizationMembership(u, activeOrganizationId)?.is_active ?? true
+}

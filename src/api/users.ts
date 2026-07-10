@@ -89,6 +89,15 @@ export async function updateUser(
   return data
 }
 
+/** Active/désactive l'utilisateur dans l'organisation courante uniquement. */
+export async function updateUserStatus(
+  id: number | string,
+  is_active: boolean
+): Promise<User> {
+  const { data } = await api.patch<User>(`/users/${id}/status`, { is_active })
+  return data
+}
+
 export async function fetchUserStoreRoles(
   userId: number | string
 ): Promise<UserStoreRoleRow[]> {

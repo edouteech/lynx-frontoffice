@@ -27,6 +27,7 @@ export interface UserOrganizationMembership {
   user_id?: number
   organization_id: number
   role_id: number | null
+  is_active?: boolean
   organization?: Organization
   role?: Role | null
   created_at?: string

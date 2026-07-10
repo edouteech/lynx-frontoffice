@@ -7,17 +7,19 @@ import {
   fetchUser,
   resendUserCredentials,
   updateUser,
+  updateUserStatus,
   type UserStoreRoleRow,
 } from '../../api/users'
 import { fetchStores } from '../../api/stores'
 import { fetchAllRoles } from '../../api/roles'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import {
   isOwnerRole,
   isOwnerRoleName,
 } from '../../lib/ownerRole'
 import { displayRoleName } from '../../lib/ownerRole'
-import { scopedRole, scopedRoleId } from '../../lib/scopedOrganization'
+import { scopedIsActive, scopedRole, scopedRoleId } from '../../lib/scopedOrganization'
 import { useAuth } from '../../contexts/useAuth'
 import type { Role, Store, User } from '../../types/api'
 import { UserCreateModal } from './create'
@@ -36,7 +38,7 @@ function formatDateTime(value: string | null | undefined): string {
 
 export default function UserShow() {
   const { id } = useParams<{ id: string }>()
-  const { activeOrganizationId } = useAuth()
+  const { user: currentUser, activeOrganizationId } = useAuth()
   const [user, setUser] = useState<User | null>(null)
   const [stores, setStores] = useState<Store[]>([])
   const [roles, setRoles] = useState<Role[]>([])
@@ -50,6 +52,7 @@ export default function UserShow() {
   const [detachingKey, setDetachingKey] = useState<string | null>(null)
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
   const [resendingCredentials, setResendingCredentials] = useState(false)
+  const [togglingStatus, setTogglingStatus] = useState(false)
 
   const loadUser = useCallback(async (options?: { silent?: boolean }) => {
     if (!id) return
@@ -389,6 +392,24 @@ export default function UserShow() {
     }
   }
 
+  async function handleToggleStatus(next: boolean) {
+    if (!id || !user) return
+    const verb = next ? 'réactiver' : 'désactiver'
+    if (!window.confirm(`Voulez-vous ${verb} « ${user.name} » dans cette entreprise ?`)) return
+    setTogglingStatus(true)
+    setError(null)
+    setAttachNotice(null)
+    try {
+      await updateUserStatus(id, next)
+      await loadUser({ silent: true })
+      setAttachNotice(`« ${user.name} » a été ${next ? 'réactivé' : 'désactivé'}.`)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingStatus(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex-1 bg-[#EFF6FF] px-6 py-10 lg:px-10">
@@ -498,6 +519,26 @@ export default function UserShow() {
               </dt>
               <dd className="mt-1 text-sm font-medium text-gray-900 break-all">
                 {user.email}
+              </dd>
+            </div>
+            <div className="border-b border-gray-100 pb-4 sm:border-0 sm:pb-0">
+              <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Statut dans cette entreprise
+              </dt>
+              <dd className="mt-2 flex items-center gap-3">
+                <ToggleSwitch
+                  checked={scopedIsActive(user, activeOrganizationId)}
+                  disabled={isOwnerUser || user.id === currentUser?.id || togglingStatus}
+                  onChange={(next) => void handleToggleStatus(next)}
+                  label={
+                    isOwnerUser || user.id === currentUser?.id
+                      ? 'Statut non modifiable'
+                      : 'Activer/désactiver ce compte'
+                  }
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  {scopedIsActive(user, activeOrganizationId) ? 'Actif' : 'Désactivé'}
+                </span>
               </dd>
             </div>
             <div className="border-b border-gray-100 pb-4 sm:border-0 sm:pb-0">
