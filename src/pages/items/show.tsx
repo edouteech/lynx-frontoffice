@@ -46,6 +46,7 @@ function fmtDatetime(iso: string) {
 const TYPE_META: Record<MovementType, { label: string; className: string }> = {
   sale:         { label: 'Vente',             className: 'bg-red-100    text-red-700'    },
   refund:       { label: 'Remboursement',     className: 'bg-orange-100 text-orange-700' },
+  buyback:      { label: 'Rachat',            className: 'bg-pink-100   text-pink-700'   },
   adjustment:   { label: 'Ajustement',        className: 'bg-amber-100  text-amber-700'  },
   transfer_out: { label: 'Transfert sortant', className: 'bg-purple-100 text-purple-700' },
   transfer_in:  { label: 'Transfert entrant', className: 'bg-blue-100   text-blue-700'   },

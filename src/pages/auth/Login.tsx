@@ -55,7 +55,7 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Connexion</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Connectez-vous avec votre compte Lynx (API Sanctum).
+            Connectez-vous avec votre compte Lynx
           </p>
         </div>
 

@@ -1,333 +1,246 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Filter,
-  Store,
-  UserRound,
-  Printer,
-  RotateCcw,
-  Undo2,
   BadgeDollarSign,
+  Eye,
+  Filter,
+  Loader2,
+  RotateCcw,
+  Store,
   TrendingDown,
-  FileSearch
+  Undo2,
 } from 'lucide-react'
-import DataTable, { type Column } from '../../components/DataTable'
+import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
+import { fetchSales, type SalesStats } from '../../api/sales'
+import { fetchStores } from '../../api/stores'
+import { getApiErrorMessage } from '../../lib/apiError'
+import type { Sale, Store as StoreType } from '../../types/api'
 
-/* ================= TYPES ================= */
+/* ── helpers ──────────────────────────────────────────────────────────────── */
 
-type Row = {
-  code: string
-  cashier: string
-  waiter: string
-  date: string
-  type: string
-  totalHT: number
-  totalTTC: number
-  reduction: number
-  /** Champs techniques pour filtres (maquette). */
-  employeeId: string
-  storeId: string
-  /** Date ISO (ex. 2026-04-15T10:30:00) */
-  soldAt: string
+function fmtMoney(v: number) {
+  return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' CFA'
 }
 
-/* ================= FORMAT UTILS ================= */
-
-function formatFcfa(value: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XOF',
-    maximumFractionDigits: 0,
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '—'
+  return new Date(d).toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   })
-    .format(value)
-    .replace('XOF', 'FCFA')
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value)
+function saleAmount(row: Sale): number {
+  const sub  = Number(row.subtotal) || 0
+  const disc = sub * ((Number(row.discount_percentage) || 0) / 100)
+  const fees = Number(row.extra_fees) || 0
+  return sub - disc + fees
 }
 
-function toDateTimeLocalValue(d: Date, time: string = '00:00') {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${time}`
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
 }
 
-/* ================= KPI CARD ================= */
+function firstOfMonthISO() {
+  const d = new Date()
+  d.setDate(1)
+  return d.toISOString().slice(0, 10)
+}
+
+/* ── KPI card ─────────────────────────────────────────────────────────────── */
 
 function KpiCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  accent,
-  tooltip,
+  label, value, sub, icon: Icon, accent,
 }: {
-  label: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-  icon: React.ComponentType<{ className?: string }>;
-  accent: string;
-  tooltip?: string;
+  label: string
+  value: React.ReactNode
+  sub?: React.ReactNode
+  icon: React.ComponentType<{ className?: string }>
+  accent: string
 }) {
   return (
-    <div 
-      className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md"
-      title={tooltip}
-    >
-      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full opacity-10 ${accent} transition-transform group-hover:scale-110`} />
-      
+    <div className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
+      <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full opacity-10 ${accent}`} />
       <div className="flex items-center gap-3 mb-4">
         <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent} shadow-inner`}>
           <Icon className="h-5 w-5 text-white" />
         </div>
         <p className="text-sm font-bold uppercase tracking-wide text-gray-500">{label}</p>
       </div>
-
-      <div className="mt-2 text-gray-900">
-        {value}
-      </div>
+      <div className="mt-2 text-gray-900">{value}</div>
       {sub && <div className="mt-2 border-t border-gray-50 pt-2">{sub}</div>}
     </div>
-  );
+  )
 }
 
-/* ================= PAGE ================= */
+/* ── page ─────────────────────────────────────────────────────────────────── */
 
 export default function ItemBuybacksPage() {
-  const defaultFrom = useMemo(() => {
-    const d = new Date()
-    d.setDate(1)
-    return toDateTimeLocalValue(d)
-  }, [])
-  const defaultTo = useMemo(() => {
-    const d = new Date()
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-    return toDateTimeLocalValue(lastDay, '23:59')
-  }, [])
+  const navigate = useNavigate()
 
-  /* ================= FILTERS ================= */
-  const [employeeId, setEmployeeId] = useState<string>('all')
+  /* filters */
   const [storeId, setStoreId] = useState<string>('all')
-  const [from, setFrom] = useState(defaultFrom)
-  const [to, setTo] = useState(defaultTo)
+  const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
+  const [to, setTo] = useState(todayISO() + 'T23:59')
 
-  const hasFilters = employeeId !== 'all' || storeId !== 'all' || from !== defaultFrom || to !== defaultTo
+  /* applied (ne changent qu'au clic sur "Filtrer") */
+  const [appliedStoreId, setAppliedStoreId] = useState<string>('all')
+  const [appliedFrom, setAppliedFrom] = useState(firstOfMonthISO() + 'T00:00')
+  const [appliedTo, setAppliedTo] = useState(todayISO() + 'T23:59')
 
-  const handleClearFilters = () => {
-    setEmployeeId('all')
-    setStoreId('all')
-    setFrom(defaultFrom)
-    setTo(defaultTo)
-    setAppliedEmployeeId('all')
-    setAppliedStoreId('all')
-    setAppliedFrom(defaultFrom)
-    setAppliedTo(defaultTo)
+  /* data */
+  const [sales, setSales] = useState<Sale[]>([])
+  const [stores, setStores] = useState<StoreType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  /* Totaux calculés côté serveur sur l'ensemble des rachats filtrés (pas juste la page affichée). */
+  const [stats, setStats] = useState<SalesStats | null>(null)
+
+  const [page, setPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
+  const [total, setTotal] = useState(0)
+
+  useEffect(() => {
+    fetchStores(1).then((r) => setStores(r.data)).catch(() => { /* silent */ })
+  }, [])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetchSales({
+        page,
+        type_facture: 'RA',
+        store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
+        from: appliedFrom || null,
+        to: appliedTo || null,
+      })
+      setSales(res.data)
+      setLastPage(res.last_page)
+      setTotal(res.total)
+      setStats(res.stats ?? null)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [page, appliedStoreId, appliedFrom, appliedTo])
+
+  useEffect(() => { void load() }, [load])
+
+  const applyFilters = () => {
+    setAppliedStoreId(storeId)
+    setAppliedFrom(from)
+    setAppliedTo(to)
+    setPage(1)
   }
 
-  const [appliedEmployeeId, setAppliedEmployeeId] = useState<string>('all')
-  const [appliedStoreId, setAppliedStoreId] = useState<string>('all')
-  const [appliedFrom, setAppliedFrom] = useState(defaultFrom)
-  const [appliedTo, setAppliedTo] = useState(defaultTo)
+  const clearFilters = () => {
+    const f = firstOfMonthISO() + 'T00:00'
+    const t = todayISO() + 'T23:59'
+    setStoreId('all'); setFrom(f); setTo(t)
+    setAppliedStoreId('all'); setAppliedFrom(f); setAppliedTo(t)
+    setPage(1)
+  }
 
-  const employees = [
-    { id: 'all', name: 'Tous les employés' },
-    { id: '1', name: 'Alex T.' },
-    { id: '2', name: 'Yousra' },
-  ]
+  const hasFilters = storeId !== 'all' || from !== appliedFrom || to !== appliedTo
 
-  const stores = [
-    { id: 'all', name: 'Tous les magasins' },
-    { id: '1', name: 'Magasin Centre-ville' },
-    { id: '2', name: 'Magasin Nord' },
-    { id: '3', name: 'Magasin Sud' },
-  ]
-
-  /* ================= MOCK DATA ================= */
-  const rows: Row[] = useMemo(() => {
-    const now = new Date()
-    const fmt = new Intl.DateTimeFormat('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    const make = (offsetDays: number) => {
-      const d = new Date(now)
-      d.setDate(now.getDate() - offsetDays)
-      const soldAt = d.toISOString().slice(0, 19)
-      return { soldAt, label: `${fmt.format(d).replace(',', '')}` }
-    }
-    
-    return [
-      {
-        code: 'RET-249-0380',
-        cashier: 'Alex T.',
-        waiter: '-',
-        date: make(1).label,
-        type: "Rachat Client",
-        totalHT: -500,
-        totalTTC: -500,
-        reduction: 0,
-        employeeId: '1',
-        storeId: '1',
-        soldAt: make(1).soldAt,
-      },
-      {
-        code: 'RET-249-0381',
-        cashier: 'Alex T.',
-        waiter: '-',
-        date: make(3).label,
-        type: "Rachat Client",
-        totalHT: -31800,
-        totalTTC: -31800,
-        reduction: 0,
-        employeeId: '1',
-        storeId: '2',
-        soldAt: make(3).soldAt,
-      },
-      {
-        code: 'RET-249-0382',
-        cashier: 'Yousra',
-        waiter: '-',
-        date: make(7).label,
-        type: "Retour Marchandise",
-        totalHT: -36375,
-        totalTTC: -37900,
-        reduction: 0,
-        employeeId: '2',
-        storeId: '3',
-        soldAt: make(7).soldAt,
-      },
-      {
-        code: 'RET-249-0383',
-        cashier: 'Alex T.',
-        waiter: '-',
-        date: make(10).label,
-        type: "Rachat Client",
-        totalHT: -33000,
-        totalTTC: -33000,
-        reduction: 0,
-        employeeId: '1',
-        storeId: '1',
-        soldAt: make(10).soldAt,
-      },
-      {
-        code: 'RET-249-0384',
-        cashier: 'Yousra',
-        waiter: '-',
-        date: make(15).label,
-        type: "Retour Marchandise",
-        totalHT: -130000,
-        totalTTC: -130000,
-        reduction: 0,
-        employeeId: '2',
-        storeId: '2',
-        soldAt: make(15).soldAt,
-      },
-    ]
-  }, [])
-
-  /* ================= FILTER LOGIC ================= */
-  const filteredRows = useMemo(() => {
-    const fromTs = appliedFrom ? new Date(appliedFrom).getTime() : Number.NEGATIVE_INFINITY
-    const toTs = appliedTo ? new Date(appliedTo).getTime() : Number.POSITIVE_INFINITY
-
-    return rows.filter((r) => {
-      if (appliedEmployeeId !== 'all' && r.employeeId !== appliedEmployeeId) return false
-      if (appliedStoreId !== 'all' && r.storeId !== appliedStoreId) return false
-      const soldTs = new Date(r.soldAt).getTime()
-      return soldTs >= fromTs && soldTs <= toTs
-    })
-  }, [appliedEmployeeId, appliedFrom, appliedStoreId, appliedTo, rows])
-
-  /* ================= KPI CALCULATIONS ================= */
+  /* KPIs */
   const totals = useMemo(() => {
-    return filteredRows.reduce((acc, r) => ({
-      ttc: acc.ttc + Math.abs(r.totalTTC),
-      ht: acc.ht + Math.abs(r.totalHT),
-      count: acc.count + 1
-    }), { ttc: 0, ht: 0, count: 0 })
-  }, [filteredRows])
+    const amount = (stats?.total_subtotal ?? 0) - (stats?.total_discount ?? 0)
+    const count  = stats?.count ?? 0
+    return {
+      amount,
+      count,
+      average: count > 0 ? amount / count : 0,
+    }
+  }, [stats])
 
-  /* ================= COLUMNS ================= */
-  const columns: Column<Row>[] = useMemo(
-    () => [
-      {
-        key: 'code',
-        label: 'N° Rachat',
-        sortable: true,
-        nowrap: true,
-        render: (v) => (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600">
-              <Undo2 className="h-4 w-4" />
-            </div>
-            <span className="font-bold text-gray-900">{String(v)}</span>
+  /* columns */
+  const columns: Column<Sale>[] = useMemo(() => [
+    {
+      key: 'invoice_number',
+      label: 'N° Rachat',
+      sortable: true,
+      nowrap: true,
+      render: (v, row) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-pink-50 text-pink-600">
+            <Undo2 className="h-4 w-4" />
           </div>
-        ),
-      },
-      { 
-        key: 'cashier', 
-        label: 'Opérateur', 
-        sortable: true,
-        render: (v) => <span className="font-medium text-gray-700">{String(v)}</span>
-      },
-      { 
-        key: 'date', 
-        label: 'Date', 
-        sortable: true, 
-        nowrap: true,
-        render: (v) => <span className="text-gray-500 text-sm">{String(v)}</span>
-      },
-      { 
-        key: 'type', 
-        label: 'Motif',
-        render: (v) => (
-          <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-            {String(v)}
+          <span className="font-bold text-gray-900">
+            {v ? String(v) : `#${String(row.id).padStart(4, '0')}`}
           </span>
-        )
+        </div>
+      ),
+    },
+    {
+      key: 'sale_date',
+      label: 'Date',
+      sortable: true,
+      nowrap: true,
+      render: (v) => <span className="text-sm text-gray-500">{fmtDate(v as string | null)}</span>,
+    },
+    {
+      key: 'seller_name',
+      label: 'Opérateur',
+      render: (v) => <span className="font-medium text-gray-700">{(v as string | null) ?? '-'}</span>,
+    },
+    {
+      key: 'customer_name',
+      label: 'Client',
+      render: (v) => <span className="text-gray-700">{(v as string | null) ?? <span className="text-gray-400">—</span>}</span>,
+    },
+    {
+      key: 'store',
+      label: 'Magasin',
+      render: (v) => {
+        const store = v as Sale['store']
+        return <span className="text-sm text-gray-600">{store?.name ?? '—'}</span>
       },
-      {
-        key: 'totalHT',
-        label: 'Total HT',
-        sortable: true,
-        align: 'right',
-        render: (v) => <span className="font-medium text-gray-600">{formatFcfa(Number(v))}</span>,
-      },
-      {
-        key: 'totalTTC',
-        label: 'Total TTC',
-        sortable: true,
-        align: 'right',
-        render: (v) => <span className="font-bold text-red-600">{formatFcfa(Number(v))}</span>,
-      },
-    ],
-    []
-  )
+    },
+    {
+      key: 'subtotal',
+      label: 'Total',
+      sortable: true,
+      align: 'right',
+      render: (_v, row) => <span className="font-bold text-pink-600">{fmtMoney(saleAmount(row))}</span>,
+    },
+  ], [])
+
+  const tableActions: Action<Sale>[] = useMemo(() => [
+    {
+      label: 'Voir le détail',
+      icon: Eye,
+      variant: 'primary',
+      onClick: (sale) => navigate(`/sales/${sale.id}/invoice`),
+    },
+  ], [navigate])
 
   return (
     <div className="space-y-6">
-      <header className="mb-7">
+      <header className="mb-1">
         <h1 className="text-2xl font-semibold text-gray-900">Rachats d'articles</h1>
-        <p className="mt-1 text-sm text-gray-500">Historique des retours et remboursements clients</p>
+        <p className="mt-1 text-sm text-gray-500">Historique des rachats clients (stock réincrémenté, sans facture)</p>
       </header>
 
-      {/* FILTERS */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm mb-6">
+      {/* Filters */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
-          <label className="lg:col-span-3">
-            <div className="mb-1 text-xs font-semibold text-gray-600">Opérateur</div>
+          <label className="lg:col-span-4">
+            <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
             <div className="relative">
-              <UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
+                value={storeId}
+                onChange={(e) => setStoreId(e.target.value)}
                 className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
               >
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>{e.name}</option>
+                <option value="all">Tous les magasins</option>
+                {stores.map((s) => (
+                  <option key={s.id} value={String(s.id)}>{s.name}</option>
                 ))}
               </select>
             </div>
@@ -338,46 +251,26 @@ export default function ItemBuybacksPage() {
             <DateRangePicker
               from={from}
               to={to}
-              onRangeChange={(f, t) => {
-                setFrom(f);
-                setTo(t);
-              }}
+              onRangeChange={(f, t) => { setFrom(f); setTo(t) }}
             />
           </div>
 
-          <label className="lg:col-span-3">
-            <div className="mb-1 text-xs font-semibold text-gray-600">Magasin</div>
-            <div className="relative">
-              <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <select
-                value={storeId}
-                onChange={(e) => setStoreId(e.target.value)}
-                className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]"
-              >
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-          </label>
-
-          <div className="lg:col-span-2 flex gap-2">
+          <div className="lg:col-span-4 flex gap-2">
             {hasFilters && (
               <button
-                onClick={handleClearFilters}
-                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition-all"
+                type="button"
+                onClick={clearFilters}
+                title="Réinitialiser les filtres"
+                aria-label="Réinitialiser les filtres"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 <RotateCcw className="h-4 w-4" />
               </button>
             )}
             <button
-              onClick={() => {
-                setAppliedEmployeeId(employeeId)
-                setAppliedStoreId(storeId)
-                setAppliedFrom(from)
-                setAppliedTo(to)
-              }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#3B82F6]/20 hover:bg-[#2563EB] active:scale-95 transition-all"
+              type="button"
+              onClick={applyFilters}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2563EB]"
             >
               <Filter className="h-4 w-4" />
               Filtrer
@@ -386,59 +279,56 @@ export default function ItemBuybacksPage() {
         </div>
       </div>
 
-      {/* KPI CARDS */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           label="Total Décaissements"
-          value={<span className="text-2xl font-bold text-red-600">{formatFcfa(totals.ttc)}</span>}
-          sub={<span className="text-xs text-gray-500">HT: {formatFcfa(totals.ht)}</span>}
+          value={<span className="text-2xl font-bold text-pink-600">{fmtMoney(totals.amount)}</span>}
           icon={BadgeDollarSign}
-          accent="bg-red-600"
+          accent="bg-pink-600"
         />
         <KpiCard
-          label="Volume Retours"
-          value={<span className="text-2xl font-bold text-gray-900">{formatNumber(totals.count)}</span>}
+          label="Volume Rachats"
+          value={<span className="text-2xl font-bold text-gray-900">{totals.count}</span>}
           sub={<span className="text-xs text-gray-500">Opérations effectuées</span>}
           icon={TrendingDown}
           accent="bg-amber-600"
         />
         <KpiCard
-          label="Motif Principal"
-          value={<span className="text-xl font-bold text-gray-900 truncate">Rachat Client</span>}
+          label="Panier Moyen"
+          value={<span className="text-2xl font-bold text-gray-900">{fmtMoney(totals.average)}</span>}
           icon={Undo2}
           accent="bg-blue-600"
         />
-        <KpiCard
-          label="Audit"
-          value={<span className="text-xl font-bold text-gray-900">Vérifié</span>}
-          icon={FileSearch}
-          accent="bg-violet-600"
-        />
       </div>
 
-      {/* TABLE */}
-      <div className="mt-6">
-        <DataTable<Row>
-          data={filteredRows}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        </div>
+      ) : (
+        <DataTable<Sale>
+          data={sales}
           columns={columns}
-          title="Historique des rachats et retours"
+          actions={tableActions}
+          title="Historique des rachats"
           searchable
           searchPlaceholder="Rechercher un n° d'opération..."
           exportFilename="rachats-articles"
-          customFilters={
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4 text-gray-500" />
-              Imprimer
-            </button>
-          }
-          getRowId={(r) => r.code}
+          getRowId={(r) => String(r.id)}
+          serverPagination={{
+            currentPage: page,
+            lastPage,
+            total,
+            onPageChange: setPage,
+            disabled: loading,
+          }}
         />
-      </div>
+      )}
     </div>
   )
 }
-

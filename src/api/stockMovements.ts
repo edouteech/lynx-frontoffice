@@ -1,6 +1,6 @@
 import { api } from './apiClient'
 
-export type MovementType = 'sale' | 'refund' | 'adjustment' | 'transfer_out' | 'transfer_in' | 'purchase' | 'inventory'
+export type MovementType = 'sale' | 'refund' | 'buyback' | 'adjustment' | 'transfer_out' | 'transfer_in' | 'purchase' | 'inventory'
 
 export interface StockMovement {
   date: string
