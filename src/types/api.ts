@@ -281,6 +281,7 @@ export interface CashRegister {
   is_available: boolean
   organization_id: number
   open_session?: CashRegisterSession | null
+  last_session?: CashRegisterSession | null
   store?: Store
   created_at: string
   updated_at: string
