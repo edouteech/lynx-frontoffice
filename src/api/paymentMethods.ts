@@ -45,6 +45,7 @@ export async function updatePaymentMethod(
     account_number?: string | null
     token?: string | null
     payment_method_category_id?: number
+    status?: 'active' | 'inactive'
     store_ids?: number[]
   }
 ): Promise<PaymentMethod> {

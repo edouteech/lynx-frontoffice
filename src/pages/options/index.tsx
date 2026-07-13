@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import type { Option } from '../../types/api'
-import { deleteOption, fetchOptions } from '../../api/options'
+import { deleteOption, fetchOptions, updateOption } from '../../api/options'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { OptionCreateModal } from './create'
 
@@ -18,6 +19,7 @@ export default function OptionsIndex() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalOption, setModalOption] = useState<Option | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const refreshList = useCallback(async () => {
     setError(null)
@@ -78,17 +80,28 @@ export default function OptionsIndex() {
     [refreshList]
   )
 
+  const handleToggleStatus = useCallback(async (o: Option, next: boolean) => {
+    if (togglingId !== null) return
+    setError(null)
+    setTogglingId(o.id)
+    try {
+      const status = next ? 'active' : 'inactive'
+      await updateOption(o.id, { status })
+      setPaginated((prev) =>
+        prev
+          ? { ...prev, data: prev.data.map((x) => (x.id === o.id ? { ...x, status } : x)) }
+          : prev
+      )
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId])
+
   const columns: Column<Option>[] = useMemo(
     () => [
       { key: 'name', label: 'Nom', sortable: true },
-      {
-        key: 'status',
-        label: 'Statut',
-        sortable: true,
-        render: (v) => (
-          <span className="capitalize text-gray-700">{String(v)}</span>
-        ),
-      },
       {
         key: 'products',
         label: 'Produits',
@@ -98,8 +111,20 @@ export default function OptionsIndex() {
           </span>
         ),
       },
+      {
+        key: 'status',
+        label: 'Statut',
+        render: (_v, row) => (
+          <ToggleSwitch
+            checked={row.status === 'active'}
+            disabled={togglingId === row.id}
+            onChange={(next) => void handleToggleStatus(row, next)}
+            label="Activer/désactiver cette option"
+          />
+        ),
+      },
     ],
-    []
+    [togglingId, handleToggleStatus]
   )
 
   const actions: Action<Option>[] = useMemo(

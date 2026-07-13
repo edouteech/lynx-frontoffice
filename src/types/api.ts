@@ -27,6 +27,7 @@ export interface UserOrganizationMembership {
   user_id?: number
   organization_id: number
   role_id: number | null
+  is_active?: boolean
   organization?: Organization
   role?: Role | null
   created_at?: string
@@ -231,6 +232,7 @@ export interface PaymentMethodCategory {
   id: number
   name: string
   is_available: boolean
+  deducts_customer_balance: boolean
   created_at: string
   updated_at: string
 }
@@ -242,6 +244,7 @@ export interface PaymentMethod {
   account_number: string | null
   token?: string | null
   payment_method_category_id: number
+  status: 'active' | 'inactive'
   category?: PaymentMethodCategory
   stores?: Array<Pick<Store, 'id' | 'name'>>
   created_at: string
@@ -278,6 +281,7 @@ export interface CashRegister {
   is_available: boolean
   organization_id: number
   open_session?: CashRegisterSession | null
+  last_session?: CashRegisterSession | null
   store?: Store
   created_at: string
   updated_at: string
@@ -515,6 +519,13 @@ export interface Sale {
   type_facture?: string | null
   code_dgi?: string | null
   periode_w?: string | null
+  dgi_status?: 'sent' | 'failed' | null
+  dgi_uid?: string | null
+  dgi_date?: string | null
+  dgi_mecef_code?: string | null
+  dgi_min?: string | null
+  dgi_counters?: string | null
+  dgi_error?: string | null
   discount_percentage: number
   extra_fees: number
   total?: number

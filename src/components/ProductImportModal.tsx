@@ -211,8 +211,14 @@ export default function ProductImportModal({ onClose, onSuccess }: ProductImport
               <li><strong>code-barres</strong> : Code-barres</li>
               <li><strong>prix_achat</strong> : Prix d'achat TTC</li>
               <li><strong>prix_vente</strong> : Prix de vente TTC</li>
-              <li><strong>tva_achat</strong> : Taux de TVA achat (ex: 18%)</li>
-              <li><strong>tva_vente</strong> : Taux de TVA vente (ex: 18%)</li>
+              <li>
+                <strong>tva_achat</strong> : Code du taux de TVA achat (ex: <strong>B</strong>)
+                <span className="ml-1 text-blue-500">— voir la feuille "Codes TVA" du modèle</span>
+              </li>
+              <li>
+                <strong>tva_vente</strong> : Code du taux de TVA vente (ex: <strong>B</strong>)
+                <span className="ml-1 text-blue-500">— voir la feuille "Codes TVA" du modèle</span>
+              </li>
               <li><strong>stock</strong> : Quantité en stock</li>
               <li><strong>seuil_alerte</strong> : Seuil d'alerte de stock</li>
               <li>

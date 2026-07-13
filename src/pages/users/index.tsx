@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, Mail, Pencil, Plus, Search } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
-import { fetchUsers, resendUserCredentials } from '../../api/users'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
+import { fetchUsers, resendUserCredentials, updateUserStatus } from '../../api/users'
 import { fetchAllRoles } from '../../api/roles'
 import { getApiErrorMessage } from '../../lib/apiError'
-import { scopedRole, scopedRoleId } from '../../lib/scopedOrganization'
+import { scopedIsActive, scopedRole, scopedRoleId } from '../../lib/scopedOrganization'
 import { useAuth } from '../../contexts/useAuth'
-import { displayRoleName } from '../../lib/ownerRole'
+import { displayRoleName, isOwnerRole } from '../../lib/ownerRole'
 import type { Role, User } from '../../types/api'
 
 function roleLabelForUser(
@@ -27,7 +28,7 @@ import { UserCreateModal } from './create'
 
 export default function UsersIndex() {
   const navigate = useNavigate()
-  const { activeOrganizationId } = useAuth()
+  const { user: currentUser, activeOrganizationId } = useAuth()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -44,6 +45,7 @@ export default function UsersIndex() {
   const [rolesCatalog, setRolesCatalog] = useState<Role[] | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [resendingId, setResendingId] = useState<number | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -121,6 +123,45 @@ export default function UsersIndex() {
     }
   }, [page, debouncedQ])
 
+  const handleResendCredentials = useCallback(async (u: User) => {
+    if (resendingId !== null) return
+    if (
+      !window.confirm(
+        `Renvoyer les identifiants de connexion à « ${u.name} » (${u.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
+      )
+    )
+      return
+    setNotice(null)
+    setError(null)
+    setResendingId(u.id)
+    try {
+      await resendUserCredentials(u.id)
+      setNotice(`Identifiants renvoyés par e-mail à ${u.email}.`)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setResendingId(null)
+    }
+  }, [resendingId])
+
+  const handleToggleStatus = useCallback(async (u: User, next: boolean) => {
+    if (togglingId !== null) return
+    const verb = next ? 'réactiver' : 'désactiver'
+    if (!window.confirm(`Voulez-vous ${verb} « ${u.name} » dans cette entreprise ?`)) return
+    setNotice(null)
+    setError(null)
+    setTogglingId(u.id)
+    try {
+      await updateUserStatus(u.id, next)
+      setNotice(`« ${u.name} » a été ${next ? 'réactivé' : 'désactivé'}.`)
+      void refreshList()
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId, refreshList])
+
   const columns: Column<User>[] = useMemo(
     () => [
       { key: 'name', label: 'Nom', sortable: true },
@@ -150,30 +191,25 @@ export default function UsersIndex() {
           )
         },
       },
+      {
+        key: 'status',
+        label: 'Statut',
+        render: (_v, row) => {
+          const role = scopedRole(row, activeOrganizationId)
+          const locked = row.id === currentUser?.id || Boolean(role && isOwnerRole(role))
+          return (
+            <ToggleSwitch
+              checked={scopedIsActive(row, activeOrganizationId)}
+              disabled={locked || togglingId === row.id}
+              onChange={(next) => void handleToggleStatus(row, next)}
+              label={locked ? 'Statut non modifiable' : 'Activer/désactiver ce compte'}
+            />
+          )
+        },
+      },
     ],
-    [rolesCatalog, roleById, activeOrganizationId]
+    [rolesCatalog, roleById, activeOrganizationId, currentUser?.id, togglingId, handleToggleStatus]
   )
-
-  const handleResendCredentials = useCallback(async (u: User) => {
-    if (resendingId !== null) return
-    if (
-      !window.confirm(
-        `Renvoyer les identifiants de connexion à « ${u.name} » (${u.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
-      )
-    )
-      return
-    setNotice(null)
-    setError(null)
-    setResendingId(u.id)
-    try {
-      await resendUserCredentials(u.id)
-      setNotice(`Identifiants renvoyés par e-mail à ${u.email}.`)
-    } catch (e) {
-      setError(getApiErrorMessage(e))
-    } finally {
-      setResendingId(null)
-    }
-  }, [resendingId])
 
   const actions: Action<User>[] = useMemo(
     () => [

@@ -24,6 +24,7 @@ export async function fetchPaymentMethodCategory(
 export async function createPaymentMethodCategory(body: {
   name: string
   is_available?: boolean
+  deducts_customer_balance?: boolean
 }): Promise<PaymentMethodCategory> {
   const { data } = await api.post<PaymentMethodCategory>(
     '/payment-method-categories',
@@ -37,6 +38,7 @@ export async function updatePaymentMethodCategory(
   body: {
     name?: string
     is_available?: boolean
+    deducts_customer_balance?: boolean
   }
 ): Promise<PaymentMethodCategory> {
   const { data } = await api.patch<PaymentMethodCategory>(

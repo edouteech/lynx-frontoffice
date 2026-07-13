@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import {
   deletePaymentMethod,
   fetchPaymentMethod,
   fetchPaymentMethods,
+  updatePaymentMethod,
 } from '../../api/paymentMethods'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -28,6 +30,7 @@ export default function PaymentMethodsIndex() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPaymentMethod, setModalPaymentMethod] =
     useState<PaymentMethod | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchStores(1)
@@ -100,6 +103,25 @@ export default function PaymentMethodsIndex() {
     [page, selectedStoreId]
   )
 
+  const handleToggleStatus = useCallback(async (pm: PaymentMethod, next: boolean) => {
+    if (togglingId !== null) return
+    setError(null)
+    setTogglingId(pm.id)
+    try {
+      const status = next ? 'active' : 'inactive'
+      await updatePaymentMethod(pm.id, { status })
+      setPaginated((prev) =>
+        prev
+          ? { ...prev, data: prev.data.map((m) => (m.id === pm.id ? { ...m, status } : m)) }
+          : prev
+      )
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setTogglingId(null)
+    }
+  }, [togglingId])
+
   const columns: Column<PaymentMethod>[] = useMemo(
     () => [
       { key: 'name', label: 'Nom', sortable: true },
@@ -133,8 +155,20 @@ export default function PaymentMethodsIndex() {
           )
         },
       },
+      {
+        key: 'status',
+        label: 'Statut',
+        render: (_v, item) => (
+          <ToggleSwitch
+            checked={item.status === 'active'}
+            disabled={togglingId === item.id}
+            onChange={(next) => void handleToggleStatus(item, next)}
+            label="Activer/désactiver ce moyen de paiement"
+          />
+        ),
+      },
     ],
-    []
+    [togglingId, handleToggleStatus]
   )
 
   const actions: Action<PaymentMethod>[] = useMemo(

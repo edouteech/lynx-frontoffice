@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, FileText, Filter, Globe, Plus, RefreshCw, RotateCcw, Store as StoreIcon, Trash2 } from 'lucide-react'
+import { Eye, Globe, RefreshCw, RotateCcw, Store as StoreIcon, Filter, Trash2 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { DateRangePicker } from '../../components/DateRangePicker'
@@ -8,12 +8,6 @@ import { confirmSale, deleteSale, fetchSales } from '../../api/sales'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Sale, Store } from '../../types/api'
-
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
-  confirmed: { label: 'Confirmée', className: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Annulée',   className: 'bg-red-100 text-red-600' },
-}
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
@@ -25,7 +19,7 @@ function firstOfMonthISO() {
   return d.toISOString().slice(0, 10)
 }
 
-export default function SalesIndex() {
+export default function PendingOrdersPage() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<{
@@ -37,19 +31,14 @@ export default function SalesIndex() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  /* Plage de dates : `from`/`to` alimentent le sélecteur, `applied*` déclenchent le filtre.
-     Tant qu'aucun filtre n'est appliqué (applied* === null), toutes les ventes sont affichées. */
   const [from, setFrom] = useState(firstOfMonthISO() + 'T00:00')
   const [to, setTo] = useState(todayISO() + 'T23:59')
   const [appliedFrom, setAppliedFrom] = useState<string | null>(null)
   const [appliedTo, setAppliedTo] = useState<string | null>(null)
 
-  // Canal déduit du n° de facture par le backend : "FAC-{caisse}W-..." = web, sinon POS.
-  // `channel` alimente le select, `appliedChannel` déclenche le filtre (au clic sur "Filtrer").
   const [channel, setChannel] = useState<'' | 'web' | 'pos'>('')
   const [appliedChannel, setAppliedChannel] = useState<'' | 'web' | 'pos'>('')
 
-  // Magasin : même mécanique brouillon/appliqué que le canal.
   const [stores, setStores] = useState<Store[]>([])
   const [storeId, setStoreId] = useState('')
   const [appliedStoreId, setAppliedStoreId] = useState('')
@@ -64,6 +53,7 @@ export default function SalesIndex() {
     try {
       const res = await fetchSales({
         page: p,
+        status: 'draft',
         from: appliedFrom,
         to: appliedTo,
         channel: appliedChannel || null,
@@ -103,7 +93,7 @@ export default function SalesIndex() {
 
   const handleDelete = useCallback(async (s: Sale) => {
     const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
-    if (!window.confirm(`Supprimer la vente ${label} ?`)) return
+    if (!window.confirm(`Supprimer la commande ${label} ?`)) return
     try {
       await deleteSale(s.id)
       void load(page)
@@ -167,24 +157,21 @@ export default function SalesIndex() {
       render: v => v ? new Date(String(v)).toLocaleDateString('fr-FR') : <span className="text-gray-400">—</span>,
     },
     {
-      key: 'status',
+      key: 'dgi_status',
       label: 'Statut',
-      render: (v, row) => {
-        const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.draft
-        return (
-          <div className="flex flex-wrap items-center gap-1">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
-            {row.dgi_status === 'failed' && (
-              <span
-                className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700"
-                title={row.dgi_error ?? 'Échec de la normalisation DGI'}
-              >
-                Échec DGI
-              </span>
-            )}
-          </div>
-        )
-      },
+      render: (_, row) => (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">Brouillon</span>
+          {row.dgi_status === 'failed' && (
+            <span
+              className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700"
+              title={row.dgi_error ?? 'Échec de la normalisation DGI'}
+            >
+              Échec DGI
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'subtotal',
@@ -206,16 +193,10 @@ export default function SalesIndex() {
       onClick: s => navigate(`/sales/${s.id}/edit`),
     },
     {
-      label: 'Facture',
-      icon: FileText,
-      onClick: s => navigate(`/sales/${s.id}/invoice`),
-      show: s => s.status === 'confirmed',
-    },
-    {
       label: 'Réessayer DGI',
       icon: RefreshCw,
       onClick: s => void handleRetryDgi(s),
-      show: s => s.status === 'draft' && s.dgi_status === 'failed',
+      show: s => s.dgi_status === 'failed',
     },
     {
       label: 'Supprimer',
@@ -227,19 +208,9 @@ export default function SalesIndex() {
 
   return (
     <div className="space-y-6">
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Ventes</h1>
-          <p className="mt-1 text-gray-600">Gérez vos ventes et encaissements par magasin.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/sales/create')}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-medium text-white hover:bg-[#2563EB]"
-        >
-          <Plus className="h-4 w-4" />
-          Nouvelle vente
-        </button>
+      <header className="mb-8">
+        <h1 className="text-3xl font-semibold text-gray-900">Commandes en attente</h1>
+        <p className="mt-1 text-gray-600">Ventes en brouillon (non confirmées), en attente de finalisation.</p>
       </header>
 
       {/* Filtres */}
@@ -322,13 +293,13 @@ export default function SalesIndex() {
         actions={actions}
         loading={loading && !paginated}
         searchable
-        searchPlaceholder="Rechercher une vente…"
+        searchPlaceholder="Rechercher une commande…"
         serverPagination={
           paginated
             ? { currentPage: paginated.current_page, lastPage: paginated.last_page, total: paginated.total, onPageChange: p => setPage(p), disabled: loading }
             : undefined
         }
-        emptyMessage="Aucune vente enregistrée"
+        emptyMessage="Aucune commande en attente"
       />
     </div>
   )

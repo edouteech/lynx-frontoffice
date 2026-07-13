@@ -11,7 +11,7 @@ export interface GeneralSetting {
   negative_stock_alerts: boolean
   item_buyback: boolean
   payment_methods: boolean
-  customer_account_payment: boolean
+  customer_account_payments: boolean
   commission: boolean
   online_articles: boolean
   store_cover_image?: string | null
