@@ -167,7 +167,7 @@ function HistoryDrawer({
       {/* Drawer panel */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-0 z-40 flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl"
+        className="fixed right-0 top-0 z-40 flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl"
         role="dialog"
         aria-label={`Historique de ${product.name}`}
       >
@@ -255,7 +255,7 @@ function HistoryDrawer({
               <p className="mt-1 text-xs text-gray-400">Modifiez les filtres ou élargissez la période.</p>
             </div>
           ) : (
-            <div className={`transition-opacity ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
+            <div className={`overflow-x-auto transition-opacity ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
               <table className="w-full text-xs">
                 <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                   <tr>
@@ -264,6 +264,12 @@ function HistoryDrawer({
                     <th className="px-3 py-2.5 text-left font-semibold uppercase tracking-wide text-gray-500">Raison</th>
                     <th className="px-3 py-2.5 text-left font-semibold uppercase tracking-wide text-gray-500">Type</th>
                     <th className="px-4 py-2.5 text-right font-semibold uppercase tracking-wide text-gray-500">Qté</th>
+                    <th className="px-4 py-2.5 text-right font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                      Stock magasin<span className="block normal-case font-normal text-gray-400">(avant opération)</span>
+                    </th>
+                    <th className="px-4 py-2.5 text-right font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+                      Stock global<span className="block normal-case font-normal text-gray-400">(avant opération)</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -281,6 +287,16 @@ function HistoryDrawer({
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <QtyCell value={Number(m.quantity_change)} />
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-gray-700">
+                        {m.stock_store_snapshot != null
+                          ? Number(m.stock_store_snapshot).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-gray-700">
+                        {m.stock_global_snapshot != null
+                          ? Number(m.stock_global_snapshot).toLocaleString('fr-FR', { maximumFractionDigits: 3 })
+                          : <span className="text-gray-300">—</span>}
                       </td>
                     </tr>
                   ))}
