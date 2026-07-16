@@ -148,16 +148,10 @@ export default function CustomersIndex() {
         render: (v) => (v ? String(v) : <span className="text-gray-400">—</span>),
       },
       {
-        key: 'aib',
-        label: 'AIB',
-        render: (v) =>
-          v ? (
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-              Oui
-            </span>
-          ) : (
-            <span className="text-gray-400">Non</span>
-          ),
+        key: 'discount_percentage',
+        label: 'Réduction (%)',
+        sortable: true,
+        render: (v) => (v ? `${v}%` : <span className="text-gray-400">—</span>),
       },
     ],
     []
