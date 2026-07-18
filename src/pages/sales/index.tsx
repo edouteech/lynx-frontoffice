@@ -28,6 +28,8 @@ function firstOfMonthISO() {
 export default function SalesIndex() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [searchQuery, setSearchQuery] = useState('')
   const [paginated, setPaginated] = useState<{
     data: Sale[]
     current_page: number
@@ -64,6 +66,8 @@ export default function SalesIndex() {
     try {
       const res = await fetchSales({
         page: p,
+        per_page: pageSize,
+        search: searchQuery.trim() || null,
         from: appliedFrom,
         to: appliedTo,
         channel: appliedChannel || null,
@@ -75,9 +79,12 @@ export default function SalesIndex() {
     } finally {
       setLoading(false)
     }
-  }, [appliedFrom, appliedTo, appliedChannel, appliedStoreId])
+  }, [appliedFrom, appliedTo, appliedChannel, appliedStoreId, pageSize, searchQuery])
 
   useEffect(() => { void load(page) }, [page, load])
+
+  // Revenir à la page 1 quand la recherche ou la taille de page changent
+  useEffect(() => { setPage(1) }, [searchQuery, pageSize])
 
   const applyFilters = useCallback(() => {
     setAppliedFrom(from)
@@ -323,9 +330,19 @@ export default function SalesIndex() {
         loading={loading && !paginated}
         searchable
         searchPlaceholder="Rechercher une vente…"
+        onSearch={setSearchQuery}
+        pageSizeOptions={[5, 10, 25, 50, 100]}
         serverPagination={
           paginated
-            ? { currentPage: paginated.current_page, lastPage: paginated.last_page, total: paginated.total, onPageChange: p => setPage(p), disabled: loading }
+            ? {
+                currentPage: paginated.current_page,
+                lastPage: paginated.last_page,
+                total: paginated.total,
+                pageSize,
+                onPageChange: p => setPage(p),
+                onPageSizeChange: setPageSize,
+                disabled: loading,
+              }
             : undefined
         }
         emptyMessage="Aucune vente enregistrée"

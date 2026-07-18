@@ -3,6 +3,7 @@ import { api } from './apiClient'
 
 export interface FetchSalesParams {
   page?: number
+  per_page?: number
   store_id?: number | null
   status?: string | null
   from?: string | null
@@ -11,6 +12,7 @@ export interface FetchSalesParams {
   channel?: 'web' | 'pos' | null
   type_facture?: 'FV' | 'FA' | 'RA' | null
   seller_name?: string | null
+  search?: string | null
 }
 
 export interface SalesStats {
@@ -23,6 +25,7 @@ export async function fetchSales(
   params: FetchSalesParams = {}
 ): Promise<Paginated<Sale> & { stats?: SalesStats }> {
   const p: Record<string, string | number> = { page: params.page ?? 1 }
+  if (params.per_page) p.per_page = params.per_page
   if (params.store_id) p.store_id = params.store_id
   if (params.status) p.status = params.status
   if (params.from) p.from = params.from
@@ -31,6 +34,7 @@ export async function fetchSales(
   if (params.channel) p.channel = params.channel
   if (params.type_facture) p.type_facture = params.type_facture
   if (params.seller_name) p.seller_name = params.seller_name
+  if (params.search) p.search = params.search
   const { data } = await api.get<Paginated<Sale> & { stats?: SalesStats }>('/sales', { params: p })
   return data
 }
