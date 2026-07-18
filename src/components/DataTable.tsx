@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -45,6 +45,9 @@ export interface ServerPagination {
   total: number
   onPageChange: (page: number) => void
   disabled?: boolean
+  /** Taille de page courante (mode serveur). Fournir avec `onPageSizeChange` pour afficher le sélecteur. */
+  pageSize?: number
+  onPageSizeChange?: (size: number) => void
 }
 
 export interface DataTableProps<T extends object> {
@@ -54,6 +57,8 @@ export interface DataTableProps<T extends object> {
   loading?: boolean
   searchable?: boolean
   searchPlaceholder?: string
+  /** Si fourni, la recherche est déléguée au serveur (debounce ~300ms) au lieu de filtrer `data` localement. */
+  onSearch?: (query: string) => void
   customFilters?: ReactNode
   title?: string
   description?: string
@@ -111,6 +116,7 @@ export default function DataTable<T extends object>({
   loading = false,
   searchable = true,
   searchPlaceholder = 'Rechercher…',
+  onSearch,
   customFilters,
   title,
   description,
@@ -132,11 +138,18 @@ export default function DataTable<T extends object>({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(itemsPerPage)
   const [exportOpen, setExportOpen] = useState(false)
+  const [jumpPageInput, setJumpPageInput] = useState('')
+
+  useEffect(() => {
+    if (!onSearch) return
+    const timeout = setTimeout(() => onSearch(searchTerm), 300)
+    return () => clearTimeout(timeout)
+  }, [searchTerm, onSearch])
 
   const processed = useMemo(() => {
     let result = [...data]
 
-    if (searchTerm) {
+    if (searchTerm && !onSearch) {
       const q = searchTerm.toLowerCase()
       result = result.filter((item) =>
         columns.some((col) => {
@@ -163,7 +176,7 @@ export default function DataTable<T extends object>({
     }
 
     return result
-  }, [data, searchTerm, sortColumn, sortDirection, columns])
+  }, [data, searchTerm, onSearch, sortColumn, sortDirection, columns])
 
   const isServer = !!serverPagination
   const totalItems = processed.length
@@ -201,6 +214,12 @@ export default function DataTable<T extends object>({
       return
     }
     setCurrentPage(Math.max(1, Math.min(p, totalPages)))
+  }
+
+  const handleJumpToPage = () => {
+    const n = parseInt(jumpPageInput, 10)
+    if (!isNaN(n)) goToPage(n)
+    setJumpPageInput('')
   }
 
   const showToolbar =
@@ -505,15 +524,21 @@ export default function DataTable<T extends object>({
                 </>
               )}
             </span>
-            {!isServer && pagination && showPageSizeSelector && (
+            {showPageSizeSelector && (isServer ? !!serverPagination.onPageSizeChange : pagination) && (
               <label className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500">Par page</span>
                 <select
-                  value={pageSize}
+                  value={isServer ? (serverPagination.pageSize ?? pageSize) : pageSize}
                   onChange={(e) => {
-                    setPageSize(Number(e.target.value))
-                    if (!isServer) setCurrentPage(1)
+                    const n = Number(e.target.value)
+                    if (isServer) {
+                      serverPagination.onPageSizeChange?.(n)
+                    } else {
+                      setPageSize(n)
+                      setCurrentPage(1)
+                    }
                   }}
+                  disabled={isServer && serverPagination.disabled}
                   className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
                 >
                   {pageSizeOptions.map((n) => (
@@ -542,6 +567,32 @@ export default function DataTable<T extends object>({
                 >
                   <ChevronLeft className="h-4 w-4" aria-hidden />
                 </button>
+                <div className="flex items-center gap-1 px-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={serverPagination.lastPage}
+                    value={jumpPageInput}
+                    onChange={(e) => setJumpPageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleJumpToPage() }
+                    }}
+                    placeholder={String(serverPagination.currentPage)}
+                    disabled={serverPagination.disabled}
+                    className="w-14 rounded border border-gray-300 px-1.5 py-1 text-center text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]"
+                    title="Aller à la page"
+                    aria-label="Aller à la page"
+                  />
+                  <span className="text-gray-500">/ {serverPagination.lastPage}</span>
+                  <button
+                    type="button"
+                    onClick={handleJumpToPage}
+                    disabled={serverPagination.disabled || !jumpPageInput}
+                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-medium hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Aller
+                  </button>
+                </div>
                 <button
                   type="button"
                   disabled={

@@ -170,6 +170,8 @@ export default function ItemsIndex() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // meta for filters
   const [stores, setStores] = useState<Store[]>([])
@@ -204,6 +206,8 @@ export default function ItemsIndex() {
     try {
       const res = await fetchProducts({
         page: p,
+        per_page:    pageSize,
+        search:      searchQuery.trim() || undefined,
         store_id:    filterStore    ? Number(filterStore)    : null,
         category_id: filterCategory ? Number(filterCategory) : null,
         stock_alert: filterAlert || null,
@@ -215,19 +219,19 @@ export default function ItemsIndex() {
     } finally {
       setLoading(false)
     }
-  }, [filterStore, filterCategory, filterAlert])
+  }, [filterStore, filterCategory, filterAlert, pageSize, searchQuery])
 
   // Reload when page or filters change
   useEffect(() => {
     void load(page)
   }, [page, load])
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters/recherche/taille de page changent
   useEffect(() => {
     setPage(1)
-  }, [filterStore, filterCategory, filterAlert])
+  }, [filterStore, filterCategory, filterAlert, searchQuery, pageSize])
 
-  const hasActiveFilter = filterStore !== '' || filterCategory !== '' || filterAlert !== ''
+  const hasActiveFilter = filterStore !== '' || filterCategory !== '' || filterAlert !== '' || searchQuery.trim() !== ''
 
   function clearFilters() {
     setFilterStore('')
@@ -479,12 +483,16 @@ export default function ItemsIndex() {
         loading={loading && !paginated}
         searchable
         searchPlaceholder="Rechercher un article…"
+        onSearch={setSearchQuery}
         pagination={false}
+        pageSizeOptions={[5, 10, 25, 50, 100]}
         serverPagination={paginated ? {
           currentPage: paginated.current_page,
           lastPage: paginated.last_page,
           total: paginated.total,
+          pageSize,
           onPageChange: p => { setPage(p) },
+          onPageSizeChange: setPageSize,
           disabled: loading,
         } : undefined}
         emptyMessage={

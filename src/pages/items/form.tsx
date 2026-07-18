@@ -122,7 +122,6 @@ export default function ItemFormPage() {
   // meta
   const [categories, setCategories] = useState<ItemCategory[]>([])
   const [vatRates, setVatRates] = useState<VatRate[]>([])
-  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingProduct, setLoadingProduct] = useState(isEdit)
@@ -175,8 +174,15 @@ export default function ItemFormPage() {
   // components (composite)
   const [components, setComponents] = useState<ProductComponent[]>([])
   const [compLoading, setCompLoading] = useState(false)
-  const [newChildId, setNewChildId] = useState('')
+  const [newChildProduct, setNewChildProduct] = useState<Product | null>(null)
   const [newChildQty, setNewChildQty] = useState('1')
+  const [childSearchQuery, setChildSearchQuery] = useState('')
+  const [showChildDropdown, setShowChildDropdown] = useState(false)
+  const [childResults, setChildResults] = useState<Product[]>([])
+  const [childResultsPage, setChildResultsPage] = useState(1)
+  const [childResultsLastPage, setChildResultsLastPage] = useState(1)
+  const [childResultsLoading, setChildResultsLoading] = useState(false)
+  const [childResultsLoadingMore, setChildResultsLoadingMore] = useState(false)
   const [compSaving, setCompSaving] = useState(false)
 
   // composants en attente (mode création uniquement)
@@ -189,8 +195,15 @@ export default function ItemFormPage() {
   const [supplementMax, setSupplementMax] = useState('')
   const [supplements, setSupplements] = useState<ProductSupplement[]>([])
   const [suppLoading, setSuppLoading] = useState(false)
-  const [newSuppId, setNewSuppId] = useState('')
+  const [newSuppProduct, setNewSuppProduct] = useState<Product | null>(null)
   const [newSuppPrice, setNewSuppPrice] = useState('0')
+  const [suppSearchQuery, setSuppSearchQuery] = useState('')
+  const [showSuppDropdown, setShowSuppDropdown] = useState(false)
+  const [suppResults, setSuppResults] = useState<Product[]>([])
+  const [suppResultsPage, setSuppResultsPage] = useState(1)
+  const [suppResultsLastPage, setSuppResultsLastPage] = useState(1)
+  const [suppResultsLoading, setSuppResultsLoading] = useState(false)
+  const [suppResultsLoadingMore, setSuppResultsLoadingMore] = useState(false)
   const [suppSaving, setSuppSaving] = useState(false)
   const [pendingSupplements, setPendingSupplements] = useState<PendingSupplement[]>([])
   const suppTempIdRef = useRef(0)
@@ -214,18 +227,110 @@ export default function ItemFormPage() {
     Promise.all([
       fetchItemCategories(1),
       fetchVatRates(1),
-      fetchProducts(1),
       fetchStores(1),
     ])
-      .then(([cats, vats, prods, strs]) => {
+      .then(([cats, vats, strs]) => {
         setCategories(cats.data)
         setVatRates(vats.data)
-        setAllProducts(prods.data)
         setStores(strs.data)
       })
       .catch(console.error)
       .finally(() => setLoadingMeta(false))
   }, [])
+
+  // ── Recherche serveur des articles supplément (debounce) ───────────────────
+  useEffect(() => {
+    let cancelled = false
+    setSuppResultsLoading(true)
+    const timeout = setTimeout(() => {
+      fetchProducts({ page: 1, per_page: 20, search: suppSearchQuery.trim() || undefined })
+        .then(res => {
+          if (cancelled) return
+          setSuppResults(res.data.filter(p => String(p.id) !== id))
+          setSuppResultsPage(res.current_page)
+          setSuppResultsLastPage(res.last_page)
+        })
+        .catch(console.error)
+        .finally(() => { if (!cancelled) setSuppResultsLoading(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timeout) }
+  }, [suppSearchQuery, id])
+
+  // ── Charger la page suivante en arrivant en bas de la liste ────────────────
+  function handleSuppDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) return
+    if (suppResultsLoadingMore || suppResultsPage >= suppResultsLastPage) return
+    setSuppResultsLoadingMore(true)
+    const nextPage = suppResultsPage + 1
+    fetchProducts({ page: nextPage, per_page: 20, search: suppSearchQuery.trim() || undefined })
+      .then(res => {
+        setSuppResults(prev => [...prev, ...res.data.filter(p => String(p.id) !== id)])
+        setSuppResultsPage(res.current_page)
+        setSuppResultsLastPage(res.last_page)
+      })
+      .catch(console.error)
+      .finally(() => setSuppResultsLoadingMore(false))
+  }
+
+  // ── Fermer le dropdown supplément au clic en dehors ─────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-supplement-dropdown]') && showSuppDropdown) {
+        setShowSuppDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showSuppDropdown])
+
+  // ── Recherche serveur des composants (debounce) ─────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    setChildResultsLoading(true)
+    const timeout = setTimeout(() => {
+      fetchProducts({ page: 1, per_page: 20, search: childSearchQuery.trim() || undefined, type: 'simple' })
+        .then(res => {
+          if (cancelled) return
+          setChildResults(res.data.filter(p => String(p.id) !== id))
+          setChildResultsPage(res.current_page)
+          setChildResultsLastPage(res.last_page)
+        })
+        .catch(console.error)
+        .finally(() => { if (!cancelled) setChildResultsLoading(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timeout) }
+  }, [childSearchQuery, id])
+
+  // ── Charger la page suivante en arrivant en bas de la liste ────────────────
+  function handleChildDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) return
+    if (childResultsLoadingMore || childResultsPage >= childResultsLastPage) return
+    setChildResultsLoadingMore(true)
+    const nextPage = childResultsPage + 1
+    fetchProducts({ page: nextPage, per_page: 20, search: childSearchQuery.trim() || undefined, type: 'simple' })
+      .then(res => {
+        setChildResults(prev => [...prev, ...res.data.filter(p => String(p.id) !== id)])
+        setChildResultsPage(res.current_page)
+        setChildResultsLastPage(res.last_page)
+      })
+      .catch(console.error)
+      .finally(() => setChildResultsLoadingMore(false))
+  }
+
+  // ── Fermer le dropdown composant au clic en dehors ──────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-component-dropdown]') && showChildDropdown) {
+        setShowChildDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showChildDropdown])
 
   // ── Load product (edit mode) ────────────────────────────────────────────────
   useEffect(() => {
@@ -580,11 +685,10 @@ export default function ItemFormPage() {
 
   // ── Component add ──────────────────────────────────────────────────────────
   async function handleAddComponent() {
-    if (!newChildId) return
+    if (!newChildProduct) return
+    const product = newChildProduct
 
     if (!currentId) {
-      const product = allProducts.find(p => String(p.id) === newChildId)
-      if (!product) return
       const qty = parseFloat(newChildQty) || 1
       const unitPrice = parseFloat(String(product.selling_price)) || 0
       const unitPurchasePrice = parseFloat(String(product.purchase_price ?? 0)) || 0
@@ -599,16 +703,16 @@ export default function ItemFormPage() {
         unitPurchasePrice,
         purchaseTotal: unitPurchasePrice * qty,
       }])
-      setNewChildId('')
+      setNewChildProduct(null)
       setNewChildQty('1')
       return
     }
 
     setCompSaving(true)
     try {
-      const comp = await addProductComponent(currentId, Number(newChildId), parseFloat(newChildQty) || 1)
+      const comp = await addProductComponent(currentId, product.id, parseFloat(newChildQty) || 1)
       setComponents(prev => [...prev, comp])
-      setNewChildId('')
+      setNewChildProduct(null)
       setNewChildQty('1')
     } catch (err) { setError(getApiErrorMessage(err)) }
     finally { setCompSaving(false) }
@@ -625,9 +729,8 @@ export default function ItemFormPage() {
 
   // ── Supplement add/remove ──────────────────────────────────────────────────
   async function handleAddSupplement() {
-    if (!newSuppId) return
-    const product = allProducts.find(p => String(p.id) === newSuppId)
-    if (!product) return
+    if (!newSuppProduct) return
+    const product = newSuppProduct
     const price = parseFloat(newSuppPrice) || 0
 
     if (!currentId) {
@@ -638,7 +741,7 @@ export default function ItemFormPage() {
         supplementSku: product.sku,
         price,
       }])
-      setNewSuppId('')
+      setNewSuppProduct(null)
       setNewSuppPrice('0')
       return
     }
@@ -647,7 +750,7 @@ export default function ItemFormPage() {
     try {
       const supp = await addProductSupplement(currentId, product.id, price)
       setSupplements(prev => [...prev, supp])
-      setNewSuppId('')
+      setNewSuppProduct(null)
       setNewSuppPrice('0')
     } catch (err) { setError(getApiErrorMessage(err)) }
     finally { setSuppSaving(false) }
@@ -829,8 +932,6 @@ export default function ItemFormPage() {
   if (loadingMeta || loadingProduct) {
     return <div className="flex min-h-screen items-center justify-center bg-[#EFF6FF]"><Loader2 className="h-8 w-8 animate-spin text-[#3B82F6]" /></div>
   }
-
-  const childOptions = allProducts.filter(p => String(p.id) !== id && p.type !== 'composite')
 
   return (
     <div className=" space-y-6">
@@ -1238,22 +1339,65 @@ export default function ItemFormPage() {
               </div>
             )}
             <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[200px] relative" data-component-dropdown>
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">Choisissez votre produit</label>
-                <Sel value={newChildId} onChange={e => setNewChildId(e.target.value)}>
-                  <option value="">Sélectionner un composant</option>
-                  {childOptions.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}{p.sku ? ` (${p.sku})` : ''}
-                    </option>
-                  ))}
-                </Sel>
+                <input
+                  type="text"
+                  value={newChildProduct ? `${newChildProduct.name}${newChildProduct.sku ? ` (${newChildProduct.sku})` : ''}` : ''}
+                  readOnly
+                  onClick={() => setShowChildDropdown(!showChildDropdown)}
+                  placeholder="Sélectionner un composant..."
+                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
+                />
+                {showChildDropdown && (
+                  <div
+                    className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                    onScroll={handleChildDropdownScroll}
+                  >
+                    <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+                      <input
+                        type="text"
+                        value={childSearchQuery}
+                        onChange={e => setChildSearchQuery(e.target.value)}
+                        placeholder="Rechercher un article..."
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                        autoFocus
+                      />
+                    </div>
+                    {childResultsLoading ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">Recherche…</div>
+                    ) : childResults.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun article trouvé.</div>
+                    ) : (
+                      <>
+                        {childResults.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setNewChildProduct(p)
+                              setChildSearchQuery('')
+                              setShowChildDropdown(false)
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                          >
+                            <div className="font-medium text-gray-900">{p.name}</div>
+                            {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+                          </button>
+                        ))}
+                        {childResultsLoadingMore && (
+                          <div className="px-3 py-2 text-center text-xs text-gray-400">Chargement…</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="w-28">
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
                 <Inp type="number" min="0.001" value={newChildQty} onChange={e => setNewChildQty(e.target.value)} />
               </div>
-              <button type="button" onClick={() => void handleAddComponent()} disabled={!newChildId || compSaving}
+              <button type="button" onClick={() => void handleAddComponent()} disabled={!newChildProduct || compSaving}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50">
                 {compSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Ajouter
@@ -1441,23 +1585,60 @@ export default function ItemFormPage() {
               </div>
             )}
             <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[200px] relative" data-supplement-dropdown>
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">Article supplément</label>
-                <Sel value={newSuppId} onChange={e => {
-                  setNewSuppId(e.target.value)
-                  const p = allProducts.find(p => String(p.id) === e.target.value)
-                  if (p) setNewSuppPrice(String(parseFloat(String(p.selling_price)) || 0))
-                  else setNewSuppPrice('0')
-                }}>
-                  <option value="">Sélectionner un article</option>
-                  {allProducts
-                    .filter(p => String(p.id) !== id)
-                    .map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}{p.sku ? ` (${p.sku})` : ''}
-                      </option>
-                    ))}
-                </Sel>
+                <input
+                  type="text"
+                  value={newSuppProduct ? `${newSuppProduct.name}${newSuppProduct.sku ? ` (${newSuppProduct.sku})` : ''}` : ''}
+                  readOnly
+                  onClick={() => setShowSuppDropdown(!showSuppDropdown)}
+                  placeholder="Sélectionner un article..."
+                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
+                />
+                {showSuppDropdown && (
+                  <div
+                    className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                    onScroll={handleSuppDropdownScroll}
+                  >
+                    <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+                      <input
+                        type="text"
+                        value={suppSearchQuery}
+                        onChange={e => setSuppSearchQuery(e.target.value)}
+                        placeholder="Rechercher un article..."
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                        autoFocus
+                      />
+                    </div>
+                    {suppResultsLoading ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">Recherche…</div>
+                    ) : suppResults.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun article trouvé.</div>
+                    ) : (
+                      <>
+                        {suppResults.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setNewSuppProduct(p)
+                              setNewSuppPrice(String(parseFloat(String(p.selling_price)) || 0))
+                              setSuppSearchQuery('')
+                              setShowSuppDropdown(false)
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                          >
+                            <div className="font-medium text-gray-900">{p.name}</div>
+                            {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+                          </button>
+                        ))}
+                        {suppResultsLoadingMore && (
+                          <div className="px-3 py-2 text-center text-xs text-gray-400">Chargement…</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="w-40">
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">Prix unitaire (CFA)</label>
@@ -1476,7 +1657,7 @@ export default function ItemFormPage() {
               <button
                 type="button"
                 onClick={() => void handleAddSupplement()}
-                disabled={!newSuppId || suppSaving}
+                disabled={!newSuppProduct || suppSaving}
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
               >
                 {suppSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

@@ -9,11 +9,14 @@ export interface CreateProductPayload extends Partial<Product> {
 
 export interface FetchProductsParams {
   page?: number
+  per_page?: number
   store_id?: number | null
   store_ids?: number[]
   category_id?: number | null
   stock_alert?: 'low' | 'out' | null
   only_trashed?: boolean
+  search?: string
+  type?: 'simple' | 'composite'
 }
 
 export async function fetchProducts(params: FetchProductsParams | number = 1): Promise<Paginated<Product>> {
@@ -21,11 +24,14 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
   const res = await api.get<Paginated<Product>>('/items', {
     params: {
       page: p.page ?? 1,
+      ...(p.per_page    ? { per_page: p.per_page }         : {}),
       ...(p.store_id    ? { store_id: p.store_id }       : {}),
       ...(p.store_ids?.length ? { store_ids: p.store_ids } : {}),
       ...(p.category_id ? { category_id: p.category_id } : {}),
       ...(p.stock_alert ? { stock_alert: p.stock_alert }  : {}),
       ...(p.only_trashed ? { only_trashed: true } : {}),
+      ...(p.search      ? { search: p.search }             : {}),
+      ...(p.type        ? { type: p.type }                   : {}),
     }
   })
   return res.data
