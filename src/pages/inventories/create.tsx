@@ -27,10 +27,23 @@ export default function InventoryCreatePage() {
   const [error, setError]       = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([fetchStores(1), fetchProducts(1)])
+    async function fetchAllProducts(): Promise<Product[]> {
+      let all: Product[] = []
+      let page = 1
+      let lastPage = 1
+      do {
+        const res = await fetchProducts({ page, per_page: 100 })
+        all = all.concat(res.data)
+        lastPage = res.last_page
+        page = res.current_page + 1
+      } while (page <= lastPage)
+      return all
+    }
+
+    Promise.all([fetchStores(1), fetchAllProducts()])
       .then(([s, p]) => {
         setStores(s.data)
-        setProducts(p.data.filter(pr => pr.track_inventory))
+        setProducts(p.filter(pr => pr.track_inventory))
       })
       .catch(console.error)
       .finally(() => setLoadingMeta(false))

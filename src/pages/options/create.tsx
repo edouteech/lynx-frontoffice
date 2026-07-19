@@ -36,14 +36,24 @@ export function OptionCreateModal({
 
   useEffect(() => {
     if (!open) return
+    let cancelled = false
     ;(async () => {
       try {
-        const products = await fetchProducts(1)
-        setAvailableProducts(products.data)
+        let all: Product[] = []
+        let page = 1
+        let lastPage = 1
+        do {
+          const res = await fetchProducts({ page, per_page: 100 })
+          all = all.concat(res.data)
+          lastPage = res.last_page
+          page = res.current_page + 1
+        } while (!cancelled && page <= lastPage)
+        if (!cancelled) setAvailableProducts(all)
       } catch {
         // best-effort
       }
     })()
+    return () => { cancelled = true }
   }, [open])
 
   useEffect(() => {

@@ -94,11 +94,27 @@ export default function DiscountsIndex() {
       setSelectedProductIds([])
       return
     }
+    let cancelled = false
     setLoadingProducts(true)
-    fetchProducts({ page: 1, store_ids: selectedStoreIds })
-      .then((res) => setProductList(res.data))
-      .catch(() => {})
-      .finally(() => setLoadingProducts(false))
+    ;(async () => {
+      try {
+        let all: Product[] = []
+        let page = 1
+        let lastPage = 1
+        do {
+          const res = await fetchProducts({ page, per_page: 100, store_ids: selectedStoreIds })
+          all = all.concat(res.data)
+          lastPage = res.last_page
+          page = res.current_page + 1
+        } while (!cancelled && page <= lastPage)
+        if (!cancelled) setProductList(all)
+      } catch {
+        // best-effort
+      } finally {
+        if (!cancelled) setLoadingProducts(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [scope, selectedStoreIds])
 
   useEffect(() => {
