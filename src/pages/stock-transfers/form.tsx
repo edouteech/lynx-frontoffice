@@ -59,7 +59,11 @@ export default function StockTransferForm() {
 
   // meta
   const [stores, setStores] = useState<Store[]>([])
-  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [productResults, setProductResults] = useState<Product[]>([])
+  const [productResultsLoading, setProductResultsLoading] = useState(false)
+  const [productResultsLoadingMore, setProductResultsLoadingMore] = useState(false)
+  const [productResultsPage, setProductResultsPage] = useState(1)
+  const [productResultsLastPage, setProductResultsLastPage] = useState(1)
   const [categories, setCategories] = useState<ItemCategory[]>([])
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingTransfer, setLoadingTransfer] = useState(isEdit)
@@ -83,7 +87,7 @@ export default function StockTransferForm() {
 
   // add-item form
   const [filterCategoryId, setFilterCategoryId] = useState('')
-  const [selectedProductId, setSelectedProductId] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [productSearchQuery, setProductSearchQuery] = useState('')
   const [showProductDropdown, setShowProductDropdown] = useState(false)
   const [addQty, setAddQty] = useState('1')
@@ -102,10 +106,9 @@ export default function StockTransferForm() {
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1)])
-      .then(([strs, prods, cats]) => {
+    Promise.all([fetchStores(1), fetchItemCategories(1)])
+      .then(([strs, cats]) => {
         setStores(strs.data)
-        setAllProducts(prods.data)
         setCategories(cats.data)
       })
       .catch(console.error)
@@ -146,17 +149,50 @@ export default function StockTransferForm() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showProductDropdown])
 
-  // ── Produits filtrés ───────────────────────────────────────────────────────
-  const filteredProducts = allProducts.filter(p => {
-    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
-    if (productSearchQuery) {
-      const q = productSearchQuery.toLowerCase()
-      const matchesName = p.name.toLowerCase().includes(q)
-      const matchesSku = p.sku?.toLowerCase().includes(q)
-      if (!matchesName && !matchesSku) return false
-    }
-    return true
-  })
+  // ── Recherche serveur des articles (debounce) ───────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    setProductResultsLoading(true)
+    const timeout = setTimeout(() => {
+      fetchProducts({
+        page: 1,
+        per_page: 20,
+        search: productSearchQuery.trim() || undefined,
+        category_id: filterCategoryId ? Number(filterCategoryId) : null,
+      })
+        .then(res => {
+          if (cancelled) return
+          setProductResults(res.data)
+          setProductResultsPage(res.current_page)
+          setProductResultsLastPage(res.last_page)
+        })
+        .catch(console.error)
+        .finally(() => { if (!cancelled) setProductResultsLoading(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timeout) }
+  }, [productSearchQuery, filterCategoryId])
+
+  // ── Charger la page suivante en arrivant en bas de la liste ────────────────
+  function handleProductDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) return
+    if (productResultsLoadingMore || productResultsPage >= productResultsLastPage) return
+    setProductResultsLoadingMore(true)
+    const nextPage = productResultsPage + 1
+    fetchProducts({
+      page: nextPage,
+      per_page: 20,
+      search: productSearchQuery.trim() || undefined,
+      category_id: filterCategoryId ? Number(filterCategoryId) : null,
+    })
+      .then(res => {
+        setProductResults(prev => [...prev, ...res.data])
+        setProductResultsPage(res.current_page)
+        setProductResultsLastPage(res.last_page)
+      })
+      .catch(console.error)
+      .finally(() => setProductResultsLoadingMore(false))
+  }
 
   // ── Items à afficher ───────────────────────────────────────────────────────
   const displayItems: StockTransferItem[] = isEdit
@@ -192,13 +228,12 @@ export default function StockTransferForm() {
 
   // ── Ajouter un article ─────────────────────────────────────────────────────
   async function handleAddItem() {
-    if (!selectedProductId || !addQty || parseFloat(addQty) <= 0) return
-    const product = allProducts.find(p => String(p.id) === selectedProductId)
-    if (!product) return
+    if (!selectedProduct || !addQty || parseFloat(addQty) <= 0) return
+    const product = selectedProduct
     const qty = parseFloat(addQty) || 1
 
     // Réinitialiser immédiatement pour éviter les doubles soumissions
-    setSelectedProductId('')
+    setSelectedProduct(null)
     setProductSearchQuery('')
     setShowProductDropdown(false)
     setAddQty('1')
@@ -502,7 +537,7 @@ export default function StockTransferForm() {
                 {/* Catégorie */}
                 <div className="w-44">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
-                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId(''); setProductSearchQuery('') }}>
+                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProduct(null); setProductSearchQuery('') }}>
                     <option value="">Toutes</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </Sel>
@@ -515,14 +550,14 @@ export default function StockTransferForm() {
                   </label>
                   <input
                     type="text"
-                    value={selectedProductId ? (allProducts.find(p => String(p.id) === selectedProductId)?.name || '') : ''}
+                    value={selectedProduct ? selectedProduct.name : ''}
                     readOnly
                     onClick={() => setShowProductDropdown(!showProductDropdown)}
                     placeholder="Sélectionner un produit..."
                     className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
                   />
                   {showProductDropdown && (
-                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg" onScroll={handleProductDropdownScroll}>
                       <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
                         <input
                           type="text"
@@ -533,21 +568,32 @@ export default function StockTransferForm() {
                           autoFocus
                         />
                       </div>
-                      {filteredProducts.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProductId(String(p.id))
-                            setProductSearchQuery('')
-                            setShowProductDropdown(false)
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                        >
-                          <div className="font-medium text-gray-900">{p.name}</div>
-                          {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
-                        </button>
-                      ))}
+                      {productResultsLoading ? (
+                        <div className="px-3 py-4 text-center text-sm text-gray-400">Recherche…</div>
+                      ) : productResults.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun produit trouvé.</div>
+                      ) : (
+                        <>
+                          {productResults.map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedProduct(p)
+                                setProductSearchQuery('')
+                                setShowProductDropdown(false)
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                            >
+                              <div className="font-medium text-gray-900">{p.name}</div>
+                              {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+                            </button>
+                          ))}
+                          {productResultsLoadingMore && (
+                            <div className="px-3 py-2 text-center text-xs text-gray-400">Chargement…</div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -561,7 +607,7 @@ export default function StockTransferForm() {
                 <button
                   type="button"
                   onClick={() => void handleAddItem()}
-                  disabled={!selectedProductId}
+                  disabled={!selectedProduct}
                   className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
                 >
                   <Plus className="h-4 w-4" /> Ajouter

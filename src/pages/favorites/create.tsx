@@ -2,9 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import type { Favorite, Product, Store } from '../../types/api'
 import { createFavorite, updateFavorite } from '../../api/favorites'
-import { fetchProducts } from '../../api/products'
+import { fetchProducts, type FetchProductsParams } from '../../api/products'
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
+
+async function fetchAllProducts(params: FetchProductsParams = {}): Promise<Product[]> {
+  let all: Product[] = []
+  let page = 1
+  let lastPage = 1
+  do {
+    const res = await fetchProducts({ ...params, page, per_page: 100 })
+    all = all.concat(res.data)
+    lastPage = res.last_page
+    page = res.current_page + 1
+  } while (page <= lastPage)
+  return all
+}
 
 export interface FavoriteCreateModalProps {
   open: boolean
@@ -43,10 +56,10 @@ export function FavoriteCreateModal({
       try {
         const [stores, products] = await Promise.all([
           fetchStores(1),
-          fetchProducts(1),
+          fetchAllProducts(),
         ])
         setAvailableStores(stores.data)
-        setAvailableProducts(products.data)
+        setAvailableProducts(products)
       } catch {
         // best-effort, le formulaire reste utilisable avec ce qu'on a déjà.
       }
@@ -60,18 +73,17 @@ export function FavoriteCreateModal({
       try {
         if (storeIds.length === 0) {
           // No stores selected, show all products
-          const products = await fetchProducts(1)
-          setAvailableProducts(products.data)
+          setAvailableProducts(await fetchAllProducts())
         } else {
           // One or more stores selected, fetch products for each store and merge
           const productPromises = storeIds.map(storeId =>
-            fetchProducts({ store_id: storeId })
+            fetchAllProducts({ store_id: storeId })
           )
           const results = await Promise.all(productPromises)
           // Merge and deduplicate products by ID
           const allProducts = new Map<number, Product>()
           for (const result of results) {
-            for (const product of result.data) {
+            for (const product of result) {
               allProducts.set(product.id, product)
             }
           }

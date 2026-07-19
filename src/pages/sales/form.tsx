@@ -160,7 +160,15 @@ export default function SaleForm() {
 
   const [customers, setCustomers] = useState<Customer[]>([])
 
-  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [productResults, setProductResults] = useState<Product[]>([])
+
+  const [productResultsLoading, setProductResultsLoading] = useState(false)
+
+  const [productResultsLoadingMore, setProductResultsLoadingMore] = useState(false)
+
+  const [productResultsPage, setProductResultsPage] = useState(1)
+
+  const [productResultsLastPage, setProductResultsLastPage] = useState(1)
 
   const [categories, setCategories] = useState<ItemCategory[]>([])
 
@@ -244,7 +252,7 @@ export default function SaleForm() {
 
   const [filterCategoryId, setFilterCategoryId] = useState('')
 
-  const [selectedProductId, setSelectedProductId] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   const [productSearchQuery, setProductSearchQuery] = useState('')
 
@@ -334,13 +342,11 @@ export default function SaleForm() {
 
   useEffect(() => {
 
-    Promise.all([fetchStores(1), fetchProducts(1), fetchItemCategories(1), fetchCustomers(1), fetchGeneralSetting()])
+    Promise.all([fetchStores(1), fetchItemCategories(1), fetchCustomers(1), fetchGeneralSetting()])
 
-      .then(async ([strs, prods, cats, custs, setting]) => {
+      .then(async ([strs, cats, custs, setting]) => {
 
         setStores(strs.data)
-
-        setAllProducts(prods.data)
 
         setCategories(cats.data)
 
@@ -762,7 +768,7 @@ export default function SaleForm() {
 
     setFilterCategoryId('')
 
-    setSelectedProductId('')
+    setSelectedProduct(null)
 
     setProductSearchQuery('')
 
@@ -782,32 +788,50 @@ export default function SaleForm() {
 
 
 
-  // ── Pré-remplir le prix de vente quand on sélectionne un produit ──────────
-
+  // ── Recherche serveur des articles (debounce) ───────────────────────────
   useEffect(() => {
+    let cancelled = false
+    setProductResultsLoading(true)
+    const timeout = setTimeout(() => {
+      fetchProducts({
+        page: 1,
+        per_page: 20,
+        search: productSearchQuery.trim() || undefined,
+        category_id: filterCategoryId ? Number(filterCategoryId) : null,
+      })
+        .then(res => {
+          if (cancelled) return
+          setProductResults(res.data)
+          setProductResultsPage(res.current_page)
+          setProductResultsLastPage(res.last_page)
+        })
+        .catch(console.error)
+        .finally(() => { if (!cancelled) setProductResultsLoading(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timeout) }
+  }, [productSearchQuery, filterCategoryId])
 
-    if (!selectedProductId) { setAddPrice(''); return }
-
-    const p = allProducts.find(x => String(x.id) === selectedProductId)
-
-    if (p) setAddPrice(p.selling_price != null ? String(p.selling_price) : '0')
-
-  }, [selectedProductId, allProducts])
-
-
-
-  // ── Produits filtrés ───────────────────────────────────────────────────────
-
-  const filteredProducts = allProducts.filter(p => {
-    if (filterCategoryId && String(p.item_category_id) !== filterCategoryId) return false
-    if (productSearchQuery) {
-      const q = productSearchQuery.toLowerCase()
-      const matchesName = p.name.toLowerCase().includes(q)
-      const matchesSku = p.sku?.toLowerCase().includes(q)
-      if (!matchesName && !matchesSku) return false
-    }
-    return true
-  })
+  // ── Charger la page suivante en arrivant en bas de la liste ────────────────
+  function handleProductDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) return
+    if (productResultsLoadingMore || productResultsPage >= productResultsLastPage) return
+    setProductResultsLoadingMore(true)
+    const nextPage = productResultsPage + 1
+    fetchProducts({
+      page: nextPage,
+      per_page: 20,
+      search: productSearchQuery.trim() || undefined,
+      category_id: filterCategoryId ? Number(filterCategoryId) : null,
+    })
+      .then(res => {
+        setProductResults(prev => [...prev, ...res.data])
+        setProductResultsPage(res.current_page)
+        setProductResultsLastPage(res.last_page)
+      })
+      .catch(console.error)
+      .finally(() => setProductResultsLoadingMore(false))
+  }
 
 
 
@@ -919,11 +943,9 @@ export default function SaleForm() {
 
   const handleAddItem = useCallback(async () => {
 
-    if (!selectedProductId || !addQty || parseFloat(addQty) <= 0) return
+    if (!selectedProduct || !addQty || parseFloat(addQty) <= 0) return
 
-    const product = allProducts.find(p => String(p.id) === selectedProductId)
-
-    if (!product) return
+    const product = selectedProduct
 
 
 
@@ -935,7 +957,7 @@ export default function SaleForm() {
 
     // Réinitialiser immédiatement pour éviter les doubles soumissions
 
-    setSelectedProductId('')
+    setSelectedProduct(null)
 
     setAddQty('1')
 
@@ -1017,7 +1039,7 @@ export default function SaleForm() {
 
     }
 
-  }, [selectedProductId, addQty, addPrice, allProducts, isEdit, id, items, pendingItems, itemEdits, pendingEdits])
+  }, [selectedProduct, addQty, addPrice, isEdit, id, items, pendingItems, itemEdits, pendingEdits])
 
 
 
@@ -2763,7 +2785,7 @@ export default function SaleForm() {
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
 
-                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProductId(''); setProductSearchQuery('') }}>
+                  <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProduct(null); setProductSearchQuery('') }}>
 
                     <option value="">Toutes</option>
 
@@ -2789,7 +2811,7 @@ export default function SaleForm() {
 
                     type="text"
 
-                    value={selectedProductId ? (allProducts.find(p => String(p.id) === selectedProductId)?.name || '') : ''}
+                    value={selectedProduct ? selectedProduct.name : ''}
 
                     readOnly
 
@@ -2803,7 +2825,7 @@ export default function SaleForm() {
 
                   {showProductDropdown && (
 
-                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg" onScroll={handleProductDropdownScroll}>
 
                       <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
 
@@ -2825,35 +2847,48 @@ export default function SaleForm() {
 
                       </div>
 
-                      {filteredProducts.map(p => (
+                      {productResultsLoading ? (
+                        <div className="px-3 py-4 text-center text-sm text-gray-400">Recherche…</div>
+                      ) : productResults.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun produit trouvé.</div>
+                      ) : (
+                        <>
+                          {productResults.map(p => (
 
-                        <button
+                            <button
 
-                          key={p.id}
+                              key={p.id}
 
-                          type="button"
+                              type="button"
 
-                          onClick={() => {
+                              onClick={() => {
 
-                            setSelectedProductId(String(p.id))
+                                setSelectedProduct(p)
 
-                            setProductSearchQuery('')
+                                setAddPrice(p.selling_price != null ? String(p.selling_price) : '0')
 
-                            setShowProductDropdown(false)
+                                setProductSearchQuery('')
 
-                          }}
+                                setShowProductDropdown(false)
 
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                              }}
 
-                        >
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
 
-                          <div className="font-medium text-gray-900">{p.name}</div>
+                            >
 
-                          {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
+                              <div className="font-medium text-gray-900">{p.name}</div>
 
-                        </button>
+                              {p.sku && <div className="text-xs text-gray-500">SKU: {p.sku}</div>}
 
-                      ))}
+                            </button>
+
+                          ))}
+                          {productResultsLoadingMore && (
+                            <div className="px-3 py-2 text-center text-xs text-gray-400">Chargement…</div>
+                          )}
+                        </>
+                      )}
 
                     </div>
 
@@ -2893,7 +2928,7 @@ export default function SaleForm() {
 
                   onClick={() => void handleAddItem()}
 
-                  disabled={!selectedProductId}
+                  disabled={!selectedProduct}
 
                   className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
 
