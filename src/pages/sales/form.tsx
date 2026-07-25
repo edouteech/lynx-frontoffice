@@ -1217,6 +1217,8 @@ export default function SaleForm() {
 
           order_type:           orderType || null,
 
+          country:              currentOrganization?.country ?? null,
+
           invoice_number:       nextInvoiceNumber,
 
           discount_percentage:  parseFloat(discountPct) || 0,
