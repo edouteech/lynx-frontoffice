@@ -606,6 +606,14 @@ export default function SaleForm() {
 
   const handleSelectRegister = async (register: CashRegister) => {
 
+    if (register.open_session && register.open_session.is_mine === false) {
+
+      setError('Cette caisse est en cours d\'utilisation sur un autre appareil.')
+
+      return
+
+    }
+
     setCashRegisterId(String(register.id))
 
     if (register.open_session) {
@@ -1653,6 +1661,10 @@ export default function SaleForm() {
 
                   const hasSession = !!register.open_session
 
+                  const lockedByOther = hasSession && register.open_session?.is_mine === false
+
+                  const selectable = isActive && !lockedByOther
+
                   return (
 
                     <button
@@ -1661,13 +1673,13 @@ export default function SaleForm() {
 
                       type="button"
 
-                      disabled={!isActive}
+                      disabled={!selectable}
 
                       onClick={() => void handleSelectRegister(register)}
 
                       className={`flex items-center justify-between p-5 rounded-2xl border transition-all text-left group
 
-                        ${!isActive
+                        ${!selectable
 
                           ? 'border-gray-150 bg-gray-50 opacity-60 cursor-not-allowed'
 
@@ -1679,13 +1691,17 @@ export default function SaleForm() {
 
                         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors
 
-                          ${hasSession
+                          ${lockedByOther
+
+                            ? 'bg-orange-50 text-orange-600'
+
+                            : hasSession
 
                             ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
 
                             : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}`}>
 
-                          <div className={`h-3 w-3 rounded-full ${hasSession ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                          <div className={`h-3 w-3 rounded-full ${lockedByOther ? 'bg-orange-500' : hasSession ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
 
                         </div>
 
@@ -1697,9 +1713,9 @@ export default function SaleForm() {
 
                           </p>
 
-                          <p className={`mt-1 text-xs font-medium ${hasSession ? 'text-emerald-600' : 'text-gray-500'}`}>
+                          <p className={`mt-1 text-xs font-medium ${lockedByOther ? 'text-orange-600' : hasSession ? 'text-emerald-600' : 'text-gray-500'}`}>
 
-                            {hasSession ? 'Active' : 'Fermée'}
+                            {lockedByOther ? 'Occupée (autre appareil)' : hasSession ? 'Active' : 'Fermée'}
 
                           </p>
 
