@@ -37,6 +37,34 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
   return res.data
 }
 
+export async function exportProducts(params: FetchProductsParams & { format?: 'xlsx' | 'csv' } = {}): Promise<Blob> {
+  const res = await api.get('/items/export', {
+    responseType: 'blob',
+    params: {
+      ...(params.store_id    ? { store_id: params.store_id }       : {}),
+      ...(params.category_id ? { category_id: params.category_id } : {}),
+      ...(params.stock_alert ? { stock_alert: params.stock_alert } : {}),
+      ...(params.search      ? { search: params.search }           : {}),
+      ...(params.type        ? { type: params.type }               : {}),
+      ...(params.format      ? { format: params.format }           : {}),
+    },
+  })
+  return res.data
+}
+
+export async function fetchAllProducts(params: FetchProductsParams = {}): Promise<Product[]> {
+  const res = await api.get<Product[]>('/items/all', {
+    params: {
+      ...(params.store_id    ? { store_id: params.store_id }       : {}),
+      ...(params.category_id ? { category_id: params.category_id } : {}),
+      ...(params.stock_alert ? { stock_alert: params.stock_alert } : {}),
+      ...(params.search      ? { search: params.search }           : {}),
+      ...(params.type        ? { type: params.type }               : {}),
+    },
+  })
+  return res.data
+}
+
 export async function restoreProduct(id: string | number): Promise<Product> {
   const res = await api.post<Product>(`/items/${id}/restore`)
   return res.data

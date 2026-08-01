@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Building2, ChevronDown, FileUp, Loader2, Pencil, Plus, Trash2, Package, RefreshCw, X, Eye } from 'lucide-react'
+import { Building2, ChevronDown, Download, FileUp, Loader2, Pencil, Plus, Trash2, Package, RefreshCw, X, Eye } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import ProductImportModal from '../../components/ProductImportModal'
-import { fetchProducts, deleteProduct, fetchProductStock, recalculateAllStock } from '../../api/products'
+import { fetchProducts, deleteProduct, fetchProductStock, recalculateAllStock, exportProducts, fetchAllProducts } from '../../api/products'
 import { fetchStores } from '../../api/stores'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { exportToPdf } from '../../lib/tableExport'
 import type { ItemCategory, Product, ProductStockEntry, Store } from '../../types/api'
 
 // ─── Alert filter options ──────────────────────────────────────────────────────
@@ -186,6 +187,10 @@ export default function ItemsIndex() {
   const [recalculating, setRecalculating] = useState(false)
   const [recalcMsg, setRecalcMsg] = useState<string | null>(null)
 
+  // export
+  const [exporting, setExporting] = useState(false)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+
   // modal
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
   const [showImport, setShowImport] = useState(false)
@@ -262,6 +267,65 @@ export default function ItemsIndex() {
       setError(getApiErrorMessage(e))
     } finally {
       setRecalculating(false)
+    }
+  }
+
+  const currentFilters = () => ({
+    search:      searchQuery.trim() || undefined,
+    store_id:    filterStore    ? Number(filterStore)    : null,
+    category_id: filterCategory ? Number(filterCategory) : null,
+    stock_alert: filterAlert || null,
+  })
+
+  async function handleExportFile(format: 'xlsx' | 'csv') {
+    setExportMenuOpen(false)
+    setExporting(true)
+    setError(null)
+    try {
+      const blob = await exportProducts({ ...currentFilters(), format })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `articles_${new Date().toISOString().slice(0, 10)}.${format}`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportMenuOpen(false)
+    setExporting(true)
+    setError(null)
+    try {
+      const products = await fetchAllProducts(currentFilters())
+      const soldByLabels: Record<string, string> = { unit: 'unité', weight: 'poids', surface: 'surface' }
+      const rows = products.map(p => [
+        p.name,
+        p.category?.name ?? '',
+        p.sku ?? '',
+        p.purchase_price != null ? Number(p.purchase_price) : null,
+        Number(storeFiltered && p.store_selling_price != null ? p.store_selling_price : p.selling_price),
+        p.track_inventory
+          ? Number(storeFiltered && p.store_stock_quantity != null ? p.store_stock_quantity : p.stock_quantity)
+          : null,
+        soldByLabels[p.sold_by] ?? 'unité',
+      ])
+      exportToPdf({
+        filename: `articles_${new Date().toISOString().slice(0, 10)}`,
+        title: 'Articles',
+        headers: ['Article', 'Catégorie', 'Référence', 'P. Achat', 'P. Vente', 'Stock', 'Vendu par'],
+        rows,
+      })
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -484,6 +548,46 @@ export default function ItemsIndex() {
         searchable
         searchPlaceholder="Rechercher un article…"
         onSearch={setSearchQuery}
+        customFilters={
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen(v => !v)}
+              disabled={exporting}
+              title="Exporter les articles correspondant aux filtres actuels"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Exporter
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => void handleExportFile('csv')}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleExportFile('xlsx')}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Excel (XLSX)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleExportPdf()}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  PDF
+                </button>
+              </div>
+            )}
+          </div>
+        }
         pagination={false}
         pageSizeOptions={[5, 10, 25, 50, 100]}
         serverPagination={paginated ? {
