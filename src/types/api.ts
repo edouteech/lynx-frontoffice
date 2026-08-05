@@ -490,6 +490,9 @@ export interface CashRegisterSession {
   invoice_count: number
   last_sale_id: number | null
   last_invoice_number: string | null
+  // true si ouverte par l'appareil courant (ou non verrouillée) ; false si un autre
+  // appareil l'a ouverte — cf. CashRegisterSession::is_mine côté backend.
+  is_mine?: boolean
   sales_total?: number
   expected_closing_balance?: number
   difference?: number | null
