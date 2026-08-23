@@ -7,6 +7,7 @@ import { CURRENCY_OPTIONS } from '../../lib/registerFormOptions'
 import LoadingScreen from '../../components/LoadingScreen'
 import { CountrySelect } from '../../components/CountrySelect'
 import { PhoneInput } from '../../components/PhoneInput'
+import { PasswordInput } from '../../components/PasswordInput'
 import { telephoneForApi } from '../../lib/phoneValue'
 import { GoogleReCaptchaProvider, useGoogleReCaptcha } from 'react-google-recaptcha-v3'
 
@@ -257,9 +258,8 @@ function RegisterForm() {
                   >
                     Mot de passe <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <PasswordInput
                     id="reg-password"
-                    type="password"
                     required
                     minLength={8}
                     value={password}
@@ -277,9 +277,8 @@ function RegisterForm() {
                     Confirmer le mot de passe{' '}
                     <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <PasswordInput
                     id="reg-password-2"
-                    type="password"
                     required
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.target.value)}

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/useAuth'
 import { getApiErrorMessage } from '../../lib/apiError'
 import LoadingScreen from '../../components/LoadingScreen'
+import { PasswordInput } from '../../components/PasswordInput'
 import { getDefaultLandingPage } from '../../lib/permissions'
 
 export default function Login() {
@@ -93,9 +94,8 @@ export default function Login() {
             >
               Mot de passe
             </label>
-            <input
+            <PasswordInput
               id="login-password"
-              type="password"
               autoComplete="current-password"
               required
               value={password}

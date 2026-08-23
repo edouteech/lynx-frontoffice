@@ -9,6 +9,7 @@ import {
   type UserEmailCheckResponse,
 } from '../../api/users'
 import { PhoneInput } from '../../components/PhoneInput'
+import { PasswordInput } from '../../components/PasswordInput'
 import { telephoneForApi } from '../../lib/phoneValue'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { User } from '../../types/api'
@@ -346,9 +347,8 @@ export function UserCreateModal({
           >
             Mot de passe {isEdit ? '(laisser vide pour ne pas changer)' : ''}
           </label>
-          <input
+          <PasswordInput
             id="user-password"
-            type="password"
             autoComplete="new-password"
             required={!isEdit}
             value={password}

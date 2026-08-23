@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { resetPasswordWithToken } from '../../api/auth'
+import { PasswordInput } from '../../components/PasswordInput'
 import { getApiErrorMessage } from '../../lib/apiError'
 
 export default function ResetPassword() {
@@ -120,9 +121,8 @@ export default function ResetPassword() {
               >
                 Nouveau mot de passe
               </label>
-              <input
+              <PasswordInput
                 id="reset-password"
-                type="password"
                 autoComplete="new-password"
                 required
                 minLength={8}
@@ -138,9 +138,8 @@ export default function ResetPassword() {
               >
                 Confirmer le mot de passe
               </label>
-              <input
+              <PasswordInput
                 id="reset-password-2"
-                type="password"
                 autoComplete="new-password"
                 required
                 minLength={8}
