@@ -177,9 +177,9 @@ export default function PendingOrdersPage() {
       key: 'subtotal',
       label: 'Total',
       render: (_, row) => {
-        const sub = (row as Sale & { subtotal?: number }).subtotal ?? 0
-        const disc = sub * ((row.discount_percentage ?? 0) / 100)
-        const total = sub - disc + (row.extra_fees ?? 0)
+        // row.total = valeur enregistrée en base, fiable. On ne la recalcule plus depuis
+        // discount_percentage (arrondi à 2 décimales en base, faisait dériver l'affichage).
+        const total = row.total ?? 0
         return <span className="font-semibold text-gray-800">{total.toLocaleString('fr-FR')} CFA</span>
       },
     },

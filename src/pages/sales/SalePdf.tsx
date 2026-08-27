@@ -132,9 +132,13 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
   const invoiceNumber = sale.invoice_number ?? `#${String(sale.id).padStart(4, '0')}`
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
-  const discountAmount = subtotal * ((sale.discount_percentage ?? 0) / 100)
   const extraFees = sale.extra_fees ?? 0
-  const netAPayer = subtotal - discountAmount + extraFees
+  // sale.total = valeur enregistrée en base, fiable. On ne recalcule que si absent (repli,
+  // vieilles ventes) — jamais quand le back nous l'a fourni.
+  const netAPayer = sale.total ?? (subtotal * (1 - (sale.discount_percentage ?? 0) / 100) + extraFees)
+  // Le montant de remise affiché est dérivé du total réel, pas recalculé depuis le
+  // pourcentage (qui n'a que 2 décimales en base et ferait dériver l'addition).
+  const discountAmount = subtotal - netAPayer + extraFees
 
   const saleDateTime = sale.sale_date ?? sale.created_at
 
@@ -252,7 +256,7 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
             <View style={s.financialBox}>
               {discountAmount > 0 && (
                 <View style={s.finRow}>
-                  <Text style={s.finLabel}>Remise ({sale.discount_percentage}%)</Text>
+                  <Text style={s.finLabel}>Remise{sale.discount_percentage ? ` (${sale.discount_percentage}%)` : ''}</Text>
                   <Text style={s.finValue}>−{fmt(discountAmount)} XOF</Text>
                 </View>
               )}

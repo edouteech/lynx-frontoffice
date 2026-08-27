@@ -218,11 +218,11 @@ export default function SalesInvoicesPage() {
       label: 'Total',
       sortable: true,
       align: 'right',
-      render: (v, row) => {
-        const sub = Number(v as number | undefined) ?? 0
-        const disc = sub * ((Number(row.discount_percentage) ?? 0) / 100)
-        const fees = Number(row.extra_fees) ?? 0
-        return <span className="font-bold text-blue-700">{fmtMoney(sub - disc + fees)}</span>
+      render: (_v, row) => {
+        // row.total = valeur enregistrée en base, fiable. On ne la recalcule plus depuis
+        // discount_percentage (arrondi à 2 décimales en base, faisait dériver l'affichage).
+        const total = Number(row.total ?? 0)
+        return <span className="font-bold text-blue-700">{fmtMoney(total)}</span>
       },
     },
   ], [])
