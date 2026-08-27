@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Package, TrendingUp } from 'lucide-react'
-import { fetchProducts } from '../../api/products'
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Loader2, Package, Search, TrendingUp } from 'lucide-react'
+import { fetchProducts, fetchAllProducts } from '../../api/products'
 import { fetchStores } from '../../api/stores'
 import { fetchItemCategories } from '../../api/itemCategories'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { exportToXlsx } from '../../lib/tableExport'
 import type { ItemCategory, Product, Store } from '../../types/api'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -151,10 +152,13 @@ export default function StockEvaluationPage() {
   const [categories, setCategories] = useState<ItemCategory[]>([])
   const [storeId, setStoreId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   // load stores + categories once
   useEffect(() => {
@@ -166,8 +170,15 @@ export default function StockEvaluationPage() {
       .catch(console.error)
   }, [])
 
+  // debounce la recherche texte (300ms, même convention que DataTable) avant de la répercuter
+  // sur les filtres réels — évite un appel API à chaque frappe.
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearch(searchInput.trim()), 300)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
+
   // reset page when filters change
-  useEffect(() => { setPage(1) }, [storeId, categoryId])
+  useEffect(() => { setPage(1) }, [storeId, categoryId, search])
 
   const load = useCallback(async (p: number) => {
     setLoading(true)
@@ -177,6 +188,7 @@ export default function StockEvaluationPage() {
         page: p,
         store_id: storeId ? Number(storeId) : null,
         category_id: categoryId ? Number(categoryId) : null,
+        search: search || undefined,
       })
       setPaginated(res)
     } catch (e) {
@@ -185,9 +197,55 @@ export default function StockEvaluationPage() {
     } finally {
       setLoading(false)
     }
-  }, [storeId, categoryId])
+  }, [storeId, categoryId, search])
 
   useEffect(() => { void load(page) }, [page, load])
+
+  // export Excel : porte sur TOUS les articles correspondant aux filtres (pas seulement
+  // la page affichée) — on repasse par fetchAllProducts puis la même dérivation (deriveRow)
+  // que le tableau, pour que le fichier reflète exactement ce qui est affiché à l'écran.
+  const handleExportXlsx = useCallback(async () => {
+    setExporting(true)
+    setError(null)
+    try {
+      const products = await fetchAllProducts({
+        store_id: storeId ? Number(storeId) : null,
+        category_id: categoryId ? Number(categoryId) : null,
+        search: search || undefined,
+      })
+      const allRows = products.map(p => deriveRow(p, storeId))
+
+      const headers = [
+        'Article', 'Référence', 'Catégorie',
+        'P. Achat', 'P. Vente', 'Marge %', 'Marge unit. (CFA)',
+        'Qté en stock', 'Coût global (CFA)', 'Valorisation (CFA)', 'Marge globale (CFA)',
+      ]
+      const rows = allRows.map(r => [
+        r.product.name,
+        r.product.sku ?? '',
+        r.product.category?.name ?? '',
+        r.product.purchase_price != null ? Number(r.product.purchase_price) : null,
+        r.sellingPrice,
+        r.marginPct != null ? Number(r.marginPct.toFixed(1)) : null,
+        r.marginUnit,
+        r.product.track_inventory ? r.quantity : null,
+        r.product.track_inventory ? r.globalCost : null,
+        r.product.track_inventory ? r.valuation : null,
+        r.product.track_inventory ? r.globalMargin : null,
+      ])
+
+      exportToXlsx({
+        filename: `evaluation-stock_${new Date().toISOString().slice(0, 10)}`,
+        sheetName: 'Évaluation de stock',
+        headers,
+        rows,
+      })
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setExporting(false)
+    }
+  }, [storeId, categoryId, search])
 
   // derive rows
   const rows: ProductRow[] = useMemo(() => {
@@ -237,8 +295,28 @@ export default function StockEvaluationPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Rechercher un article, une référence…"
+                className="h-10 w-64 rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              />
+            </div>
             <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} />
             <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
+            <button
+              type="button"
+              onClick={() => void handleExportXlsx()}
+              disabled={exporting}
+              title="Exporter tous les articles correspondant aux filtres actuels"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60 transition-colors"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Exporter Excel
+            </button>
           </div>
         </div>
       </div>
