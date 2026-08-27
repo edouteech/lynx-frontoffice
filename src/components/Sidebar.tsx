@@ -282,9 +282,18 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
       return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stock.manage')
     }
 
-    // Ventes (sortie du groupe "Point de vente", même permission qu'avant)
+    // Ventes (sortie du groupe "Point de vente") — visible avec l'une de ces permissions,
+    // exactement la même logique que SaleController::authorizeBackofficeSale() côté API :
+    //   - admin_panel.stores.manage : droit large historique
+    //   - admin_panel.sales.manage  : permission fine dédiée au menu Ventes (nouvelle,
+    //     ajoutée en même temps que la sortie du groupe "Point de vente")
+    //   - cash_register.sales.create_from_backoffice : permission historique côté caisse
     if (item.id === 'sales') {
-      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage')
+      return (
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.sales.manage') ||
+        hasPermissionCode(user, activeOrganizationId, 'cash_register.sales.create_from_backoffice')
+      )
     }
 
     // Point de vente
