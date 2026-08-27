@@ -174,9 +174,9 @@ export function CustomerTransactionsModal({
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {sales.map((sale) => {
-                      const sub = (sale as Sale & { subtotal?: number }).subtotal ?? 0
-                      const disc = sub * ((sale.discount_percentage ?? 0) / 100)
-                      const totalAmt = sub - disc + (sale.extra_fees ?? 0)
+                      // sale.total = valeur enregistrée en base, fiable. On ne la recalcule plus
+                      // depuis discount_percentage (arrondi à 2 décimales en base).
+                      const totalAmt = sale.total ?? 0
                       const statusInfo = STATUS_LABELS[sale.status] ?? STATUS_LABELS.draft
 
                       return (
