@@ -147,13 +147,17 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    id: 'sales',
+    label: 'Ventes',
+    icon: ReceiptText,
+  },
+  {
     id: 'ventes-menu',
     label: 'Point de vente',
     icon: ShoppingBag,
     children: [
       { id: 'stores', label: 'Magasins', icon: Store },
       { id: 'cash-registers', label: 'Caisses', icon: Wallet },
-      { id: 'sales', label: 'Ventes', icon: ReceiptText },
       { id: 'commandes-en-attente', label: 'Commandes en attente', icon: Hourglass },
       { id: 'vat-rates', label: 'TVA', icon: Percent },
       { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
@@ -276,6 +280,11 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
     // Stock
     if (item.id === 'stock-menu') {
       return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stock.manage')
+    }
+
+    // Ventes (sortie du groupe "Point de vente", même permission qu'avant)
+    if (item.id === 'sales') {
+      return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage')
     }
 
     // Point de vente
