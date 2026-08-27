@@ -35,10 +35,9 @@ function fmtDate(d: string | null | undefined) {
 }
 
 function saleAmount(row: Sale): number {
-  const sub  = Number(row.subtotal) || 0
-  const disc = sub * ((Number(row.discount_percentage) || 0) / 100)
-  const fees = Number(row.extra_fees) || 0
-  return sub - disc + fees
+  // row.total = valeur enregistrée en base, fiable. On ne la recalcule plus depuis
+  // discount_percentage (arrondi à 2 décimales en base, faisait dériver l'affichage).
+  return Number(row.total) || 0
 }
 
 function todayISO() {

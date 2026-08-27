@@ -145,9 +145,13 @@ export default function InvoicePage() {
 
   const items = sale.items ?? []
   const subtotal = items.reduce((acc, it) => acc + (it.quantity * it.unit_price), 0)
-  const discount = sale.discount_percentage ? subtotal * (sale.discount_percentage / 100) : 0
   const extraFees = sale.extra_fees ?? 0
-  const total = subtotal - discount + extraFees
+  // sale.total = valeur enregistrée en base, fiable. On ne recalcule que si absent (repli,
+  // vieilles ventes) — jamais quand le back nous l'a fourni.
+  const total = sale.total ?? (subtotal * (1 - (sale.discount_percentage ?? 0) / 100) + extraFees)
+  // Le montant de remise affiché est dérivé du total réel, pas recalculé depuis le
+  // pourcentage (qui n'a que 2 décimales en base et ferait dériver l'addition).
+  const discount = subtotal - total + extraFees
   const invoiceNumber = sale.invoice_number ?? `#${String(sale.id).padStart(4, '0')}`
 
   const logoUrl = receiptSetting?.printed_receipt_logo
@@ -269,7 +273,7 @@ export default function InvoicePage() {
           >
             {discount > 0 && (
               <div className="flex justify-between text-base font-bold text-[#475569]">
-                <span>Remise ({sale.discount_percentage}%)</span>
+                <span>Remise{sale.discount_percentage ? ` (${sale.discount_percentage}%)` : ''}</span>
                 <span>-{fmtMoney(discount)}</span>
               </div>
             )}
