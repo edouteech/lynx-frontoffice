@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, Download, Loader2, Package, TrendingUp } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Loader2, Package, Search, TrendingUp } from 'lucide-react'
 import { fetchProducts, fetchAllProducts } from '../../api/products'
 import { fetchStores } from '../../api/stores'
 import { fetchItemCategories } from '../../api/itemCategories'
@@ -152,6 +152,8 @@ export default function StockEvaluationPage() {
   const [categories, setCategories] = useState<ItemCategory[]>([])
   const [storeId, setStoreId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -168,8 +170,15 @@ export default function StockEvaluationPage() {
       .catch(console.error)
   }, [])
 
+  // debounce la recherche texte (300ms, même convention que DataTable) avant de la répercuter
+  // sur les filtres réels — évite un appel API à chaque frappe.
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearch(searchInput.trim()), 300)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
+
   // reset page when filters change
-  useEffect(() => { setPage(1) }, [storeId, categoryId])
+  useEffect(() => { setPage(1) }, [storeId, categoryId, search])
 
   const load = useCallback(async (p: number) => {
     setLoading(true)
@@ -179,6 +188,7 @@ export default function StockEvaluationPage() {
         page: p,
         store_id: storeId ? Number(storeId) : null,
         category_id: categoryId ? Number(categoryId) : null,
+        search: search || undefined,
       })
       setPaginated(res)
     } catch (e) {
@@ -187,7 +197,7 @@ export default function StockEvaluationPage() {
     } finally {
       setLoading(false)
     }
-  }, [storeId, categoryId])
+  }, [storeId, categoryId, search])
 
   useEffect(() => { void load(page) }, [page, load])
 
@@ -201,6 +211,7 @@ export default function StockEvaluationPage() {
       const products = await fetchAllProducts({
         store_id: storeId ? Number(storeId) : null,
         category_id: categoryId ? Number(categoryId) : null,
+        search: search || undefined,
       })
       const allRows = products.map(p => deriveRow(p, storeId))
 
@@ -234,7 +245,7 @@ export default function StockEvaluationPage() {
     } finally {
       setExporting(false)
     }
-  }, [storeId, categoryId])
+  }, [storeId, categoryId, search])
 
   // derive rows
   const rows: ProductRow[] = useMemo(() => {
@@ -284,6 +295,16 @@ export default function StockEvaluationPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Rechercher un article, une référence…"
+                className="h-10 w-64 rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              />
+            </div>
             <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} />
             <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
             <button
