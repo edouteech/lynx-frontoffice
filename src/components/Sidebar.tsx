@@ -147,9 +147,13 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    id: 'sales',
-    label: 'Ventes',
+    id: 'ventes-clients-menu',
+    label: 'Ventes & Clients',
     icon: ReceiptText,
+    children: [
+      { id: 'sales', label: 'Ventes', icon: ReceiptText },
+      { id: 'customers', label: 'Clients', icon: UserRoundPlus },
+    ],
   },
   {
     id: 'ventes-menu',
@@ -161,7 +165,6 @@ const navItems: NavItem[] = [
       { id: 'commandes-en-attente', label: 'Commandes en attente', icon: Hourglass },
       { id: 'vat-rates', label: 'TVA', icon: Percent },
       { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
-      { id: 'customers', label: 'Clients', icon: UserRoundPlus },
     ],
   },
   {
@@ -282,13 +285,15 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
       return hasPermissionCode(user, activeOrganizationId, 'admin_panel.stock.manage')
     }
 
-    // Ventes (sortie du groupe "Point de vente") — visible avec l'une de ces permissions,
-    // exactement la même logique que SaleController::authorizeBackofficeSale() côté API :
+    // Ventes + Clients (sortis du groupe "Point de vente", regroupés ensemble) —
+    // visible avec l'une de ces permissions, exactement la même logique que
+    // SaleController::authorizeBackofficeSale() côté API. Clients réutilise cette
+    // même permission plutôt que d'en avoir une dédiée :
     //   - admin_panel.stores.manage : droit large historique
     //   - admin_panel.sales.manage  : permission fine dédiée au menu Ventes (nouvelle,
     //     ajoutée en même temps que la sortie du groupe "Point de vente")
     //   - cash_register.sales.create_from_backoffice : permission historique côté caisse
-    if (item.id === 'sales') {
+    if (item.id === 'ventes-clients-menu') {
       return (
         hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage') ||
         hasPermissionCode(user, activeOrganizationId, 'admin_panel.sales.manage') ||
