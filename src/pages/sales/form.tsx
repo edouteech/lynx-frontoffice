@@ -20,6 +20,8 @@ import {
 
 } from '../../api/sales'
 
+import type { CreateSalePayload } from '../../api/sales'
+
 import { fetchStores } from '../../api/stores'
 
 import { fetchCashRegisters } from '../../api/cashRegisters'
@@ -126,6 +128,14 @@ interface PendingItem {
 
 
 
+// Une ligne du widget de paiement mixte (état local avant envoi — voir buildPaymentsPayload).
+// `rowId` est purement local (clé React), sans rapport avec l'id serveur de sale_payments.
+interface PaymentRow {
+  rowId: number
+  methodId: string
+  amount: string
+}
+
 const STATUS_META = {
 
   draft:     { label: 'Brouillon',  className: 'bg-gray-100 text-gray-600' },
@@ -214,7 +224,16 @@ export default function SaleForm() {
 
   const [cashRegisterId, setCashRegisterId] = useState('')
 
-  const [paymentMethodId, setPaymentMethodId] = useState('')
+  // Paiement par un ou plusieurs moyens à la fois — un seul rang = comportement
+  // historique (montant implicite = total) ; 2+ rangs = paiement mixte, montants saisis
+  // manuellement et devant sommer au total avant de pouvoir enregistrer.
+  // Initialisé avec un rang vide (pas []) pour que le champ reste affiché dès le premier
+  // rendu, avant même le chargement du magasin/des moyens de paiement — sinon le widget
+  // disparaît complètement le temps que l'effet ci-dessous (choix d'Espèces par défaut)
+  // ait pu tourner.
+  const paymentRowIdRef = useRef(0)
+  const nextPaymentRowId = () => ++paymentRowIdRef.current
+  const [payments, setPayments] = useState<PaymentRow[]>([{ rowId: nextPaymentRowId(), methodId: '', amount: '' }])
 
   const [saleDate, setSaleDate] = useState('')
 
@@ -512,7 +531,18 @@ export default function SaleForm() {
 
         setCashRegisterId(s.cash_register_id ? String(s.cash_register_id) : '')
 
-        setPaymentMethodId(s.payment_method_id ? String(s.payment_method_id) : '')
+        // Paiement mixte (2+ lignes en base) : on les recharge telles quelles. Moyen
+        // unique ou vente sans paiement encore choisi : un seul rang, montant implicite
+        // (laissé vide, il sera envoyé comme = total à la sauvegarde).
+        if (s.payments && s.payments.length > 1) {
+          setPayments(s.payments.map(p => ({
+            rowId:    nextPaymentRowId(),
+            methodId: p.payment_method_id ? String(p.payment_method_id) : '',
+            amount:   String(p.amount),
+          })))
+        } else {
+          setPayments([{ rowId: nextPaymentRowId(), methodId: s.payment_method_id ? String(s.payment_method_id) : '', amount: '' }])
+        }
 
         setSaleDate(s.sale_date ? s.sale_date.slice(0, 16).replace(' ', 'T') : '')
 
@@ -580,10 +610,13 @@ export default function SaleForm() {
 
       setRestaurantOptions(opts.data)
 
-      // Définir "Espèces" comme moyen de paiement par défaut
+      // Définir "Espèces" comme moyen de paiement par défaut (1er rang uniquement,
+      // seulement si aucun moyen n'est encore choisi dessus)
       const cashMethod = methods.find(m => m.name === 'Espèces')
-      if (cashMethod && !paymentMethodId) {
-        setPaymentMethodId(String(cashMethod.id))
+      if (cashMethod && !payments[0]?.methodId) {
+        setPayments(prev => prev.length
+          ? [{ ...prev[0], methodId: String(cashMethod.id) }, ...prev.slice(1)]
+          : [{ rowId: nextPaymentRowId(), methodId: String(cashMethod.id), amount: '' }])
       }
 
     }).catch(console.error)
@@ -740,9 +773,9 @@ export default function SaleForm() {
 
     setCustomerId('')
 
-    // Réinitialiser à Espèces par défaut
+    // Réinitialiser à un seul rang, Espèces par défaut
     const cashMethod = storePaymentMethods.find(m => m.name === 'Espèces')
-    setPaymentMethodId(cashMethod ? String(cashMethod.id) : '')
+    setPayments([{ rowId: nextPaymentRowId(), methodId: cashMethod ? String(cashMethod.id) : '', amount: '' }])
 
     setSaleDate('')
 
@@ -937,9 +970,25 @@ export default function SaleForm() {
     m => !m.category?.deducts_customer_balance || customerAccountPaymentsEnabled
   )
 
-  const selectedPaymentMethod = storePaymentMethods.find(m => String(m.id) === paymentMethodId)
+  const paymentMethodFor = (row: PaymentRow) => storePaymentMethods.find(m => String(m.id) === row.methodId)
 
-  const requiresCustomerBalance = selectedPaymentMethod?.category?.deducts_customer_balance ?? false
+  // Un seul rang : montant implicite = total (comportement historique, rien à saisir).
+  // 2+ rangs (paiement mixte) : chaque montant est saisi manuellement et doit sommer au total.
+  const paymentRowAmount = (row: PaymentRow): number =>
+    payments.length <= 1 ? total : (parseFloat(row.amount) || 0)
+
+  const paymentsTotal     = payments.reduce((s, p) => s + paymentRowAmount(p), 0)
+  const paymentsRemaining = Math.round((total - paymentsTotal) * 100) / 100
+  const isMixedPayment    = payments.length > 1
+
+  // Portion du paiement réglée par un moyen qui déduit le solde client (peut n'être
+  // qu'une partie du total en cas de paiement mixte, ex: espèces + compte client).
+  const customerBalanceRequiredAmount = payments.reduce((s, p) => {
+    const method = paymentMethodFor(p)
+    return s + (method?.category?.deducts_customer_balance ? paymentRowAmount(p) : 0)
+  }, 0)
+
+  const requiresCustomerBalance = customerBalanceRequiredAmount > 0
 
   const selectedCustomerBalance = customerId
     ? customers.find(c => String(c.id) === customerId)?.account_balance ?? 0
@@ -1176,6 +1225,19 @@ export default function SaleForm() {
 
   // ── Enregistrer ───────────────────────────────────────────────────────────
 
+  // Construit les champs payment_method_id / payments à partir de l'état local `payments`.
+  // Un seul rang → comportement historique (payment_method_id seul, montant implicite).
+  // 2+ rangs → paiement mixte, chaque montant explicite dans `payments`.
+  function buildPaymentFields(): Pick<CreateSalePayload, 'payment_method_id' | 'payments'> {
+    if (!isMixedPayment) {
+      return { payment_method_id: payments[0]?.methodId ? Number(payments[0].methodId) : null }
+    }
+    return {
+      payment_method_id: null,
+      payments: payments.map(p => ({ payment_method_id: Number(p.methodId), amount: paymentRowAmount(p) })),
+    }
+  }
+
   async function handleSave() {
 
     if (!storeId) { setError('Veuillez sélectionner un magasin.'); return }
@@ -1183,6 +1245,17 @@ export default function SaleForm() {
     if (!isEdit && pendingItems.length === 0) { setError('Ajoutez au moins un article avant d\'enregistrer.'); return }
 
     if (requiresCustomerBalance && !customerId) { setError('Veuillez sélectionner un client pour un paiement par compte client.'); return }
+
+    if (isMixedPayment) {
+      const incompleteRow = payments.find(p => !p.methodId || !(parseFloat(p.amount) > 0))
+      if (incompleteRow) { setError('Chaque moyen de paiement doit avoir un montant renseigné.'); return }
+      if (Math.abs(paymentsRemaining) > 0.01) {
+        setError(paymentsRemaining > 0
+          ? `Il reste ${paymentsRemaining.toLocaleString('fr-FR')} CFA à répartir sur un moyen de paiement.`
+          : `Le total des paiements dépasse le montant de la vente de ${(-paymentsRemaining).toLocaleString('fr-FR')} CFA.`)
+        return
+      }
+    }
 
 
 
@@ -1208,7 +1281,7 @@ export default function SaleForm() {
 
           cash_register_id:     cashRegisterId ? Number(cashRegisterId) : null,
 
-          payment_method_id:    paymentMethodId ? Number(paymentMethodId) : null,
+          ...buildPaymentFields(),
 
           sale_date:            (() => {
             const now = new Date();
@@ -1259,7 +1332,7 @@ export default function SaleForm() {
 
           cash_register_id:    cashRegisterId ? Number(cashRegisterId) : null,
 
-          payment_method_id:   paymentMethodId ? Number(paymentMethodId) : null,
+          ...buildPaymentFields(),
 
           sale_date:           saleDate ? saleDate.slice(0, 16).replace('T', ' ') : null,
 
@@ -2573,33 +2646,92 @@ export default function SaleForm() {
 
               <div>
 
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Moyen de paiement</label>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">Moyen de paiement</label>
+                  {!isConfirmed && (
+                    <button
+                      type="button"
+                      onClick={() => setPayments(prev => [...prev, { rowId: nextPaymentRowId(), methodId: '', amount: '' }])}
+                      className="text-xs font-medium text-[#3B82F6] hover:underline"
+                    >
+                      + Ajouter un moyen
+                    </button>
+                  )}
+                </div>
 
-                <Sel
+                <div className="space-y-2">
+                  {payments.map(row => {
+                    // Un même moyen ne peut pas être choisi sur deux rangs à la fois — ça ne
+                    // représenterait rien de plus que ce moyen une seule fois avec un montant
+                    // cumulé, juste de façon confuse. On exclut donc les moyens déjà pris par
+                    // les AUTRES rangs (le moyen déjà sélectionné sur CE rang reste visible).
+                    const usedElsewhere = new Set(
+                      payments.filter(p => p.rowId !== row.rowId && p.methodId).map(p => p.methodId)
+                    )
+                    const optionsForRow = availablePaymentMethods.filter(
+                      m => !usedElsewhere.has(String(m.id))
+                    )
 
-                  value={paymentMethodId}
+                    return (
+                    <div key={row.rowId} className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <Sel
+                          value={row.methodId}
+                          onChange={e => setPayments(prev => prev.map(p => p.rowId === row.rowId ? { ...p, methodId: e.target.value } : p))}
+                          disabled={isConfirmed || !storeId}
+                        >
+                          <option value="">— Choisir —</option>
+                          {optionsForRow.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </Sel>
+                      </div>
 
-                  onChange={e => setPaymentMethodId(e.target.value)}
+                      {isMixedPayment && (
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={row.amount}
+                          onChange={e => setPayments(prev => prev.map(p => p.rowId === row.rowId ? { ...p, amount: e.target.value } : p))}
+                          disabled={isConfirmed}
+                          placeholder="Montant"
+                          className="w-28 shrink-0 rounded-lg border border-gray-300 px-2.5 py-2.5 text-sm text-right placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 disabled:bg-gray-50 disabled:text-gray-500"
+                        />
+                      )}
 
-                  disabled={isConfirmed || !storeId}
+                      {isMixedPayment && !isConfirmed && (
+                        <button
+                          type="button"
+                          onClick={() => setPayments(prev => prev.filter(p => p.rowId !== row.rowId))}
+                          className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                          title="Retirer ce moyen de paiement"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    )
+                  })}
+                </div>
 
-                >
-
-                  {availablePaymentMethods.map(m => (
-
-                    <option key={m.id} value={m.id}>{m.name}</option>
-
-                  ))}
-
-                </Sel>
+                {isMixedPayment && (
+                  <p className={`mt-1.5 text-xs ${Math.abs(paymentsRemaining) > 0.01 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {Math.abs(paymentsRemaining) <= 0.01
+                      ? 'Montants équilibrés ✓'
+                      : paymentsRemaining > 0
+                        ? `Reste à répartir : ${paymentsRemaining.toLocaleString('fr-FR')} CFA`
+                        : `Dépasse le total de ${(-paymentsRemaining).toLocaleString('fr-FR')} CFA`}
+                  </p>
+                )}
 
                 {requiresCustomerBalance && (
 
-                  <p className={`mt-1.5 text-xs ${selectedCustomerBalance < total ? 'text-red-500' : 'text-gray-500'}`}>
+                  <p className={`mt-1.5 text-xs ${selectedCustomerBalance < customerBalanceRequiredAmount ? 'text-red-500' : 'text-gray-500'}`}>
 
                     {customerId
 
-                      ? `Solde du client : ${selectedCustomerBalance.toLocaleString('fr-FR')} CFA${selectedCustomerBalance < total ? ' (insuffisant)' : ''}`
+                      ? `Solde du client : ${selectedCustomerBalance.toLocaleString('fr-FR')} CFA${selectedCustomerBalance < customerBalanceRequiredAmount ? ' (insuffisant)' : ''}`
 
                       : 'Sélectionnez un client pour ce moyen de paiement.'}
 

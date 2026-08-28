@@ -31,6 +31,18 @@ function fmtDgiDateTime(d: string | null | undefined): string | null {
   return `${day}/${mo}/${y} ${h}:${mi}:${s}`
 }
 
+// Libellé du/des moyen(s) de paiement — détaille chaque montant si la vente est réglée
+// par plusieurs moyens à la fois (sale.payment_method reste alors null côté API, cf.
+// SaleController::buildSaleHeader()), sinon reprend simplement le moyen unique.
+function paymentSummary(sale: Sale): string | null {
+  if (sale.payments && sale.payments.length > 1) {
+    return sale.payments
+      .map(p => `${p.payment_method_name ?? 'Moyen #' + p.payment_method_id} (${fmtMoney(p.amount)})`)
+      .join(' + ')
+  }
+  return sale.payment_method?.name ?? null
+}
+
 const PRINT_STYLES = `
   @media print {
     /* Force l'impression des couleurs de fond */
@@ -296,12 +308,12 @@ export default function InvoicePage() {
 
         {/* Pied de facture */}
         <div className="invoice-footer px-10">
-          {(sale.payment_method || sale.cash_register) && (
+          {(paymentSummary(sale) || sale.cash_register) && (
             <div className="mb-6 flex gap-8 text-sm text-[#475569] border-t border-[#E2E8F0] pt-6">
-              {sale.payment_method && (
+              {paymentSummary(sale) && (
                 <div>
                   <span className="font-bold text-[#1E293B]">Paiement : </span>
-                  {sale.payment_method.name}
+                  {paymentSummary(sale)}
                 </div>
               )}
               {sale.cash_register && (

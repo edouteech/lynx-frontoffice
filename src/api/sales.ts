@@ -1,4 +1,9 @@
 import type { Paginated, Sale, SaleItem } from '../types/api'
+
+export interface CreateSalePaymentPayload {
+  payment_method_id: number
+  amount: number
+}
 import { api } from './apiClient'
 
 export interface FetchSalesParams {
@@ -87,6 +92,10 @@ export interface CreateSalePayload {
   paid_amount?: number | null
   change_amount?: number | null
   items?: CreateSaleItemPayload[]
+  // Paiement par plusieurs moyens à la fois (ex: espèces + carte) — optionnel, la somme
+  // des montants doit égaler le total de la vente. Si omis, payment_method_id ci-dessus
+  // reste le comportement historique (un seul moyen).
+  payments?: CreateSalePaymentPayload[]
 }
 
 export async function createSale(body: CreateSalePayload): Promise<Sale> {

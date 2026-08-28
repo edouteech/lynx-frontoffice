@@ -550,8 +550,19 @@ export interface Sale {
   payment_method?: PaymentMethod
   customer?: Customer
   items?: SaleItem[]
+  // Détail des paiements si la vente est réglée par plusieurs moyens à la fois
+  // (payment_method_id/payment_method_name ci-dessus reflètent alors "Paiement mixte").
+  payments?: SalePayment[]
   created_at: string
   updated_at: string
+}
+
+export interface SalePayment {
+  id: number
+  sale_id: number
+  payment_method_id: number | null
+  payment_method_name: string | null
+  amount: number
 }
 
 export interface StockAdjustmentItem {
