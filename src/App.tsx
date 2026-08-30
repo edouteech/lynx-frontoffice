@@ -57,7 +57,6 @@ import StockAdjustmentForm from './pages/stock-adjustments/form'
 import SalesIndex from './pages/sales/index'
 import SaleForm from './pages/sales/form'
 import InvoicePage from './pages/sales/InvoicePage'
-import PendingOrdersPage from './pages/sales/PendingOrdersPage'
 import SalesRecapPage from './pages/rapports/SalesRecapPage'
 import SalesByItemsPage from './pages/rapports/SalesByItemsPage'
 import SalesByEmployeePage from './pages/rapports/SalesByEmployeePage'
@@ -443,14 +442,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <InvoicePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/commandes-en-attente"
-          element={
-            <ProtectedRoute>
-              {withLayout(<PendingOrdersPage />)}
             </ProtectedRoute>
           }
         />

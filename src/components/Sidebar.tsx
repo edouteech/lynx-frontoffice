@@ -39,7 +39,6 @@ import {
   Trash2,
   Settings2,
   Globe,
-  Hourglass,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { useGeneralSetting } from '../contexts/useGeneralSetting'
@@ -162,7 +161,6 @@ const navItems: NavItem[] = [
     children: [
       { id: 'stores', label: 'Magasins', icon: Store },
       { id: 'cash-registers', label: 'Caisses', icon: Wallet },
-      { id: 'commandes-en-attente', label: 'Commandes en attente', icon: Hourglass },
       { id: 'vat-rates', label: 'TVA', icon: Percent },
       { id: 'payment-methods', label: 'Moyens de paiement', icon: Banknote },
     ],

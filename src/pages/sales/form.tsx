@@ -6,7 +6,7 @@ import {
 
   AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, FileText, Loader2,
 
-  LockOpen, Plus, Receipt, RefreshCw, Save, ShoppingBag, Store as StoreIcon, Trash2
+  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2
 
 } from 'lucide-react'
 
@@ -14,13 +14,15 @@ import { pdf } from '@react-pdf/renderer'
 
 import {
 
-  fetchSale, createSale, updateSale, confirmSale,
+  fetchSale, createSale, createSaleDgi, updateSale,
 
   addSaleItem, updateSaleItem, removeSaleItem,
 
 } from '../../api/sales'
 
 import type { CreateSalePayload } from '../../api/sales'
+
+import { isBeninCountry } from '../../lib/dgi'
 
 import { fetchStores } from '../../api/stores'
 
@@ -1273,7 +1275,12 @@ export default function SaleForm() {
 
       if (!isEdit) {
 
-        const sale = await createSale({
+        // La route choisie décide seule de la normalisation DGI côté backend (cf.
+        // SaleController::applyDgiNormalization) — country n'est plus qu'une info envoyée
+        // avec la vente, pour l'affichage/les exports.
+        const createFn = isBeninCountry(currentOrganization?.country) ? createSaleDgi : createSale
+
+        const sale = await createFn({
 
           store_id:             Number(storeId),
 
@@ -1387,84 +1394,6 @@ export default function SaleForm() {
         setError(getApiErrorMessage(err))
 
       }
-
-    } finally {
-
-      setSaving(false)
-
-    }
-
-  }
-
-
-
-  // ── Réessayer la normalisation DGI (vente restée en brouillon suite à un échec) ──
-
-  async function handleRetryDgi() {
-
-    if (!id) return
-
-    setSaving(true)
-
-    setError(null)
-
-    void Swal.fire({
-
-      title: 'Normalisation DGI en cours…',
-
-      text: 'Merci de patienter, la vente est envoyée à la DGI.',
-
-      allowOutsideClick: false,
-
-      allowEscapeKey: false,
-
-      showConfirmButton: false,
-
-      didOpen: () => Swal.showLoading(),
-
-    })
-
-    try {
-
-      const updated = await confirmSale(id)
-
-      setCurrentSale(updated)
-
-      setStatus(updated.status)
-
-      await Swal.fire({
-
-        title: 'Normalisation DGI réussie',
-
-        text: `La vente ${updated.invoice_number ?? ''} a été normalisée et confirmée.`,
-
-        icon: 'success',
-
-        confirmButtonColor: '#0F2E4A',
-
-      })
-
-    } catch (err) {
-
-      try {
-
-        const refreshed = await fetchSale(id)
-
-        setCurrentSale(refreshed)
-
-      } catch { /* on garde l'état courant si le rechargement échoue */ }
-
-      await Swal.fire({
-
-        title: 'Échec de la normalisation DGI',
-
-        text: getApiErrorMessage(err),
-
-        icon: 'error',
-
-        confirmButtonColor: '#0F2E4A',
-
-      })
 
     } finally {
 
@@ -2367,48 +2296,6 @@ export default function SaleForm() {
           <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{successMsg}</div>
 
         )}
-
-        {currentSale?.status === 'draft' && currentSale?.dgi_status === 'failed' && (
-
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-
-            <p className="flex items-center gap-2">
-
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-
-              <span>
-
-                <span className="font-semibold">Normalisation DGI échouée</span> — la vente reste en brouillon (stock non décrémenté).
-
-                {currentSale.dgi_error && <> Détail : {currentSale.dgi_error}</>}
-
-              </span>
-
-            </p>
-
-            <button
-
-              type="button"
-
-              onClick={() => void handleRetryDgi()}
-
-              disabled={saving}
-
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
-
-            >
-
-              <RefreshCw className="h-3.5 w-3.5" />
-
-              Réessayer la normalisation
-
-            </button>
-
-          </div>
-
-        )}
-
-
 
         {/* Bandeau magasin + caisse en lecture seule */}
 

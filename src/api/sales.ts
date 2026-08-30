@@ -103,9 +103,23 @@ export async function createSale(body: CreateSalePayload): Promise<Sale> {
   return data
 }
 
+// Facturation normalisée (Bénin) : même contrat que createSale, mais la normalisation
+// DGI est toujours tentée côté backend pour les ventes créées via cette route — cf.
+// isBeninCountry() (src/lib/dgi.ts) pour décider laquelle des deux appeler.
+export async function createSaleDgi(body: CreateSalePayload): Promise<Sale> {
+  const { data } = await api.post<Sale>('/sales/dgi', body)
+  return data
+}
+
 // Création multiple : envoie plusieurs ventes en une seule requête POST
 export async function createSales(sales: CreateSalePayload[]): Promise<Sale[]> {
   const { data } = await api.post<{ sales: Sale[] }>('/sales', { sales })
+  return data.sales
+}
+
+// Équivalent bulk de createSaleDgi.
+export async function createSalesDgi(sales: CreateSalePayload[]): Promise<Sale[]> {
+  const { data } = await api.post<{ sales: Sale[] }>('/sales/dgi', { sales })
   return data.sales
 }
 
@@ -145,7 +159,3 @@ export async function removeSaleItem(
   await api.delete(`/sales/${saleId}/items/${itemId}`)
 }
 
-export async function confirmSale(id: number | string): Promise<Sale> {
-  const { data } = await api.post<Sale>(`/sales/${id}/confirm`)
-  return data
-}
