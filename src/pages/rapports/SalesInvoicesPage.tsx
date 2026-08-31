@@ -330,7 +330,17 @@ export default function SalesInvoicesPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           label="Total"
-          value={<span className="text-2xl font-bold text-gray-900">{fmtMoney(totals.total)}</span>}
+          value={
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-gray-900">{fmtMoney(totals.total - totals.discount)}</span>
+              <span className="text-xs font-semibold text-gray-400">Net</span>
+            </div>
+          }
+          sub={
+            <span className="text-xs text-gray-500">
+              Brut : <span className="font-semibold text-gray-600">{fmtMoney(totals.total)}</span>
+            </span>
+          }
           icon={BadgeDollarSign}
           accent="bg-blue-600"
         />
