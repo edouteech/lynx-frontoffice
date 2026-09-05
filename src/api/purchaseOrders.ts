@@ -17,8 +17,8 @@ export async function fetchPurchaseOrder(id: number | string): Promise<PurchaseO
 }
 
 export async function fetchPurchasingCenters(): Promise<Store[]> {
-  const { data } = await api.get<Paginated<Store>>('/stores', { params: { page: 1, per_page: 200 } })
-  return data.data.filter(s => s.is_purchasing_center)
+  const { data } = await api.get<Store[]>('/purchasing-centers')
+  return data
 }
 
 export interface CreatePurchaseOrderPayload {
