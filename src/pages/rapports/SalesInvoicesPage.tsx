@@ -272,7 +272,6 @@ export default function SalesInvoicesPage() {
             >
               <option value="all">Tous les statuts</option>
               <option value="confirmed">Confirmées</option>
-              <option value="draft">Brouillons</option>
               <option value="cancelled">Annulées</option>
             </select>
           </label>
