@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, CheckCircle2, ChevronRight, Edit, Loader2, Package,
-  Printer, ShieldCheck, Truck,
+  ArrowLeft, CheckCircle2, ChevronRight, Edit, FileText, Loader2, Package,
+  Printer, ShieldCheck, Truck, Upload,
 } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import Swal from 'sweetalert2'
@@ -12,6 +12,7 @@ import {
   confirmPurchaseOrder,
   validatePurchaseOrder,
   submitPurchaseOrder,
+  uploadPurchaseOrderFile,
 } from '../../api/purchaseOrders'
 import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -47,6 +48,8 @@ export default function PurchaseOrderShow() {
 
   const [receptions, setReceptions] = useState<PurchaseOrderReception[]>([])
   const [receptionLoading, setReceptionLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -83,6 +86,22 @@ export default function PurchaseOrderShow() {
       setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } finally {
       setPrinting(false)
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const result = await uploadPurchaseOrderFile(id, file)
+      setOrder(prev => prev ? { ...prev, file_path: result.file_path, file_name: result.file_name } : prev)
+    } catch (err) {
+      setUploadError(getApiErrorMessage(err))
+    } finally {
+      setUploading(false)
+      e.target.value = ''
     }
   }
 
@@ -584,6 +603,54 @@ export default function PurchaseOrderShow() {
             </div>
           )}
         </div>
+
+        {/* ─── Document joint ──────────────────────────────────────────────── */}
+        <Can code="admin_panel.orders.create_or_edit">
+          <div className="no-print mt-6 overflow-hidden rounded-2xl bg-white shadow-sm px-5 py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-900">Document joint</h2>
+            </div>
+
+            {order.file_path ? (
+              <div className="flex items-center gap-3">
+                <FileText className="h-8 w-8 text-blue-500 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={order.file_path}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {order.file_name ?? 'Document'}
+                  </a>
+                  <p className="text-xs text-gray-400">Cliquez pour ouvrir</p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  Remplacer
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => void handleFileUpload(e)} disabled={uploading} />
+                </label>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-8 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                {uploading
+                  ? <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                  : <Upload className="h-6 w-6 text-gray-400" />}
+                <span className="text-sm text-gray-500">
+                  {uploading ? 'Envoi en cours…' : 'Cliquez pour joindre un document'}
+                </span>
+                <span className="text-xs text-gray-400">JPG, PNG, WEBP ou PDF · max 10 Mo</span>
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => void handleFileUpload(e)} disabled={uploading} />
+              </label>
+            )}
+
+            {uploadError && (
+              <p className="text-xs text-red-600">{uploadError}</p>
+            )}
+          </div>
+        </Can>
+
       </div>
   )
 }
