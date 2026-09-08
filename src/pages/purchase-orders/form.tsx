@@ -95,7 +95,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   const [purchasingCenterId, setPurchasingCenterId] = useState('')
   const [orderIsCentral, setOrderIsCentral] = useState(isCentral)
   const [storeId, setStoreId] = useState('')
-  const [orderDate, setOrderDate] = useState('')
+  const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [expectedDate, setExpectedDate] = useState('')
   const [note, setNote] = useState('')
   const [discountPct, setDiscountPct] = useState('0')
@@ -422,7 +422,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
     )
   }
 
-  const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.validated
+  const statusInfo = STATUS_LABELS[status] ?? STATUS_LABELS.draft
   const formTitle = isEdit
     ? `Commande #${id!.padStart(4, '0')}`
     : orderIsCentral

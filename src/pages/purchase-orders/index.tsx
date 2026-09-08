@@ -9,6 +9,7 @@ import type { PurchaseOrder } from '../../types/api'
 import Can from '../../components/Can'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  draft:              { label: 'Brouillon',           className: 'bg-gray-100 text-gray-600' },
   submitted:          { label: 'Soumise',            className: 'bg-purple-100 text-purple-700' },
   confirmed:          { label: 'Confirmée',           className: 'bg-indigo-100 text-indigo-700' },
   validated:          { label: 'Validée',             className: 'bg-blue-100 text-blue-700' },
@@ -98,7 +99,7 @@ export default function PurchaseOrdersIndex({ type }: Props) {
       key: 'status',
       label: 'Statut',
       render: v => {
-        const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.validated
+        const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.draft
         return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
       },
     },
