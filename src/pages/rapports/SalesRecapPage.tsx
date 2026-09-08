@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
+import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent, ArrowDownLeft } from "lucide-react";
 import { fetchSalesSummary, fetchSalesTrend } from "../../api/salesSummary";
 import { fetchSalesByEmployee } from "../../api/salesByEmployee";
 import { fetchUsers } from "../../api/users";
@@ -31,6 +31,8 @@ type SalesSummary = {
   total_cost_ttc: number;
   total_cost_ht: number;
   commission_amount: number;
+  total_refunds?: number;
+  total_buybacks?: number;
   profit_ht: number;
   profit_margin_pct: number;
 };
@@ -340,18 +342,26 @@ export default function SalesRecapPage() {
           accent="bg-blue-600"
         />
         <KpiCard
-          label="Marge"
+          label="Marge & Commissions"
           value={
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-gray-900">
-                {formatFcfa(summary?.profit_ht ?? 0)}
-              </span>
-              <span className="text-sm font-medium text-emerald-600">
-                Taux = {Number(summary?.profit_margin_pct ?? 0).toFixed(1)} %
-              </span>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-xl font-bold text-gray-900">
+                  {formatFcfa(summary?.profit_ht ?? 0)}
+                </span>
+                <span className="text-sm font-semibold text-emerald-600">
+                  / Taux : {Number(summary?.profit_margin_pct ?? 0).toFixed(1)} %
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-700 text-sm font-semibold">Commission :</span>
+                <span className="text-lg font-bold text-amber-600">
+                  {formatFcfa(summary?.commission_amount ?? 0)}
+                </span>
+              </div>
             </div>
           }
-          tooltip={`marge HT = vente HT - achat HT\nTaux de marge = (prix de vente HT - cout d'achat HT) / cout d'achat HT * 100`}
+          tooltip={`Marge HT = vente HT - achat HT\nTaux = (prix vente HT - coût achat HT) / coût achat HT * 100\nCommission = total des commissions prévues`}
           icon={TrendingUp}
           accent="bg-emerald-600"
         />
@@ -371,14 +381,26 @@ export default function SalesRecapPage() {
           accent="bg-violet-600"
         />
         <KpiCard
-          label="Commissions"
+          label="Remboursement & Rachat"
           value={
-            <span className="text-2xl font-bold text-gray-900">
-              {formatFcfa(summary?.commission_amount ?? 0)}
-            </span>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-700 text-sm font-semibold">Remb. :</span>
+                <span className="text-lg font-bold text-rose-600">
+                  {formatFcfa(summary?.total_refunds ?? 0)}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-700 text-sm font-semibold">Rachat :</span>
+                <span className="text-lg font-bold text-indigo-600">
+                  {formatFcfa(summary?.total_buybacks ?? 0)}
+                </span>
+              </div>
+            </div>
           }
-          icon={Percent}
-          accent="bg-amber-600"
+          tooltip="Total des avoirs/remboursements (FA) et rachats d'or/articles (RA) enregistrés sur la période"
+          icon={ArrowDownLeft}
+          accent="bg-rose-600"
         />
       </div>
 
