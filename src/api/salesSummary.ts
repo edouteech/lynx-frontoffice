@@ -17,6 +17,8 @@ export interface SalesSummary {
   total_cost_ht: number;
   total_cost: number; // compat
   commission_amount: number;
+  total_refunds?: number;
+  total_buybacks?: number;
   profit_ht: number;
   profit: number; // compat
   profit_margin_pct: number;
