@@ -176,6 +176,8 @@ export interface PurchaseOrder {
   discount_percentage: number
   extra_fees: number
   subtotal?: number
+  file_path: string | null
+  file_name: string | null
   supplier?: Supplier
   purchasing_center?: Store
   store?: Store

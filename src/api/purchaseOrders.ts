@@ -102,3 +102,17 @@ export async function markPurchaseOrderCompleted(id: number | string): Promise<P
   const { data } = await api.post<PurchaseOrder>(`/purchase-orders/${id}/complete`)
   return data
 }
+
+export async function uploadPurchaseOrderFile(
+  id: number | string,
+  file: File
+): Promise<{ file_path: string; file_name: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post<{ file_path: string; file_name: string }>(
+    `/purchase-orders/${id}/upload`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return data
+}
