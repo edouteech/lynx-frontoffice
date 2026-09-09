@@ -58,7 +58,8 @@ export default function StockTransferForm() {
   const isEdit = !!id
 
   // meta
-  const [stores, setStores] = useState<Store[]>([])
+  const [fromStores, setFromStores] = useState<Store[]>([]) // magasins de l'utilisateur
+  const [toStores, setToStores] = useState<Store[]>([])     // tous les magasins de l'org
   const [productResults, setProductResults] = useState<Product[]>([])
   const [productResultsLoading, setProductResultsLoading] = useState(false)
   const [productResultsLoadingMore, setProductResultsLoadingMore] = useState(false)
@@ -106,9 +107,14 @@ export default function StockTransferForm() {
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([fetchStores(1, undefined, undefined, true), fetchItemCategories(1)])
-      .then(([strs, cats]) => {
-        setStores(strs.data)
+    Promise.all([
+      fetchStores(1),                        // magasins de l'utilisateur (source)
+      fetchStores(1, undefined, undefined, true), // tous les magasins de l'org (destination)
+      fetchItemCategories(1),
+    ])
+      .then(([fromStrs, toStrs, cats]) => {
+        setFromStores(fromStrs.data)
+        setToStores(toStrs.data)
         setCategories(cats.data)
       })
       .catch(console.error)
@@ -373,8 +379,8 @@ export default function StockTransferForm() {
   }
 
   const statusMeta = STATUS_META[status]
-  const fromStore = stores.find(s => String(s.id) === fromStoreId)
-  const toStore   = stores.find(s => String(s.id) === toStoreId)
+  const fromStore = fromStores.find(s => String(s.id) === fromStoreId)
+  const toStore   = toStores.find(s => String(s.id) === toStoreId)
 
   return (
     <div className=" space-y-6">
@@ -475,7 +481,7 @@ export default function StockTransferForm() {
                 </label>
                 <Sel value={fromStoreId} onChange={e => setFromStoreId(e.target.value)} disabled={!isDraft}>
                   <option value="">— Sélectionner —</option>
-                  {stores.map(s => (
+                  {fromStores.map(s => (
                     <option key={s.id} value={s.id} disabled={String(s.id) === toStoreId}>
                       {s.name}
                     </option>
@@ -488,7 +494,7 @@ export default function StockTransferForm() {
                 </label>
                 <Sel value={toStoreId} onChange={e => setToStoreId(e.target.value)} disabled={!isDraft}>
                   <option value="">— Sélectionner —</option>
-                  {stores.map(s => (
+                  {toStores.map(s => (
                     <option key={s.id} value={s.id} disabled={String(s.id) === fromStoreId}>
                       {s.name}
                     </option>
