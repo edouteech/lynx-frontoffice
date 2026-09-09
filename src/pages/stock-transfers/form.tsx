@@ -106,7 +106,7 @@ export default function StockTransferForm() {
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([fetchStores(1), fetchItemCategories(1)])
+    Promise.all([fetchStores(1, undefined, undefined, true), fetchItemCategories(1)])
       .then(([strs, cats]) => {
         setStores(strs.data)
         setCategories(cats.data)
