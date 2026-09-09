@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent, ArrowDownLeft } from "lucide-react";
+import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, ArrowDownLeft } from "lucide-react";
 import { fetchSalesSummary, fetchSalesTrend } from "../../api/salesSummary";
 import { fetchSalesByEmployee } from "../../api/salesByEmployee";
 import { fetchUsers } from "../../api/users";
