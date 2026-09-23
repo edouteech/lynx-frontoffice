@@ -10,12 +10,14 @@ import {
   Edit,
   Eye,
   Search,
+  Printer,
   Trash2,
 } from 'lucide-react'
 import {
   exportToCsv,
   exportToPdf,
   exportToXlsx,
+  printTable,
   type ExportCell,
 } from '../lib/tableExport'
 import Can from './Can'
@@ -25,6 +27,7 @@ export interface Column<T> {
   label: string
   sortable?: boolean
   render?: (value: unknown, item: T) => ReactNode
+  exportValue?: (item: T) => ExportCell
   align?: 'left' | 'center' | 'right'
   /** Si true, cellule en une ligne (sinon retour à la ligne possible). */
   nowrap?: boolean
@@ -63,6 +66,7 @@ export interface DataTableProps<T extends object> {
   title?: string
   description?: string
   exportFilename?: string
+  printable?: boolean
   emptyMessage?: ReactNode
   /** Pagination côté client (tranche `data` déjà chargée). */
   pagination?: boolean
@@ -121,6 +125,7 @@ export default function DataTable<T extends object>({
   title,
   description,
   exportFilename,
+  printable = true,
   emptyMessage = 'Aucun élément',
   pagination = true,
   itemsPerPage = 10,
@@ -242,13 +247,59 @@ export default function DataTable<T extends object>({
   const exportRows = useMemo((): ExportCell[][] => {
     return processed.map((item) =>
       columns.map((c) => {
+        if (c.exportValue) {
+          return c.exportValue(item)
+        }
         const v = getNestedValue(
           item as Record<string, unknown>,
           String(c.key)
         )
         if (v == null) return null
-        if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
-          return v
+        if (typeof v === 'number' || typeof v === 'boolean') return v
+        if (typeof v === 'string') {
+          const trimmed = v.trim()
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(trimmed)
+              if (parsed && typeof parsed === 'object') {
+                return (
+                  parsed.name ??
+                  parsed.nom ??
+                  parsed.label ??
+                  parsed.title ??
+                  parsed.libelle ??
+                  parsed.store_name ??
+                  trimmed
+                )
+              }
+            } catch {
+              return trimmed
+            }
+          }
+          return trimmed
+        }
+        if (typeof v === 'object') {
+          const obj = v as Record<string, unknown>
+          if (obj.name != null) return String(obj.name)
+          if (obj.nom != null) return String(obj.nom)
+          if (obj.label != null) return String(obj.label)
+          if (obj.title != null) return String(obj.title)
+          if (obj.libelle != null) return String(obj.libelle)
+          if (obj.store_name != null) return String(obj.store_name)
+          if (obj.customer_name != null) return String(obj.customer_name)
+          if (Array.isArray(v)) {
+            return v
+              .map((it) => {
+                if (it && typeof it === 'object') {
+                  const o = it as Record<string, unknown>
+                  return String(o.name ?? o.nom ?? o.label ?? it)
+                }
+                return String(it)
+              })
+              .filter(Boolean)
+              .join(', ')
+          }
+        }
         // Fallback: stringify objects/arrays for exports.
         try {
           return JSON.stringify(v)
@@ -288,6 +339,22 @@ export default function DataTable<T extends object>({
                     className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/25"
                   />
                 </div>
+              )}
+              {(printable ?? !!exportFilename) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    printTable({
+                      title: title ?? exportFilename,
+                      headers: exportHeaders,
+                      rows: exportRows,
+                    })
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Printer className="h-4 w-4 text-gray-500" />
+                  Imprimer
+                </button>
               )}
               {exportFilename && (
                 <div className="relative">
@@ -332,6 +399,17 @@ export default function DataTable<T extends object>({
                           onClick: () => {
                             exportToPdf({
                               filename: exportFilename,
+                              title,
+                              headers: exportHeaders,
+                              rows: exportRows,
+                            })
+                          },
+                        },
+                        {
+                          key: 'print',
+                          label: 'Imprimer le tableau',
+                          onClick: () => {
+                            printTable({
                               title,
                               headers: exportHeaders,
                               rows: exportRows,

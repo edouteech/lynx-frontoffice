@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CircleSlash, Eye, Loader2, Lock, LockOpen, Pencil, Plus, Power, PowerOff, Wallet,
+  CircleSlash, Eye, Lock, LockOpen, Pencil, Plus, Power, PowerOff, Wallet,
 } from 'lucide-react'
+import DataTable, { type Column } from '../../components/DataTable'
 import {
   fetchCashRegisters, toggleCashRegisterStatus, updateCashRegister,
 } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
+import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
-import type { CashRegister, CashRegisterSession } from '../../types/api'
+import type { CashRegister, CashRegisterSession, Paginated, Store } from '../../types/api'
 import { CashRegisterCreateModal } from './create'
 import { OpenSessionModal, CloseSessionModal } from './SessionModals'
 
@@ -26,176 +28,61 @@ function fmtMoney(v: number) {
   return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' CFA'
 }
 
-// ── Carte caisse ──────────────────────────────────────────────────────────────
-
-function RegisterCard({
-  register,
-  openSession,
-  onEdit,
-  onToggleStatus,
-  onToggleAvailability,
-  onOpenSession,
-  onCloseSession,
-  onView,
-}: {
-  register: CashRegister
-  openSession: CashRegisterSession | null
-  onEdit: () => void
-  onToggleStatus: () => void
-  onToggleAvailability: () => void
-  onOpenSession: () => void
-  onCloseSession: (s: CashRegisterSession) => void
-  onView: () => void
-}) {
-  const isActive = register.status === 'active'
-  const isOpen = openSession !== null
-  const isAvailable = register.is_available
-
-  return (
-    <div className={`flex flex-col rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md
-      ${isOpen ? 'border-emerald-200' : 'border-gray-200'}`}>
-
-      {/* Header de la carte */}
-      <div className="flex items-start justify-between p-5 pb-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold
-              ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-              {isActive ? 'Active' : 'Inactive'}
-            </span>
-            {isOpen && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                Session ouverte
-              </span>
-            )}
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold
-              ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-              {isAvailable ? 'Disponible' : 'Occupée'}
-            </span>
-          </div>
-          <h3 className="text-base font-bold text-gray-900 truncate">{register.name}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{register.store?.name ?? '—'}</p>
-        </div>
-        <div className="ml-3 flex shrink-0 h-10 w-10 items-center justify-center rounded-xl bg-[#EFF6FF]">
-          <Wallet className="h-5 w-5 text-[#0F2E4A]" />
-        </div>
-      </div>
-
-      {/* Section session */}
-      <div className="mx-5 mb-4 rounded-xl border p-4
-        ${isOpen ? 'border-emerald-100 bg-emerald-50/40' : 'border-gray-100 bg-gray-50'}">
-        {isOpen && openSession ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500">Ouverture</span>
-              <span className="text-xs font-medium text-emerald-700">il y a {elapsedLabel(openSession.opened_at)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">Solde ouverture</span>
-              <span className="text-sm font-semibold text-gray-900">{fmtMoney(openSession.opening_balance)}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => onCloseSession(openSession)}
-              className="mt-1 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              <Lock className="h-4 w-4" />
-              Fermer la session
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">Aucune session active</p>
-            <button
-              type="button"
-              onClick={onOpenSession}
-              disabled={!isActive}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <LockOpen className="h-4 w-4" />
-              Ouvrir une session
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="mt-auto flex items-center justify-between border-t border-gray-100 px-5 py-3">
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={onView}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Détail
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Modifier
-          </button>
-        </div>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={onToggleAvailability}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
-              ${isAvailable
-                ? 'text-orange-600 hover:bg-orange-50'
-                : 'text-green-600 hover:bg-green-50'}`}
-          >
-            <CircleSlash className="h-3.5 w-3.5" />
-            {isAvailable ? 'Occuper' : 'Libérer'}
-          </button>
-          <button
-            type="button"
-            onClick={onToggleStatus}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
-              ${isActive
-                ? 'text-amber-600 hover:bg-amber-50'
-                : 'text-emerald-600 hover:bg-emerald-50'}`}
-          >
-            {isActive
-              ? <><PowerOff className="h-3.5 w-3.5" />Désactiver</>
-              : <><Power className="h-3.5 w-3.5" />Activer</>}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function CashRegistersIndex() {
   const navigate = useNavigate()
 
+  const [page, setPage] = useState(1)
+  const [paginated, setPaginated] = useState<Paginated<CashRegister> | null>(null)
   const [registers, setRegisters] = useState<CashRegister[]>([])
   const [openSessions, setOpenSessions] = useState<Record<number, CashRegisterSession | null>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Filtres
+  const [stores, setStores] = useState<Store[]>([])
+  const [storeFilter, setStoreFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   // Modals
   const [editModal, setEditModal] = useState<CashRegister | null | 'new'>()
   const [openSessionFor, setOpenSessionFor] = useState<CashRegister | null>(null)
   const [closeSessionFor, setCloseSessionFor] = useState<{ register: CashRegister; session: CashRegisterSession } | null>(null)
 
+  // Charger les magasins pour le filtre
+  useEffect(() => {
+    fetchStores(1).then(r => setStores(r.data)).catch(console.error)
+  }, [])
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, storeFilter, statusFilter])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchCashRegisters(1)
-      const list = res.data
-      setRegisters(list)
+      const res = await fetchCashRegisters(
+        page,
+        statusFilter || undefined,
+        storeFilter || undefined,
+        false,
+        debouncedSearch || undefined
+      )
+      setPaginated(res)
+      setRegisters(res.data)
 
-      // Utilise open_session envoyé par le backend (eager-loaded)
       const sessionMap: Record<number, CashRegisterSession | null> = {}
-      list.forEach(r => {
+      res.data.forEach(r => {
         sessionMap[r.id] = r.open_session ?? null
       })
       setOpenSessions(sessionMap)
@@ -204,7 +91,7 @@ export default function CashRegistersIndex() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, statusFilter, storeFilter, debouncedSearch])
 
   useEffect(() => { void load() }, [load])
 
@@ -228,7 +115,6 @@ export default function CashRegistersIndex() {
     }
   }
 
-  // Recharger les sessions d'une caisse après ouverture/fermeture
   async function refreshSessions(registerId: number) {
     try {
       const sessions = await fetchCashRegisterSessions(registerId)
@@ -236,6 +122,196 @@ export default function CashRegistersIndex() {
       setOpenSessions(prev => ({ ...prev, [registerId]: open }))
     } catch { /* silent */ }
   }
+
+  const columns: Column<CashRegister>[] = useMemo(() => [
+    {
+      key: 'name',
+      label: 'Caisse',
+      sortable: true,
+      render: (_, r) => (
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate(`/cash-registers/${r.id}`)}
+            className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-left"
+          >
+            {r.name}
+          </button>
+          {r.reference && (
+            <p className="text-xs font-mono text-gray-400">Réf: {r.reference}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'store.name',
+      label: 'Magasin',
+      sortable: true,
+      render: (_, r) => (
+        <span className="text-gray-700 font-medium">{r.store?.name ?? '—'}</span>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Statut',
+      sortable: true,
+      render: (v) => {
+        const isActive = v === 'active'
+        return (
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'is_available',
+      label: 'Disponibilité',
+      sortable: true,
+      render: (v) => {
+        const isAvail = Boolean(v)
+        return (
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            isAvail ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+          }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${isAvail ? 'bg-green-500' : 'bg-orange-500'}`} />
+            {isAvail ? 'Disponible' : 'Occupée'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'session',
+      label: 'Session',
+      render: (_, r) => {
+        const openSession = openSessions[r.id] ?? r.open_session ?? null
+        const isOpen = openSession !== null
+        const isActive = r.status === 'active'
+
+        if (isOpen && openSession) {
+          return (
+            <div className="flex items-center gap-3">
+              <div>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Ouverte ({elapsedLabel(openSession.opened_at)})
+                </span>
+                <p className="text-xs text-gray-500">Solde : {fmtMoney(openSession.opening_balance)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCloseSessionFor({ register: r, session: openSession })}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+                title="Fermer la session"
+              >
+                <Lock className="h-3.5 w-3.5 text-gray-500" />
+                Fermer
+              </button>
+            </div>
+          )
+        }
+
+        return (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">Aucune session</span>
+            <button
+              type="button"
+              onClick={() => setOpenSessionFor(r)}
+              disabled={!isActive}
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title={isActive ? 'Ouvrir une session' : 'Activez la caisse pour ouvrir une session'}
+            >
+              <LockOpen className="h-3.5 w-3.5" />
+              Ouvrir
+            </button>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      align: 'right',
+      nowrap: true,
+      render: (_, r) => {
+        const isActive = r.status === 'active'
+        const isAvailable = r.is_available
+        return (
+          <div className="flex items-center justify-end gap-2.5 whitespace-nowrap">
+            <button
+              type="button"
+              onClick={() => navigate(`/cash-registers/${r.id}`)}
+              className="inline-flex items-center justify-center rounded-lg p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Détail"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditModal(r)}
+              className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Modifier"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleToggleAvailability(r)}
+              className={`inline-flex items-center justify-center rounded-lg p-1.5 transition-colors ${
+                isAvailable
+                  ? 'text-orange-600 hover:bg-orange-50'
+                  : 'text-green-600 hover:bg-green-50'
+              }`}
+              title={isAvailable ? 'Occuper' : 'Libérer'}
+            >
+              <CircleSlash className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleToggleStatus(r)}
+              className={`inline-flex items-center justify-center rounded-lg p-1.5 transition-colors ${
+                isActive
+                  ? 'text-amber-600 hover:bg-amber-50'
+                  : 'text-emerald-600 hover:bg-emerald-50'
+              }`}
+              title={isActive ? 'Désactiver' : 'Activer'}
+            >
+              {isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+            </button>
+          </div>
+        )
+      },
+    },
+  ], [navigate, openSessions])
+
+  const customFilters = (
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        value={storeFilter}
+        onChange={(e) => setStoreFilter(e.target.value)}
+        className="h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
+      >
+        <option value="">Tous les magasins</option>
+        {stores.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
+      >
+        <option value="">Tous les statuts</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -248,7 +324,7 @@ export default function CashRegistersIndex() {
             <h1 className="text-3xl font-semibold text-gray-900">Caisses</h1>
           </div>
           <p className="mt-2 text-gray-600">
-            Ouvrez et fermez vos sessions de caisse, suivez les écarts.
+            Gérez vos caisses, ouvrez/fermez les sessions et suivez les écarts.
           </p>
         </div>
         <button
@@ -267,39 +343,24 @@ export default function CashRegistersIndex() {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-        </div>
-      ) : registers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-300 py-16 text-gray-400">
-          <Wallet className="h-10 w-10" />
-          <p>Aucune caisse configurée.</p>
-          <button
-            type="button"
-            onClick={() => setEditModal('new')}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            Créer la première caisse →
-          </button>
-        </div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {registers.map(register => (
-            <RegisterCard
-              key={register.id}
-              register={register}
-              openSession={openSessions[register.id] ?? null}
-              onView={() => navigate(`/cash-registers/${register.id}`)}
-              onEdit={() => setEditModal(register)}
-              onToggleStatus={() => void handleToggleStatus(register)}
-              onToggleAvailability={() => void handleToggleAvailability(register)}
-              onOpenSession={() => setOpenSessionFor(register)}
-              onCloseSession={session => setCloseSessionFor({ register, session })}
-            />
-          ))}
-        </div>
-      )}
+      <DataTable
+        data={registers}
+        columns={columns}
+        loading={loading}
+        searchable={true}
+        searchPlaceholder="Rechercher une caisse (nom, référence, magasin)..."
+        onSearch={(q) => setSearch(q)}
+        customFilters={customFilters}
+        exportFilename="caisses"
+        printable={true}
+        emptyMessage="Aucune caisse trouvée."
+        serverPagination={{
+          currentPage: paginated?.current_page ?? 1,
+          lastPage: paginated?.last_page ?? 1,
+          total: paginated?.total ?? 0,
+          onPageChange: setPage,
+        }}
+      />
 
       {/* Modal création/édition caisse */}
       <CashRegisterCreateModal
@@ -318,6 +379,7 @@ export default function CashRegistersIndex() {
           onOpened={session => {
             setOpenSessions(prev => ({ ...prev, [openSessionFor.id]: session }))
             setOpenSessionFor(null)
+            void load()
           }}
         />
       )}
@@ -332,9 +394,11 @@ export default function CashRegistersIndex() {
           onClosed={_updated => {
             void refreshSessions(closeSessionFor.register.id)
             setCloseSessionFor(null)
+            void load()
           }}
         />
       )}
     </div>
   )
 }
+

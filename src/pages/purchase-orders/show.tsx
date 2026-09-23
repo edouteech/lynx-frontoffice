@@ -4,7 +4,6 @@ import {
   ArrowLeft, CheckCircle2, ChevronRight, Edit, FileText, Loader2, Package,
   Printer, ShieldCheck, Truck, Upload,
 } from 'lucide-react'
-import { pdf } from '@react-pdf/renderer'
 import Swal from 'sweetalert2'
 import {
   fetchPurchaseOrder,
@@ -17,7 +16,6 @@ import {
 import { fetchReceptions } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder, PurchaseOrderReception } from '../../types/api'
-import PurchaseOrderPdf from './PurchaseOrderPdf'
 import Can from '../../components/Can'
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -44,7 +42,6 @@ export default function PurchaseOrderShow() {
   const [submitting, setSubmitting] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [validating, setValidating] = useState(false)
-  const [printing, setPrinting] = useState(false)
 
   const [receptions, setReceptions] = useState<PurchaseOrderReception[]>([])
   const [receptionLoading, setReceptionLoading] = useState(false)
@@ -76,17 +73,9 @@ export default function PurchaseOrderShow() {
       .finally(() => setReceptionLoading(false))
   }, [id])
 
-  async function handlePrint() {
+  function handlePrint() {
     if (!order) return
-    setPrinting(true)
-    try {
-      const blob = await pdf(<PurchaseOrderPdf order={order} />).toBlob()
-      const url  = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
-    } finally {
-      setPrinting(false)
-    }
+    navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/print`)
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -198,9 +187,9 @@ export default function PurchaseOrderShow() {
   }
 
   // Financial computations
-  const subtotal = (order?.items ?? []).reduce((sum, i) => sum + (i.quantity * i.unit_cost), 0)
-  const discountAmount = subtotal * ((order?.discount_percentage ?? 0) / 100)
-  const total = subtotal - discountAmount + (order?.extra_fees ?? 0)
+  const subtotal = (order?.items ?? []).reduce((sum, i) => sum + (Number(i.quantity) * Number(i.unit_cost)), 0)
+  const discountAmount = subtotal * ((Number(order?.discount_percentage) || 0) / 100)
+  const total = subtotal - discountAmount + (Number(order?.extra_fees) || 0)
 
   const isCentral = order?.purchasing_center_id !== null && order?.purchasing_center_id !== undefined
 
@@ -273,12 +262,12 @@ export default function PurchaseOrderShow() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => void handlePrint()}
-              disabled={printing}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              {printing ? 'Génération…' : 'Imprimer'}
+              <Printer className="h-4 w-4" />
+              Imprimer
             </button>
 
             {canEdit && (
@@ -322,13 +311,11 @@ export default function PurchaseOrderShow() {
             )}
 
             {canReceive && (
-              <Can code="admin_panel.orders.ack_or_adjust">
-                <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receive`)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
-                  <Truck className="h-4 w-4" />
-                  Réceptionner
-                </button>
-              </Can>
+              <button onClick={() => navigate(`/${isCentral ? 'central-orders' : 'purchase-orders'}/${order.id}/receive`)}
+                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600">
+                <Truck className="h-4 w-4" />
+                Réceptionner
+              </button>
             )}
 
             {canMarkComplete && (
@@ -498,15 +485,19 @@ export default function PurchaseOrderShow() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-gray-700">
-                              {item.current_stock.toLocaleString('fr-FR')}
+                              {Number(item.current_stock ?? 0).toLocaleString('fr-FR')}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-700">
-                              {item.quantity.toLocaleString('fr-FR')}
+                              {Number(item.quantity ?? 0).toLocaleString('fr-FR')}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums">
-                              <span className={item.received_quantity > 0 ? 'font-medium text-green-600' : 'text-gray-400'}>
-                                {item.received_quantity.toLocaleString('fr-FR')}
-                              </span>
+                              {item.received_quantity > 0 ? (
+                                <span className="font-medium text-green-600">
+                                  {Number(item.received_quantity).toLocaleString('fr-FR')}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">0</span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums">
                               {isFullyReceived ? (
@@ -516,15 +507,15 @@ export default function PurchaseOrderShow() {
                                 </span>
                               ) : (
                                 <span className="font-medium text-amber-600">
-                                  {item.remaining_quantity.toLocaleString('fr-FR')}
+                                  {Number(item.remaining_quantity ?? 0).toLocaleString('fr-FR')}
                                 </span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-gray-700">
-                              {item.unit_cost.toLocaleString('fr-FR')}
+                              {Number(item.unit_cost ?? 0).toLocaleString('fr-FR')}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums font-semibold text-gray-900">
-                              {item.total.toLocaleString('fr-FR')}
+                              {Number(item.total ?? 0).toLocaleString('fr-FR')}
                             </td>
                           </tr>
                         )

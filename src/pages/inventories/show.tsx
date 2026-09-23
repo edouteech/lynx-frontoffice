@@ -4,14 +4,12 @@ import {
   ArrowLeft, CheckCircle2, ClipboardCheck, FileText, Loader2,
   Printer, Save, Trash2, Upload,
 } from 'lucide-react'
-import { pdf } from '@react-pdf/renderer'
 import {
   fetchInventoryById, updateInventoryItem,
   applyInventory, deleteInventory, uploadInventoryFile,
 } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory, InventoryItem } from '../../types/api'
-import InventoryPdf from './InventoryPdf'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -187,22 +185,9 @@ export default function InventoryShowPage() {
     }
   }
 
-  // ── print (PDF) ───────────────────────────────────────────────────────────
-
-  const [printing, setPrinting] = useState(false)
-
-  async function handlePrint() {
+  function handlePrint() {
     if (!inventory) return
-    setPrinting(true)
-    try {
-      const blob = await pdf(<InventoryPdf inventory={inventory} />).toBlob()
-      const url  = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      // release after a delay so the new tab has time to load it
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
-    } finally {
-      setPrinting(false)
-    }
+    navigate(`/inventories/${inventory.id}/print`)
   }
 
   // ── file upload ────────────────────────────────────────────────────────────
@@ -282,12 +267,11 @@ export default function InventoryShowPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void handlePrint()}
-              disabled={printing}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              {printing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              {printing ? 'Génération…' : 'Imprimer'}
+              <Printer className="h-4 w-4" />
+              Imprimer
             </button>
 
             {isDraft && (

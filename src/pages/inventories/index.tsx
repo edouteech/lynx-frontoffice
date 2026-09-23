@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ClipboardCheck, Loader2, Plus, X } from 'lucide-react'
+import { ClipboardCheck, Loader2, Plus, Printer, X } from 'lucide-react'
 import { fetchInventories, deleteInventory } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory } from '../../types/api'
@@ -167,15 +167,25 @@ export default function InventoriesIndex() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
-                      {inv.status === 'draft' && (
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          onClick={() => void handleDelete(inv)}
-                          className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          onClick={() => navigate(`/inventories/${inv.id}/print`)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
                         >
-                          Supprimer
+                          <Printer className="h-3.5 w-3.5" />
+                          Imprimer
                         </button>
-                      )}
+                        {inv.status === 'draft' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(inv)}
+                            className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

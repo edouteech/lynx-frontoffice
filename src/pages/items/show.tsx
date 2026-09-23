@@ -541,12 +541,12 @@ export default function ItemShowPage() {
               )}
               <InfoRow label="TVA Achat">
                 {product.purchase_vat_rate
-                  ? <>{product.purchase_vat_rate.name} ({product.purchase_vat_rate.rate}%)</>
+                  ? <>{product.purchase_vat_rate.name} ({!isNaN(Number(String(product.purchase_vat_rate.rate).replace(',', '.'))) ? Number(String(product.purchase_vat_rate.rate).replace(',', '.')) : product.purchase_vat_rate.rate}%)</>
                   : <span className="text-gray-400">Aucune</span>}
               </InfoRow>
               <InfoRow label="TVA Vente">
                 {product.sales_vat_rate
-                  ? <>{product.sales_vat_rate.name} ({product.sales_vat_rate.rate}%)</>
+                  ? <>{product.sales_vat_rate.name} ({!isNaN(Number(String(product.sales_vat_rate.rate).replace(',', '.'))) ? Number(String(product.sales_vat_rate.rate).replace(',', '.')) : product.sales_vat_rate.rate}%)</>
                   : <span className="text-gray-400">Aucune</span>}
               </InfoRow>
             </div>
