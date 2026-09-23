@@ -174,6 +174,7 @@ export default function SalesInvoicesPage() {
       label: 'N° Facture',
       sortable: true,
       nowrap: true,
+      exportValue: (row) => row.invoice_number ?? `#${String(row.id).padStart(4, '0')}`,
       render: (v, row) => (
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -190,24 +191,50 @@ export default function SalesInvoicesPage() {
       label: 'Date',
       sortable: true,
       nowrap: true,
+      exportValue: (row) => fmtDate(row.sale_date ?? row.created_at),
       render: (v) => <span className="text-sm text-gray-500">{fmtDate(v as string | null)}</span>,
     },
     {
       key: 'customer_name',
       label: 'Client',
+      exportValue: (row) => row.customer_name ?? row.customer?.name ?? 'Anonyme',
       render: (v) => <span className="text-gray-700">{(v as string | null) ?? <span className="text-gray-400">—</span>}</span>,
     },
     {
       key: 'store',
       label: 'Magasin',
+      exportValue: (row) => {
+        const store = row.store as any
+        if (typeof store === 'string') {
+          try {
+            const p = JSON.parse(store)
+            return p?.name ?? store
+          } catch {
+            return store
+          }
+        }
+        return store?.name ?? (row as any).store_name ?? '—'
+      },
       render: (v) => {
-        const store = v as Sale['store']
-        return <span className="text-sm text-gray-600">{store?.name ?? '—'}</span>
+        const store = v as any
+        let name = '—'
+        if (typeof store === 'string') {
+          try {
+            const p = JSON.parse(store)
+            name = p?.name ?? store
+          } catch {
+            name = store
+          }
+        } else if (store && typeof store === 'object') {
+          name = store.name ?? '—'
+        }
+        return <span className="text-sm text-gray-600">{name}</span>
       },
     },
     {
       key: 'status',
       label: 'Statut',
+      exportValue: (row) => (STATUS[row.status] ?? { label: row.status }).label,
       render: (v) => {
         const s = STATUS[v as string] ?? { label: String(v), className: 'bg-gray-100 text-gray-600' }
         return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${s.className}`}>{s.label}</span>
@@ -218,6 +245,7 @@ export default function SalesInvoicesPage() {
       label: 'Total',
       sortable: true,
       align: 'right',
+      exportValue: (row) => fmtMoney(Number(row.total ?? 0)),
       render: (_v, row) => {
         // row.total = valeur enregistrée en base, fiable. On ne la recalcule plus depuis
         // discount_percentage (arrondi à 2 décimales en base, faisait dériver l'affichage).

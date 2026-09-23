@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Eye, Plus, Trash2 } from 'lucide-react'
+import { ArrowRight, Eye, Plus, Printer, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deleteStockTransfer, fetchStockTransfers } from '../../api/stockTransfers'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { StockTransfer } from '../../types/api'
+
+function formatFcfa(value: number) {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    maximumFractionDigits: 0,
+  })
+    .format(value)
+    .replace('XOF', 'FCFA')
+}
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   draft:     { label: 'Brouillon', className: 'bg-gray-100 text-gray-600' },
@@ -76,17 +86,17 @@ export default function StockTransfersIndex() {
       render: v => <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">{String(v ?? 0)}</span>,
     },
     {
+      key: 'total_amount',
+      label: 'Total',
+      render: v => <span className="font-semibold text-gray-900">{formatFcfa(Number(v ?? 0))}</span>,
+    },
+    {
       key: 'status',
       label: 'Statut',
       render: v => {
         const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.draft
         return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
       },
-    },
-    {
-      key: 'note',
-      label: 'Note',
-      render: v => v ? <span className="max-w-xs truncate text-gray-500">{String(v)}</span> : <span className="text-gray-400">—</span>,
     },
   ], [])
 
@@ -96,6 +106,12 @@ export default function StockTransfersIndex() {
       icon: Eye,
       variant: 'primary',
       onClick: t => navigate(`/stock-transfers/${t.id}/edit`),
+    },
+    {
+      label: 'Imprimer',
+      icon: Printer,
+      variant: 'default',
+      onClick: t => navigate(`/stock-transfers/${t.id}/print`),
     },
     {
       label: 'Supprimer',

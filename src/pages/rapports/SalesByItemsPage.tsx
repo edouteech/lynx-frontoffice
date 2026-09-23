@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { UserRound, Printer, Store, Filter, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { UserRound, Store, Filter, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { fetchSalesByItem, type SalesByItem } from "../../api/salesByItem";
@@ -496,15 +496,6 @@ export default function SalesByItemsPage() {
           searchPlaceholder="Rechercher un produit…"
           exportFilename="ventes-par-articles"
           emptyMessage={loading ? "Chargement..." : "Aucun article vendu sur cette période"}
-          customFilters={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimer
-            </button>
-          }
           getRowId={(r) => r.product}
         />
       </div>

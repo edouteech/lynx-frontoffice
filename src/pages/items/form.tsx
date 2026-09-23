@@ -1087,13 +1087,21 @@ export default function ItemFormPage() {
                   <Field label="TVA Achat">
                     <Sel value={purchaseVatId} onChange={e => setPurchaseVatId(e.target.value)}>
                       <option value="">Aucune TVA</option>
-                      {vatRates.map(v => <option key={v.id} value={v.id}>{v.name} ({v.rate}%)</option>)}
+                      {vatRates.map(v => {
+                        const rateNum = Number(String(v.rate).replace(',', '.'))
+                        const formattedRate = isNaN(rateNum) ? v.rate : rateNum
+                        return <option key={v.id} value={v.id}>{v.name} ({formattedRate}%)</option>
+                      })}
                     </Sel>
                   </Field>
                   <Field label="TVA Vente">
                     <Sel value={salesVatId} onChange={e => setSalesVatId(e.target.value)}>
                       <option value="">Aucune TVA</option>
-                      {vatRates.map(v => <option key={v.id} value={v.id}>{v.name} ({v.rate}%)</option>)}
+                      {vatRates.map(v => {
+                        const rateNum = Number(String(v.rate).replace(',', '.'))
+                        const formattedRate = isNaN(rateNum) ? v.rate : rateNum
+                        return <option key={v.id} value={v.id}>{v.name} ({formattedRate}%)</option>
+                      })}
                     </Sel>
                   </Field>
                 </div>

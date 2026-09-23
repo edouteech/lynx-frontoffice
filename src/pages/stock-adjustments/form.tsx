@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, Check, ChevronDown,
-  Loader2, Minus, Package, PackagePlus, Plus, Save, Trash2,
+  Loader2, Minus, Package, PackagePlus, Plus, Printer, Save, Trash2,
 } from 'lucide-react'
 import {
   fetchStockAdjustment, createStockAdjustment, updateStockAdjustment,
@@ -396,11 +396,21 @@ export default function StockAdjustmentForm() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button type="button" onClick={() => navigate('/stock-adjustments')}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
+            {isEdit && (
+              <button
+                type="button"
+                onClick={() => navigate(`/stock-adjustments/${id}/print`)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Printer className="h-4 w-4 text-gray-500" />
+                Imprimer
+              </button>
+            )}
             {isEdit && isDraft && (
               <button
                 type="button"

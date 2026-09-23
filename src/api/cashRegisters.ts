@@ -5,12 +5,14 @@ export async function fetchCashRegisters(
   page = 1,
   statusFilter?: string,
   storeId?: number | string,
-  only_trashed?: boolean
+  only_trashed?: boolean,
+  search?: string
 ): Promise<Paginated<CashRegister>> {
   const params: Record<string, string | number | boolean> = { page }
   if (statusFilter) params.status = statusFilter
   if (storeId != null && String(storeId) !== '') params.store_id = storeId
   if (only_trashed) params.only_trashed = true
+  if (search) params.search = search
   const { data } = await api.get<Paginated<CashRegister>>('/cash-registers', {
     params,
   })

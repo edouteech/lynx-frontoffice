@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Filter, Store, CreditCard, Printer, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
+import { Filter, Store, CreditCard, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { fetchSalesByPaymentMethod, type SalesByPaymentMethod } from "../../api/salesByPaymentMethod";
@@ -549,15 +549,6 @@ export default function SalesByPaymentMethodPage() {
           searchPlaceholder="Rechercher une méthode…"
           exportFilename="ventes-moyens-paiement"
           loading={loading}
-          customFilters={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimer
-            </button>
-          }
           getRowId={(r) => `${r.payment_method}-${r.store_name}`}
         />
       </div>

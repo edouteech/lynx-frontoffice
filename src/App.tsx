@@ -48,12 +48,15 @@ import SuppliersIndex from './pages/suppliers'
 import PurchaseOrdersIndex from './pages/purchase-orders'
 import PurchaseOrderForm from './pages/purchase-orders/form'
 import PurchaseOrderShow from './pages/purchase-orders/show'
+import PurchaseOrderPrintPage from './pages/purchase-orders/print'
 import PurchaseOrderReceive from './pages/purchase-orders/receive'
 import PurchaseOrderReceptionShow from './pages/purchase-orders/reception-show'
 import StockTransfersIndex from './pages/stock-transfers/index'
 import StockTransferForm from './pages/stock-transfers/form'
+import StockTransferPrintPage from './pages/stock-transfers/print'
 import StockAdjustmentsIndex from './pages/stock-adjustments/index'
 import StockAdjustmentForm from './pages/stock-adjustments/form'
+import StockAdjustmentPrintPage from './pages/stock-adjustments/print'
 import SalesIndex from './pages/sales/index'
 import SaleForm from './pages/sales/form'
 import InvoicePage from './pages/sales/InvoicePage'
@@ -73,6 +76,7 @@ import StockMovementsPage from './pages/stock/MovementsPage'
 import InventoriesIndex from './pages/inventories/index'
 import InventoryCreatePage from './pages/inventories/create'
 import InventoryShowPage from './pages/inventories/show'
+import InventoryPrintPage from './pages/inventories/print'
 
 import TrashStores from './pages/trash/stores'
 import TrashItems from './pages/trash/items'
@@ -334,6 +338,14 @@ export default function App() {
           }
         />
         <Route
+          path="/central-orders/:id/print"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderPrintPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/purchase-orders/:id"
           element={
             <ProtectedRoute>
@@ -366,6 +378,14 @@ export default function App() {
           }
         />
         <Route
+          path="/purchase-orders/:id/print"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderPrintPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/stock-transfers"
           element={
             <ProtectedRoute>
@@ -390,6 +410,14 @@ export default function App() {
           }
         />
         <Route
+          path="/stock-transfers/:id/print"
+          element={
+            <ProtectedRoute>
+              <StockTransferPrintPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/stock-adjustments"
           element={
             <ProtectedRoute>
@@ -410,6 +438,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<StockAdjustmentForm />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stock-adjustments/:id/print"
+          element={
+            <ProtectedRoute>
+              <StockAdjustmentPrintPage />
             </ProtectedRoute>
           }
         />
@@ -596,6 +632,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               {withLayout(<InventoryShowPage />)}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventories/:id/print"
+          element={
+            <ProtectedRoute>
+              <InventoryPrintPage />
             </ProtectedRoute>
           }
         />

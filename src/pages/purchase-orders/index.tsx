@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Plus, Store, Trash2 } from 'lucide-react'
+import { Eye, Plus, Printer, Store, Trash2 } from 'lucide-react'
 import Swal from 'sweetalert2'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deletePurchaseOrder, fetchPurchaseOrders } from '../../api/purchaseOrders'
@@ -106,8 +106,9 @@ export default function PurchaseOrdersIndex({ type }: Props) {
     {
       key: 'subtotal',
       label: 'Sous-total',
+      exportValue: (row) => `${Math.round(Number((row as any).subtotal ?? 0)).toLocaleString('fr-FR')} CFA`,
       render: (_, row) => {
-        const sub = (row as PurchaseOrder & { subtotal?: number }).subtotal ?? 0
+        const sub = Math.round(Number((row as any).subtotal ?? 0))
         return <span className="font-semibold">{sub.toLocaleString('fr-FR')} CFA</span>
       },
     },
@@ -118,8 +119,14 @@ export default function PurchaseOrdersIndex({ type }: Props) {
       label: 'Voir / Modifier',
       icon: Eye,
       variant: 'primary',
-      onClick: o => navigate(`/purchase-orders/${o.id}`),
+      onClick: o => navigate(type === 'central' ? `/central-orders/${o.id}` : `/purchase-orders/${o.id}`),
       permission: 'admin_panel.orders.create_or_edit',
+    },
+    {
+      label: 'Imprimer',
+      icon: Printer,
+      variant: 'default',
+      onClick: o => navigate(type === 'central' ? `/central-orders/${o.id}/print` : `/purchase-orders/${o.id}/print`),
     },
     {
       label: 'Supprimer',
@@ -128,7 +135,7 @@ export default function PurchaseOrdersIndex({ type }: Props) {
       onClick: o => void handleDelete(o),
       permission: 'admin_panel.orders.create_or_edit',
     },
-  ], [navigate, handleDelete])
+  ], [navigate, handleDelete, type])
 
   const isCentral = type === 'central'
 

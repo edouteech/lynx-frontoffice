@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Filter, Store, Printer, RotateCcw, UserRound, TrendingUp, BadgeDollarSign, Percent } from "lucide-react";
+import { Filter, Store, RotateCcw, UserRound, TrendingUp, BadgeDollarSign, Percent } from "lucide-react";
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { fetchSalesByEmployee, type SalesByEmployee } from "../../api/salesByEmployee";
@@ -502,15 +502,6 @@ export default function SalesByEmployeePage() {
           searchPlaceholder="Rechercher un employé…"
           exportFilename="ventes-par-employe"
           emptyMessage={loading ? "Chargement..." : "Aucune donnée de vente pour cette période"}
-          customFilters={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimer
-            </button>
-          }
           getRowId={(r) => r.employee}
         />
       </div>

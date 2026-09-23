@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Filter, Store, UserRound, Printer, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
+import { Filter, Store, UserRound, RotateCcw, TrendingUp, ShoppingBag, BadgeDollarSign, Percent } from "lucide-react";
 import DataTable, { type Column } from "../../components/DataTable";
 import { DateRangePicker } from "../../components/DateRangePicker";
 import { fetchSalesByCategory, type SalesByCategory } from "../../api/salesByCategory";
@@ -539,15 +539,6 @@ export default function SalesByCategoryPage() {
           searchPlaceholder="Rechercher une catégorie…"
           exportFilename="ventes-par-categorie"
           loading={loading}
-          customFilters={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimer
-            </button>
-          }
           getRowId={(r) => r.category}
         />
       </div>

@@ -118,6 +118,8 @@ export interface StockTransferItem {
   product_name: string
   product_sku: string | null
   product_category: string | null
+  purchase_price?: number
+  selling_price?: number
   quantity: number
   stock_from: number
   stock_to: number
@@ -133,6 +135,7 @@ export interface StockTransfer {
   status: 'draft' | 'submitted' | 'confirmed' | 'cancelled'
   can_validate?: boolean
   items_count?: number
+  total_amount?: number
   from_store?: Store
   to_store?: Store
   items?: StockTransferItem[]
@@ -574,8 +577,12 @@ export interface StockAdjustmentItem {
   product_name: string
   product_sku: string | null
   product_category: string | null
+  purchase_price?: number
+  selling_price?: number
   quantity_change: number
   current_stock: number
+  stock_store_snapshot?: number | null
+  stock_global_snapshot?: number | null
 }
 
 export interface StockAdjustment {
@@ -585,7 +592,9 @@ export interface StockAdjustment {
   adjustment_date: string | null
   note: string | null
   status: 'draft' | 'applied' | 'cancelled'
+  user_name?: string | null
   items_count?: number
+  total_amount?: number
   store?: Store
   items?: StockAdjustmentItem[]
   created_at: string

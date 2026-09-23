@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, ChevronDown, ChevronUp, Loader2,
+  ArrowLeft, ChevronDown, ChevronUp, CircleSlash, Loader2,
   Lock, LockOpen, Pencil, Plus, Power, PowerOff,
 } from 'lucide-react'
-import { fetchCashRegister, toggleCashRegisterStatus } from '../../api/cashRegisters'
+import { fetchCashRegister, toggleCashRegisterStatus, updateCashRegister } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { fetchStore } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -216,6 +216,16 @@ export default function CashRegisterShow() {
     }
   }
 
+  async function handleToggleAvailability() {
+    if (!cashRegister) return
+    try {
+      const updated = await updateCashRegister(cashRegister.id, { is_available: !cashRegister.is_available })
+      setCashRegister(updated)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex-1 bg-[#EFF6FF] px-6 py-10 lg:px-10">
@@ -250,17 +260,31 @@ export default function CashRegisterShow() {
             <ArrowLeft className="h-4 w-4" />
             Retour à la liste
           </Link>
-          <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-            <button type="button" onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+            >
               <Pencil className="h-4 w-4" />
               Modifier
             </button>
             <button
               type="button"
+              onClick={() => void handleToggleAvailability()}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors
+                ${cashRegister.is_available
+                  ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+                  : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'}`}
+            >
+              <CircleSlash className="h-4 w-4" />
+              {cashRegister.is_available ? 'Occuper' : 'Libérer'}
+            </button>
+            <button
+              type="button"
               disabled={toggling}
               onClick={() => void handleToggleStatus()}
-              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors
                 ${cashRegister.status === 'active'
                   ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
@@ -281,7 +305,11 @@ export default function CashRegisterShow() {
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">Caisse</span>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statutPill(cashRegister.status)}`}>
-              {cashRegister.status}
+              {cashRegister.status === 'active' ? 'Active' : 'Inactive'}
+            </span>
+            <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold
+              ${cashRegister.is_available ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-orange-100 text-orange-700 border border-orange-200'}`}>
+              {cashRegister.is_available ? 'Disponible' : 'Occupée'}
             </span>
             {openSession && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">

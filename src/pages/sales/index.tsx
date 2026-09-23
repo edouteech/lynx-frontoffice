@@ -120,6 +120,7 @@ export default function SalesIndex() {
     {
       key: 'invoice_number',
       label: 'N° vente',
+      exportValue: (row) => row.invoice_number ?? `#${String(row.id).padStart(4, '0')}`,
       render: (v, row) => (
         <span className="font-mono font-semibold text-gray-700">
           {(v as string) ?? `#${String(row.id).padStart(4, '0')}`}
@@ -129,11 +130,13 @@ export default function SalesIndex() {
     {
       key: 'store',
       label: 'Magasin',
+      exportValue: (row) => row.store?.name ?? '—',
       render: (_, row) => <span className="font-medium text-gray-800">{row.store?.name ?? '—'}</span>,
     },
     {
       key: 'customer',
       label: 'Client',
+      exportValue: (row) => row.customer?.name ?? 'Anonyme',
       render: (_, row) => row.customer?.name
         ? <span className="text-gray-700">{row.customer.name}</span>
         : <span className="text-gray-400 italic">Anonyme</span>,
@@ -141,11 +144,13 @@ export default function SalesIndex() {
     {
       key: 'sale_date',
       label: 'Date',
+      exportValue: (row) => row.sale_date ? new Date(String(row.sale_date)).toLocaleDateString('fr-FR') : '—',
       render: v => v ? new Date(String(v)).toLocaleDateString('fr-FR') : <span className="text-gray-400">—</span>,
     },
     {
       key: 'status',
       label: 'Statut',
+      exportValue: (row) => (STATUS_LABELS[String(row.status)] ?? STATUS_LABELS.draft).label,
       render: v => {
         const s = STATUS_LABELS[String(v)] ?? STATUS_LABELS.draft
         return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
@@ -154,6 +159,7 @@ export default function SalesIndex() {
     {
       key: 'subtotal',
       label: 'Total',
+      exportValue: (row) => `${(row.total ?? 0).toLocaleString('fr-FR')} CFA`,
       render: (_, row) => {
         // row.total = valeur enregistrée en base, fiable. On ne la recalcule plus depuis
         // discount_percentage (arrondi à 2 décimales en base, faisait dériver l'affichage).

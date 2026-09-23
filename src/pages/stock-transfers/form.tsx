@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check,
-  ChevronDown, Loader2, Package, Plus, Save, Shuffle, Trash2,
+  ChevronDown, Loader2, Package, Plus, Printer, Save, Shuffle, Trash2,
 } from 'lucide-react'
 import {
   fetchStockTransfer, createStockTransfer, updateStockTransfer,
@@ -403,11 +403,21 @@ export default function StockTransferForm() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button type="button" onClick={() => navigate('/stock-transfers')}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
+            {isEdit && (
+              <button
+                type="button"
+                onClick={() => navigate(`/stock-transfers/${id}/print`)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Printer className="h-4 w-4 text-gray-500" />
+                Imprimer
+              </button>
+            )}
             {/* Valider (seulement edit + soumis + droits de validation) */}
             {isEdit && status === 'submitted' && canValidate && (
               <button
