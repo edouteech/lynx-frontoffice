@@ -27,7 +27,27 @@ const formatInputDateTime = (date: Date) => {
 const formatJustDate = (date: Date | null) => {
   if (!date || isNaN(date.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+};
+
+const parseDateString = (val: string): Date | null => {
+  if (!val) return null;
+  const clean = val.trim();
+  if (clean.includes("/")) {
+    const [d, m, y] = clean.split("/").map(Number);
+    if (!isNaN(d) && !isNaN(m) && !isNaN(y) && y >= 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const dt = new Date(y, m - 1, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+  if (clean.includes("-")) {
+    const [y, m, d] = clean.split("-").map(Number);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d) && y >= 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const dt = new Date(y, m - 1, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+  return null;
 };
 
 const formatJustTime = (date: Date | null) => {
@@ -35,245 +55,6 @@ const formatJustTime = (date: Date | null) => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
-
-function formatDateOnInput(val: string): string {
-  const digits = val.replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-}
-
-interface TimePickerInputProps {
-  value: string;
-  onChange: (timeStr: string) => void;
-}
-
-const TimePickerInput: React.FC<TimePickerInputProps> = ({ value, onChange }) => {
-  const [hours, setHours] = useState(() => {
-    const parts = (value || "").split(":");
-    return parts[0] || "00";
-  });
-  const [minutes, setMinutes] = useState(() => {
-    const parts = (value || "").split(":");
-    return parts[1] || "00";
-  });
-
-  const [hourBuffer, setHourBuffer] = useState<string | null>(null);
-  const [minBuffer, setMinBuffer] = useState<string | null>(null);
-
-  const hourRef = useRef<HTMLInputElement>(null);
-  const minRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const [h, m] = (value || "").split(":");
-    if (h !== undefined && hourBuffer === null) setHours(h.padStart(2, "0"));
-    if (m !== undefined && minBuffer === null) setMinutes(m.padStart(2, "0"));
-  }, [value, hourBuffer, minBuffer]);
-
-  const commitTime = (hVal: string, mVal: string) => {
-    const h = (hVal || "00").padStart(2, "0").slice(-2);
-    const m = (mVal || "00").padStart(2, "0").slice(-2);
-    let hNum = parseInt(h, 10);
-    let mNum = parseInt(m, 10);
-    if (isNaN(hNum)) hNum = 0;
-    if (isNaN(mNum)) mNum = 0;
-    hNum = Math.min(23, Math.max(0, hNum));
-    mNum = Math.min(59, Math.max(0, mNum));
-    const pad = (n: number) => String(n).padStart(2, "0");
-    onChange(`${pad(hNum)}:${pad(mNum)}`);
-  };
-
-  const handleHourFocus = () => {
-    setHourBuffer("");
-    requestAnimationFrame(() => hourRef.current?.select());
-  };
-
-  const handleHourBlur = () => {
-    let finalH = hours;
-    if (hourBuffer !== null) {
-      const num = parseInt(hourBuffer, 10);
-      if (isNaN(num)) {
-        finalH = hours || "00";
-      } else {
-        finalH = String(Math.min(23, Math.max(0, num))).padStart(2, "0");
-      }
-      setHourBuffer(null);
-      setHours(finalH);
-      commitTime(finalH, minutes);
-    }
-  };
-
-  const handleHourKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key >= "0" && e.key <= "9") {
-      e.preventDefault();
-      const digit = e.key;
-      const currentBuf = hourBuffer ?? "";
-
-      if (currentBuf === "") {
-        const num = parseInt(digit, 10);
-        if (num > 2) {
-          // Digits 3-9: cannot have 2nd digit in 24h clock -> format as 0X and move to minutes
-          const val = `0${num}`;
-          setHours(val);
-          setHourBuffer(null);
-          commitTime(val, minutes);
-          minRef.current?.focus();
-        } else {
-          // 0, 1, 2: wait for second digit
-          setHourBuffer(digit);
-          setHours(digit);
-        }
-      } else {
-        // Second digit of hour
-        let num = parseInt(currentBuf + digit, 10);
-        if (num > 23) num = 23;
-        const val = String(num).padStart(2, "0");
-        setHours(val);
-        setHourBuffer(null);
-        commitTime(val, minutes);
-        minRef.current?.focus();
-      }
-    } else if (e.key === "Backspace") {
-      e.preventDefault();
-      setHourBuffer("");
-      setHours("00");
-    } else if (e.key === "ArrowRight" || e.key === ":") {
-      e.preventDefault();
-      handleHourBlur();
-      minRef.current?.focus();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      const cur = parseInt(hours, 10) || 0;
-      const next = cur >= 23 ? 0 : cur + 1;
-      const val = String(next).padStart(2, "0");
-      setHours(val);
-      setHourBuffer(null);
-      commitTime(val, minutes);
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      const cur = parseInt(hours, 10) || 0;
-      const next = cur <= 0 ? 23 : cur - 1;
-      const val = String(next).padStart(2, "0");
-      setHours(val);
-      setHourBuffer(null);
-      commitTime(val, minutes);
-    }
-  };
-
-  const handleMinFocus = () => {
-    setMinBuffer("");
-    requestAnimationFrame(() => minRef.current?.select());
-  };
-
-  const handleMinBlur = () => {
-    let finalM = minutes;
-    if (minBuffer !== null) {
-      const num = parseInt(minBuffer, 10);
-      if (isNaN(num)) {
-        finalM = minutes || "00";
-      } else {
-        finalM = String(Math.min(59, Math.max(0, num))).padStart(2, "0");
-      }
-      setMinBuffer(null);
-      setMinutes(finalM);
-      commitTime(hours, finalM);
-    }
-  };
-
-  const handleMinKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key >= "0" && e.key <= "9") {
-      e.preventDefault();
-      const digit = e.key;
-      const currentBuf = minBuffer ?? "";
-
-      if (currentBuf === "") {
-        const num = parseInt(digit, 10);
-        if (num > 5) {
-          // Digits 6-9: cannot have 2nd digit in minutes -> format as 0X
-          const val = `0${num}`;
-          setMinutes(val);
-          setMinBuffer(null);
-          commitTime(hours, val);
-        } else {
-          // 0-5: wait for second digit
-          setMinBuffer(digit);
-          setMinutes(digit);
-        }
-      } else {
-        // Second digit of minute
-        let num = parseInt(currentBuf + digit, 10);
-        if (num > 59) num = 59;
-        const val = String(num).padStart(2, "0");
-        setMinutes(val);
-        setMinBuffer(null);
-        commitTime(hours, val);
-      }
-    } else if (e.key === "Backspace") {
-      e.preventDefault();
-      if (minBuffer === "" || minBuffer === null) {
-        hourRef.current?.focus();
-      } else {
-        setMinBuffer("");
-        setMinutes("00");
-      }
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      handleMinBlur();
-      hourRef.current?.focus();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      const cur = parseInt(minutes, 10) || 0;
-      const next = cur >= 59 ? 0 : cur + 1;
-      const val = String(next).padStart(2, "0");
-      setMinutes(val);
-      setMinBuffer(null);
-      commitTime(hours, val);
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      const cur = parseInt(minutes, 10) || 0;
-      const next = cur <= 0 ? 59 : cur - 1;
-      const val = String(next).padStart(2, "0");
-      setMinutes(val);
-      setMinBuffer(null);
-      commitTime(hours, val);
-    }
-  };
-
-  return (
-    <div className="flex items-center text-xs sm:text-sm font-semibold text-gray-700">
-      <input
-        ref={hourRef}
-        type="text"
-        inputMode="numeric"
-        value={hours}
-        onChange={() => {}}
-        onKeyDown={handleHourKeyDown}
-        onBlur={handleHourBlur}
-        onFocus={handleHourFocus}
-        placeholder="HH"
-        maxLength={2}
-        className="text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent w-[18px] text-center tracking-tight p-0"
-      />
-      <span className="text-gray-400 font-medium text-xs mx-[1px] select-none">:</span>
-      <input
-        ref={minRef}
-        type="text"
-        inputMode="numeric"
-        value={minutes}
-        onChange={() => {}}
-        onKeyDown={handleMinKeyDown}
-        onBlur={handleMinBlur}
-        onFocus={handleMinFocus}
-        placeholder="mm"
-        maxLength={2}
-        className="text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent w-[18px] text-center tracking-tight p-0"
-      />
-    </div>
-  );
-};
-
-
-
 
 const getDaysInMonth = (year: number, month: number) => {
   return new Date(year, month + 1, 0).getDate();
@@ -327,7 +108,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
   useEffect(() => {
     setEndDateText(formatJustDate(endDate || startDate));
     setEndTimeText(formatJustTime(endDate || startDate));
-  }, [endDate]);
+  }, [endDate, startDate]);
 
   useEffect(() => {
     const s = new Date(from);
@@ -403,7 +184,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
         end = new Date(start);
         end.setHours(23, 59, 59, 999);
         break;
-      case "this-week":
+      case "this-week": {
         const day = now.getDay();
         const diff = now.getDate() - day + (day === 0 ? -6 : 1);
         start.setDate(diff);
@@ -412,7 +193,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
         end.setDate(start.getDate() + 6);
         end.setHours(23, 59, 59, 999);
         break;
-      case "last-week":
+      }
+      case "last-week": {
         const lastWeekStart = new Date();
         const d = now.getDay();
         lastWeekStart.setDate(now.getDate() - d - 6 + (d === 0 ? -6 : 0));
@@ -422,6 +204,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
         end.setDate(start.getDate() + 6);
         end.setHours(23, 59, 59, 999);
         break;
+      }
       case "this-month":
         start.setDate(1);
         start.setHours(0, 0, 0, 0);
@@ -457,32 +240,25 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
   };
 
   const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDateOnInput(e.target.value);
-    setStartDateText(formatted);
-    if (formatted.length === 10) {
-      const [y, m, d] = formatted.split("-").map(Number);
-      if (y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-        const updated = new Date(startDate);
-        updated.setFullYear(y, m - 1, d);
-        if (!isNaN(updated.getTime()) && updated.getDate() === d) {
-          setStartDate(updated);
-          setViewDate(new Date(updated));
-        }
+    const val = e.target.value;
+    setStartDateText(val);
+    const parsed = parseDateString(val);
+    if (parsed) {
+      const updated = new Date(startDate);
+      updated.setFullYear(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      if (!isNaN(updated.getTime())) {
+        setStartDate(updated);
+        setViewDate(new Date(updated));
       }
     }
   };
 
-  const handleStartDateBlur = () => {
-    setStartDateText(formatJustDate(startDate));
-  };
-
-  const handleStartTimeChange = (timeStr: string) => {
-    setStartTimeText(timeStr);
-    const parts = timeStr.split(":");
-    if (parts.length === 2) {
-      const h = Number(parts[0]);
-      const m = Number(parts[1]);
-      if (!isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setStartTimeText(val);
+    if (val) {
+      const [h, m] = val.split(":").map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
         const updated = new Date(startDate);
         updated.setHours(h, m, 0, 0);
         setStartDate(updated);
@@ -491,32 +267,27 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
   };
 
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatDateOnInput(e.target.value);
-    setEndDateText(formatted);
-    if (formatted.length === 10) {
-      const [y, m, d] = formatted.split("-").map(Number);
-      if (y > 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-        const updated = new Date(endDate || startDate);
-        updated.setFullYear(y, m - 1, d);
-        if (!isNaN(updated.getTime()) && updated.getDate() === d) {
-          setEndDate(updated);
-        }
+    const val = e.target.value;
+    setEndDateText(val);
+    const parsed = parseDateString(val);
+    if (parsed) {
+      const base = endDate || startDate || new Date();
+      const updated = new Date(base);
+      updated.setFullYear(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      if (!isNaN(updated.getTime())) {
+        setEndDate(updated);
       }
     }
   };
 
-  const handleEndDateBlur = () => {
-    setEndDateText(formatJustDate(endDate || startDate));
-  };
-
-  const handleEndTimeChange = (timeStr: string) => {
-    setEndTimeText(timeStr);
-    const parts = timeStr.split(":");
-    if (parts.length === 2) {
-      const h = Number(parts[0]);
-      const m = Number(parts[1]);
-      if (!isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        const updated = new Date(endDate || startDate);
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setEndTimeText(val);
+    if (val) {
+      const [h, m] = val.split(":").map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        const base = endDate || startDate || new Date();
+        const updated = new Date(base);
         updated.setHours(h, m, 59, 999);
         setEndDate(updated);
       }
@@ -557,7 +328,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
 
     return (
       <div className="w-[280px]">
-        <div className="mb-4 flex items-center justify-center font-semibold text-gray-700">
+        <div className="mb-4 flex items-center justify-center font-semibold text-gray-700 capitalize">
           {monthName} {year}
         </div>
         <div className="grid grid-cols-7 gap-y-1 text-center">
@@ -576,6 +347,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
             return (
               <button
                 key={idx}
+                type="button"
                 onClick={() => handleDayClick(d.date)}
                 onMouseEnter={() => setHoverDate(d.date)}
                 className={`relative h-9 w-9 text-sm transition-all flex items-center justify-center
@@ -599,6 +371,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
     <div className="relative" ref={containerRef}>
       {/* Trigger Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center gap-2 rounded-xl border border-[#3B82F6]/30 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:border-[#3B82F6] transition-all"
       >
@@ -626,6 +399,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
             ].map((p) => (
               <button
                 key={p.id}
+                type="button"
                 onClick={() => applyPreset(p.id)}
                 className="w-full text-left px-3 py-2 text-sm font-medium text-gray-600 hover:bg-white hover:text-[#3B82F6] hover:shadow-sm rounded-xl transition-all"
               >
@@ -637,57 +411,59 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
           {/* Main Calendar Area */}
           <div className="flex flex-col">
             {/* Top Controls */}
-            <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/30 flex items-center justify-between gap-4">
+            <div className="border-b border-gray-100 px-6 py-3.5 bg-gray-50/30 flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2 shrink-0">
                 {/* Start Date / Time Pill */}
-                <div className="flex items-center rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-sm focus-within:border-[#3B82F6] focus-within:ring-2 focus-within:ring-[#3B82F6]/20 transition-all">
+                <div className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2.5 py-1.5 shadow-sm focus-within:border-[#3B82F6] focus-within:ring-2 focus-within:ring-[#3B82F6]/20 transition-all">
                   <input
                     type="text"
+                    placeholder="JJ/MM/AAAA"
                     value={startDateText}
                     onChange={handleStartDateChange}
-                    onBlur={handleStartDateBlur}
-                    placeholder="AAAA-MM-JJ"
-                    maxLength={10}
-                    className="text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent w-[80px] text-center tracking-tight"
+                    className="w-[82px] p-0 text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent"
                   />
-                  <span className="text-gray-400 font-normal text-xs select-none mx-1">-</span>
-                  <TimePickerInput
+                  <span className="text-gray-300 font-normal text-xs select-none">|</span>
+                  <input
+                    type="time"
                     value={startTimeText}
                     onChange={handleStartTimeChange}
+                    className="w-[68px] p-0 text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent cursor-pointer"
                   />
                 </div>
 
                 <div className="h-px w-3 bg-gray-300 shrink-0" />
 
                 {/* End Date / Time Pill */}
-                <div className="flex items-center rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-sm focus-within:border-[#3B82F6] focus-within:ring-2 focus-within:ring-[#3B82F6]/20 transition-all">
+                <div className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2.5 py-1.5 shadow-sm focus-within:border-[#3B82F6] focus-within:ring-2 focus-within:ring-[#3B82F6]/20 transition-all">
                   <input
                     type="text"
+                    placeholder="JJ/MM/AAAA"
                     value={endDateText}
                     onChange={handleEndDateChange}
-                    onBlur={handleEndDateBlur}
-                    placeholder="AAAA-MM-JJ"
-                    maxLength={10}
-                    className="text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent w-[80px] text-center tracking-tight"
+                    className="w-[82px] p-0 text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent"
                   />
-                  <span className="text-gray-400 font-normal text-xs select-none mx-1">-</span>
-                  <TimePickerInput
+                  <span className="text-gray-300 font-normal text-xs select-none">|</span>
+                  <input
+                    type="time"
                     value={endTimeText}
                     onChange={handleEndTimeChange}
+                    className="w-[68px] p-0 text-xs sm:text-sm font-semibold text-gray-700 outline-none bg-transparent cursor-pointer"
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-2 ml-auto shrink-0">
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-all"
+                  className="rounded-xl px-3.5 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-all"
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleApply}
-                  className="rounded-xl bg-[#3B82F6] px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-[#3B82F6]/20 hover:bg-[#2563EB] active:scale-95 transition-all"
+                  className="rounded-xl bg-[#3B82F6] px-5 py-1.5 text-sm font-semibold text-white shadow-md shadow-[#3B82F6]/20 hover:bg-[#2563EB] active:scale-95 transition-all"
                 >
                   Appliquer
                 </button>
@@ -698,6 +474,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
               {/* Left Calendar */}
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
                   className="absolute left-0 top-0 p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
                 >
@@ -709,6 +486,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
               {/* Right Calendar */}
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
                   className="absolute right-0 top-0 p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"
                 >
@@ -723,4 +501,3 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ from, to, onRa
     </div>
   );
 };
-
