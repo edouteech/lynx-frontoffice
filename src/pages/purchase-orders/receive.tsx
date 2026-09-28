@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, FileUp, Loader2, Truck, X } from 'lucide-react'
+import { ArrowLeft, CheckCheck, FileUp, HelpCircle, Loader2, Truck, X } from 'lucide-react'
 import { fetchPurchaseOrder } from '../../api/purchaseOrders'
 import { createReception } from '../../api/purchaseOrderReceptions'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder } from '../../types/api'
-import Can from '../../components/Can'
 
 export default function PurchaseOrderReceive() {
   const { id } = useParams<{ id: string }>()
@@ -193,13 +192,30 @@ export default function PurchaseOrderReceive() {
                 </h2>
               </div>
               {pending.length > 0 && (
-                <button
-                  type="button"
-                  onClick={setAll}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
-                >
-                  Tout recevoir
-                </button>
+                <div className="group relative flex items-center">
+                  <button
+                    type="button"
+                    onClick={setAll}
+                    title="Remplit automatiquement les quantités entrantes avec le reste à livrer de chaque article"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors shadow-sm"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Tout recevoir</span>
+                    <HelpCircle className="h-3 w-3 text-blue-400" />
+                  </button>
+
+                  {/* Info-bulle explicative au survol */}
+                  <div className="pointer-events-none absolute right-0 top-full z-30 mt-2 hidden w-64 rounded-xl bg-gray-900/95 p-3 text-xs font-normal leading-relaxed text-white shadow-xl backdrop-blur-sm group-hover:block transition-all">
+                    <div className="flex items-center gap-1.5 font-semibold text-blue-300 mb-1">
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      <span>Remplissage automatique</span>
+                    </div>
+                    <p className="text-gray-200 text-[11px]">
+                      Remplit automatiquement la colonne <span className="font-semibold text-white">« Quantité entrant »</span> de tous les articles avec leur stock restant à livrer.
+                    </p>
+                    <div className="absolute -top-1 right-6 h-2 w-2 rotate-45 bg-gray-900/95" />
+                  </div>
+                </div>
               )}
             </div>
 
@@ -267,18 +283,16 @@ export default function PurchaseOrderReceive() {
                 Annuler
               </button>
               {pending.length > 0 && (
-                <Can code="admin_panel.orders.ack_or_adjust">
-                  <button
-                    type="button"
-                    onClick={() => void handleSubmit()}
-                    disabled={submitting}
-                    className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
-                  >
-                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    <Truck className="h-4 w-4" />
-                    Valider la réception
-                  </button>
-                </Can>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
+                >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <Truck className="h-4 w-4" />
+                  Valider la réception
+                </button>
               )}
             </div>
           </div>

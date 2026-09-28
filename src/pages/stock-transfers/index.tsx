@@ -118,6 +118,7 @@ export default function StockTransfersIndex() {
       icon: Trash2,
       variant: 'danger',
       onClick: t => void handleDelete(t),
+      show: t => t.status !== 'confirmed',
     },
   ], [navigate, handleDelete])
 

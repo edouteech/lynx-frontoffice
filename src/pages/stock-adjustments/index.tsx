@@ -120,6 +120,7 @@ export default function StockAdjustmentsIndex() {
       icon: Trash2,
       variant: 'danger',
       onClick: a => void handleDelete(a),
+      show: a => a.status !== 'applied',
     },
   ], [navigate, handleDelete])
 
