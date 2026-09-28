@@ -116,11 +116,10 @@ export default function PurchaseOrdersIndex({ type }: Props) {
 
   const actions: Action<PurchaseOrder>[] = useMemo(() => [
     {
-      label: 'Voir / Modifier',
+      label: 'Voir le détail',
       icon: Eye,
       variant: 'primary',
       onClick: o => navigate(type === 'central' ? `/central-orders/${o.id}` : `/purchase-orders/${o.id}`),
-      permission: 'admin_panel.orders.create_or_edit',
     },
     {
       label: 'Imprimer',

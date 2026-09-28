@@ -604,7 +604,7 @@ export default function App() {
           path="/stock/movements"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.items.manage">
+              <RequirePermission code="admin_panel.stock.manage">
                 {withLayout(<StockMovementsPage />)}
               </RequirePermission>
             </ProtectedRoute>
@@ -614,7 +614,7 @@ export default function App() {
           path="/stock/evaluation"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.items.manage">
+              <RequirePermission code="admin_panel.stock.manage">
                 {withLayout(<StockEvaluationPage />)}
               </RequirePermission>
             </ProtectedRoute>
