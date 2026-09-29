@@ -119,6 +119,18 @@ function fmtDgiDateTime(d: string | null | undefined): string | null {
   return `${day}/${mo}/${y} ${h}:${mi}:${s}`
 }
 
+// Libellé du/des moyen(s) de paiement — détaille chaque montant si la vente est réglée
+// par plusieurs moyens à la fois (sale.payment_method reste alors null côté API, cf.
+// SaleController::buildSaleHeader()), sinon reprend simplement le moyen unique.
+function paymentSummary(sale: Sale): string | null {
+  if (sale.payments && sale.payments.length > 1) {
+    return sale.payments
+      .map(p => `${p.payment_method_name ?? 'Moyen #' + p.payment_method_id} (${fmt(p.amount)} XOF)`)
+      .join(' + ')
+  }
+  return sale.payment_method?.name ?? null
+}
+
 interface Props {
   sale: Sale
   organization: Organization | null
@@ -281,12 +293,12 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
 
           {/* ── footer info ── */}
           <View style={s.footerInfoBorder}>
-            {(sale.payment_method || sale.cash_register) && (
+            {(paymentSummary(sale) || sale.cash_register) && (
               <View style={s.paymentRow}>
-                {sale.payment_method && (
+                {paymentSummary(sale) && (
                   <View style={s.paymentTextRow}>
                     <Text style={s.paymentLabel}>Paiement : </Text>
-                    <Text style={s.paymentValue}>{sale.payment_method.name}</Text>
+                    <Text style={s.paymentValue}>{paymentSummary(sale)}</Text>
                   </View>
                 )}
                 {sale.cash_register && (
