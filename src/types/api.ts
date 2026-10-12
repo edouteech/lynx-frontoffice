@@ -489,8 +489,15 @@ export interface CashRegisterSession {
   opening_balance: number
   closing_balance: number | null
   note: string | null
+  closing_note?: string | null
   opened_at: string
   closed_at: string | null
+  opened_by_user_id?: number | null
+  opened_by_user_name?: string | null
+  closed_by_user_id?: number | null
+  closed_by_user_name?: string | null
+  user_id?: number | null
+  user_name?: string | null
   status: 'open' | 'closed'
   invoice_count: number
   last_sale_id: number | null

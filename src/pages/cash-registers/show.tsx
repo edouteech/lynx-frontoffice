@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronDown, ChevronUp, CircleSlash, Loader2,
-  Lock, LockOpen, Pencil, Plus, Power, PowerOff,
+  Lock, LockOpen, Pencil, Plus, Power, PowerOff, User,
 } from 'lucide-react'
 import { fetchCashRegister, toggleCashRegisterStatus, updateCashRegister } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
@@ -49,6 +49,8 @@ function SessionRow({
 }) {
   const [expanded, setExpanded] = useState(session.status === 'open')
   const isOpen = session.status === 'open'
+  const openerName = session.opened_by_user_name || session.user_name
+  const closerName = session.closed_by_user_name
 
   return (
     <div className={`overflow-hidden rounded-xl border transition-all
@@ -59,13 +61,19 @@ function SessionRow({
         onClick={() => setExpanded(v => !v)}
         className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${sessionStatusPill(session.status)}`}>
             {isOpen ? 'Ouverte' : 'Fermée'}
           </span>
           <span className="text-sm font-medium text-gray-900">
             Ouverture : {fmtDate(session.opened_at)}
           </span>
+          {openerName && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+              <User className="h-3 w-3 text-gray-400" />
+              {openerName}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {isOpen && (
@@ -137,11 +145,40 @@ function SessionRow({
             )}
           </div>
 
-          {session.closed_at && (
-            <p className="mt-3 text-xs text-gray-500">Fermée le {fmtDate(session.closed_at)}</p>
-          )}
+          {/* Horodatages et intervenants */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
+            <div>
+              <span className="font-medium text-gray-700">Ouverte : </span>
+              {fmtDate(session.opened_at)}
+              {openerName && <span className="ml-1 font-semibold text-gray-800">par {openerName}</span>}
+            </div>
+
+            {session.closed_at && (
+              <div>
+                <span className="font-medium text-gray-700">Fermée : </span>
+                {fmtDate(session.closed_at)}
+                {closerName && <span className="ml-1 font-semibold text-gray-800">par {closerName}</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
           {session.note && (
-            <p className="mt-2 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-600 italic">{session.note}</p>
+            <div className="mt-3">
+              <p className="text-xs font-medium text-gray-500">Note d'ouverture :</p>
+              <p className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 italic">
+                {session.note}
+              </p>
+            </div>
+          )}
+
+          {session.closing_note && session.closing_note !== session.note && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-gray-500">Note de clôture / Justification d'écart :</p>
+              <p className="mt-1 rounded-lg border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs text-amber-900 italic">
+                {session.closing_note}
+              </p>
+            </div>
           )}
         </div>
       )}
