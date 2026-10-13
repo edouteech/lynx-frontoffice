@@ -380,7 +380,7 @@ export default function SalesInvoicesPage() {
         />
         <KpiCard
           label="Remises"
-          value={<span className="text-2xl font-bold text-amber-600">-{fmtMoney(totals.discount)}</span>}
+          value={<span className="text-2xl font-bold text-amber-600">{fmtMoney(totals.discount)}</span>}
           icon={Tag}
           accent="bg-amber-600"
         />

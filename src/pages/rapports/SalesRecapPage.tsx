@@ -368,13 +368,21 @@ export default function SalesRecapPage() {
         <KpiCard
           label="Volume de vente"
           value={
-            <div className="flex flex-col">
-              <span className="text-xl font-bold text-gray-900">
-                {formatNumber(summary?.total_transactions ?? 0)} Transactions
-              </span>
-              <span className="text-sm font-medium text-gray-600">
-                {formatNumber(summary?.total_items_sold ?? 0)} Articles
-              </span>
+            <div className="flex flex-col gap-1.5">
+              <div>
+                <span className="text-xl font-bold text-gray-900">
+                  {formatNumber(summary?.total_transactions ?? 0)} Transactions
+                </span>
+                <span className="ml-2 text-sm font-medium text-gray-600">
+                  / {formatNumber(summary?.total_items_sold ?? 0)} Articles
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-700 text-sm font-semibold">Remise :</span>
+                <span className="text-lg font-bold text-rose-600">
+                  {formatFcfa(summary?.discount_ttc ?? 0)}
+                </span>
+              </div>
             </div>
           }
           icon={ShoppingBag}

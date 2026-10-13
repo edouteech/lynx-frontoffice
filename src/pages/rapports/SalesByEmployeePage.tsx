@@ -268,7 +268,8 @@ export default function SalesByEmployeePage() {
       profit_ht: acc.profit_ht + Number(row.profit_ht),
       total_tx: acc.total_tx + Number(row.total_transactions),
       commission: acc.commission + Number(row.commission_amount),
-    }), { revenue_ttc: 0, revenue_ht: 0, total_cost_ht: 0, profit_ht: 0, total_tx: 0, commission: 0 });
+      discount: acc.discount + Number(row.discount_amount ?? 0),
+    }), { revenue_ttc: 0, revenue_ht: 0, total_cost_ht: 0, profit_ht: 0, total_tx: 0, commission: 0, discount: 0 });
   }, [rows]);
 
   const avgMarginPct = useMemo(() => {
@@ -460,7 +461,17 @@ export default function SalesByEmployeePage() {
         />
         <KpiCard
           label="Transactions"
-          value={<span className="text-2xl font-bold text-gray-900">{formatNumber(totals.total_tx)}</span>}
+          value={
+            <div className="flex flex-col gap-1.5">
+              <span className="text-2xl font-bold text-gray-900">{formatNumber(totals.total_tx)}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-gray-700 text-sm font-semibold">Remise :</span>
+                <span className="text-lg font-bold text-rose-600">
+                  {formatFcfa(totals.discount)}
+                </span>
+              </div>
+            </div>
+          }
           icon={UserRound}
           accent="bg-violet-600"
         />
