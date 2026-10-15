@@ -369,6 +369,17 @@ export default function ItemBuybacksPage() {
           searchable
           searchPlaceholder="Rechercher un n° d'opération..."
           exportFilename="rachats-articles"
+          onExportAll={async () => {
+            const res = await fetchSales({
+              per_page: -1,
+              type_facture: 'RA',
+              store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
+              seller_name: appliedEmployeeId !== 'all' ? appliedEmployeeId : null,
+              from: appliedFrom || null,
+              to: appliedTo || null,
+            })
+            return res.data
+          }}
           getRowId={(r) => String(r.id)}
           serverPagination={{
             currentPage: page,

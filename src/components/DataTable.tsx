@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -9,6 +9,7 @@ import {
   Download,
   Edit,
   Eye,
+  Loader2,
   Search,
   Printer,
   Trash2,
@@ -66,6 +67,8 @@ export interface DataTableProps<T extends object> {
   title?: string
   description?: string
   exportFilename?: string
+  /** Fonction asynchrone optionnelle appelée lors de l'export pour récupérer l'ensemble des données (en mode pagination serveur). */
+  onExportAll?: () => Promise<T[]>
   printable?: boolean
   emptyMessage?: ReactNode
   /** Pagination côté client (tranche `data` déjà chargée). */
@@ -125,6 +128,7 @@ export default function DataTable<T extends object>({
   title,
   description,
   exportFilename,
+  onExportAll,
   printable = true,
   emptyMessage = 'Aucun élément',
   pagination = true,
@@ -143,6 +147,7 @@ export default function DataTable<T extends object>({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(itemsPerPage)
   const [exportOpen, setExportOpen] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const [jumpPageInput, setJumpPageInput] = useState('')
 
   useEffect(() => {
@@ -244,9 +249,10 @@ export default function DataTable<T extends object>({
   }
 
   const exportHeaders = useMemo(() => columns.map((c) => c.label), [columns])
-  const exportRows = useMemo((): ExportCell[][] => {
-    return processed.map((item) =>
-      columns.map((c) => {
+
+  const formatItemToExportRow = useCallback(
+    (item: T): ExportCell[] => {
+      return columns.map((c) => {
         if (c.exportValue) {
           return c.exportValue(item)
         }
@@ -300,15 +306,38 @@ export default function DataTable<T extends object>({
               .join(', ')
           }
         }
-        // Fallback: stringify objects/arrays for exports.
         try {
           return JSON.stringify(v)
         } catch {
           return String(v)
         }
       })
-    )
-  }, [processed, columns])
+    },
+    [columns]
+  )
+
+  const exportRows = useMemo((): ExportCell[][] => {
+    return processed.map(formatItemToExportRow)
+  }, [processed, formatItemToExportRow])
+
+  const resolveRowsForExport = async (): Promise<ExportCell[][]> => {
+    if (onExportAll) {
+      setExportLoading(true)
+      try {
+        const allItems = await onExportAll()
+        return allItems.map(formatItemToExportRow)
+      } finally {
+        setExportLoading(false)
+      }
+    }
+    return exportRows
+  }
+
+  const handleExportAction = async (action: (rows: ExportCell[][]) => void) => {
+    setExportOpen(false)
+    const rowsToExport = await resolveRowsForExport()
+    action(rowsToExport)
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -343,14 +372,16 @@ export default function DataTable<T extends object>({
               {(printable ?? !!exportFilename) && (
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={exportLoading}
+                  onClick={async () => {
+                    const rowsToExport = await resolveRowsForExport()
                     printTable({
                       title: title ?? exportFilename,
                       headers: exportHeaders,
-                      rows: exportRows,
+                      rows: rowsToExport,
                     })
                   }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   <Printer className="h-4 w-4 text-gray-500" />
                   Imprimer
@@ -360,11 +391,16 @@ export default function DataTable<T extends object>({
                 <div className="relative">
                   <button
                     type="button"
+                    disabled={exportLoading}
                     onClick={() => setExportOpen((v) => !v)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    <Download className="h-4 w-4" />
-                    Exporter
+                    {exportLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    {exportLoading ? 'Exportation…' : 'Exporter'}
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                   {exportOpen && (
@@ -374,10 +410,12 @@ export default function DataTable<T extends object>({
                           key: 'csv',
                           label: 'CSV',
                           onClick: () => {
-                            exportToCsv({
-                              filename: exportFilename,
-                              headers: exportHeaders,
-                              rows: exportRows,
+                            handleExportAction((rows) => {
+                              exportToCsv({
+                                filename: exportFilename,
+                                headers: exportHeaders,
+                                rows,
+                              })
                             })
                           },
                         },
@@ -385,11 +423,13 @@ export default function DataTable<T extends object>({
                           key: 'xlsx',
                           label: 'Excel (XLSX)',
                           onClick: () => {
-                            exportToXlsx({
-                              filename: exportFilename,
-                              headers: exportHeaders,
-                              rows: exportRows,
-                              sheetName: exportFilename,
+                            handleExportAction((rows) => {
+                              exportToXlsx({
+                                filename: exportFilename,
+                                headers: exportHeaders,
+                                rows,
+                                sheetName: exportFilename,
+                              })
                             })
                           },
                         },
@@ -397,11 +437,13 @@ export default function DataTable<T extends object>({
                           key: 'pdf',
                           label: 'PDF',
                           onClick: () => {
-                            exportToPdf({
-                              filename: exportFilename,
-                              title,
-                              headers: exportHeaders,
-                              rows: exportRows,
+                            handleExportAction((rows) => {
+                              exportToPdf({
+                                filename: exportFilename,
+                                title,
+                                headers: exportHeaders,
+                                rows,
+                              })
                             })
                           },
                         },
@@ -409,10 +451,12 @@ export default function DataTable<T extends object>({
                           key: 'print',
                           label: 'Imprimer le tableau',
                           onClick: () => {
-                            printTable({
-                              title,
-                              headers: exportHeaders,
-                              rows: exportRows,
+                            handleExportAction((rows) => {
+                              printTable({
+                                title,
+                                headers: exportHeaders,
+                                rows,
+                              })
                             })
                           },
                         },
@@ -421,7 +465,6 @@ export default function DataTable<T extends object>({
                           key={it.key}
                           type="button"
                           onClick={() => {
-                            setExportOpen(false)
                             it.onClick()
                           }}
                           className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"

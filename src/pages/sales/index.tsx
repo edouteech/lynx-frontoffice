@@ -289,6 +289,18 @@ export default function SalesIndex() {
         searchable
         searchPlaceholder="Rechercher une vente…"
         onSearch={setSearchQuery}
+        exportFilename="ventes"
+        onExportAll={async () => {
+          const res = await fetchSales({
+            per_page: -1,
+            search: searchQuery.trim() || null,
+            from: appliedFrom,
+            to: appliedTo,
+            channel: appliedChannel || null,
+            store_id: appliedStoreId ? Number(appliedStoreId) : null,
+          })
+          return res.data
+        }}
         pageSizeOptions={[5, 10, 25, 50, 100]}
         serverPagination={
           paginated

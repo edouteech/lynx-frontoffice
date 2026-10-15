@@ -403,6 +403,17 @@ export default function SalesInvoicesPage() {
           searchable
           searchPlaceholder="Rechercher une facture..."
           exportFilename="factures-ventes"
+          onExportAll={async () => {
+            const res = await fetchSales({
+              per_page: -1,
+              store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
+              status: appliedStatus !== 'all' ? appliedStatus : null,
+              channel: appliedChannel || null,
+              from: appliedFrom || null,
+              to: appliedTo || null,
+            })
+            return res.data
+          }}
           getRowId={(r) => String(r.id)}
           serverPagination={{
             currentPage: page,
