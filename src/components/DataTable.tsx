@@ -22,6 +22,8 @@ import {
   type ExportCell,
 } from '../lib/tableExport'
 import Can from './Can'
+import { useAuth } from '../contexts/useAuth'
+import { isOwner } from '../lib/permissions'
 
 export interface Column<T> {
   key: keyof T | string
@@ -41,6 +43,7 @@ export interface Action<T> {
   variant?: 'default' | 'danger' | 'primary'
   show?: (item: T) => boolean
   permission?: string
+  ownerOnly?: boolean
 }
 
 export interface ServerPagination {
@@ -239,7 +242,22 @@ export default function DataTable<T extends object>({
     customFilters ||
     exportFilename
 
-  const colCount = columns.length + (actions.length > 0 ? 1 : 0)
+  const { user, activeOrganizationId } = useAuth()
+  const isOwnerUser = isOwner(user, activeOrganizationId)
+
+  const effectiveActions = useMemo(() => {
+    return actions.filter((action) => {
+      if (action.ownerOnly && !isOwnerUser) return false
+      const isDelete =
+        action.variant === 'danger' ||
+        (action.label && action.label.toLowerCase().includes('supprim')) ||
+        (action.label && action.label.toLowerCase().includes('effac'))
+      if (isDelete && !isOwnerUser) return false
+      return true
+    })
+  }, [actions, isOwnerUser])
+
+  const colCount = columns.length + (effectiveActions.length > 0 ? 1 : 0)
 
   const rowKey = (item: T, index: number) => {
     if (getRowId) return String(getRowId(item))
@@ -529,7 +547,7 @@ export default function DataTable<T extends object>({
                   </span>
                 </th>
               ))}
-              {actions.length > 0 && (
+              {effectiveActions.length > 0 && (
                 <th className="w-36 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Actions
                 </th>
@@ -590,10 +608,10 @@ export default function DataTable<T extends object>({
                           )}
                     </td>
                   ))}
-                  {actions.length > 0 && (
+                  {effectiveActions.length > 0 && (
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-center gap-1">
-                        {actions.map((action, ai) => {
+                        {effectiveActions.map((action, ai) => {
                           if (action.show && !action.show(item)) return null
                           const Icon = defaultActionIcon(action)
                           const button = (

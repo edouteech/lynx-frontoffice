@@ -16,6 +16,17 @@ export function hasPermissionCode(
   return perms.some((p) => p.code === code)
 }
 
+export function isOwner(
+  user: User | null | undefined,
+  activeOrganizationId: number | null | undefined
+): boolean {
+  if (!user || activeOrganizationId == null) return false
+  const m = user.organization_memberships?.find(
+    (x) => x.organization_id === activeOrganizationId
+  )
+  return isOwnerRoleName(m?.role?.name ?? '')
+}
+
 export function getDefaultLandingPage(
   user: User | null | undefined,
   activeOrganizationId: number | null | undefined

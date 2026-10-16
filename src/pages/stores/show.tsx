@@ -10,6 +10,7 @@ import { deleteStore, fetchStore } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Store } from '../../types/api'
 import { StoreCreateModal } from './create'
+import { OwnerOnly } from '../../components/Can'
 
 function statusPill(status: string) {
   const s = (status || '').toLowerCase()
@@ -110,15 +111,17 @@ export default function StoreShow() {
               <Pencil className="h-4 w-4" />
               Modifier
             </button>
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deleting ? 'Suppression…' : 'Supprimer'}
-            </button>
+            <OwnerOnly>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </OwnerOnly>
           </div>
         </div>
 

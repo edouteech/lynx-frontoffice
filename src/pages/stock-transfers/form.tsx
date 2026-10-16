@@ -489,26 +489,62 @@ export default function StockTransferForm() {
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Magasin source <span className="text-red-500">*</span>
                 </label>
-                <Sel value={fromStoreId} onChange={e => setFromStoreId(e.target.value)} disabled={!isDraft}>
+                <Sel
+                  value={fromStoreId}
+                  onChange={e => {
+                    const nextId = e.target.value
+                    setFromStoreId(nextId)
+                    if (toStoreId && toStoreId === nextId) {
+                      setToStoreId('')
+                    }
+                  }}
+                  disabled={!isDraft}
+                >
                   <option value="">— Sélectionner —</option>
-                  {fromStores.map(s => (
-                    <option key={s.id} value={s.id} disabled={String(s.id) === toStoreId}>
-                      {s.name}
-                    </option>
-                  ))}
+                  {fromStores.map(s => {
+                    const isSameAsDest = String(s.id) === toStoreId
+                    return (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={isSameAsDest}
+                        className={isSameAsDest ? 'text-gray-400 bg-gray-100' : ''}
+                      >
+                        {s.name}
+                      </option>
+                    )
+                  })}
                 </Sel>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Magasin destination <span className="text-red-500">*</span>
                 </label>
-                <Sel value={toStoreId} onChange={e => setToStoreId(e.target.value)} disabled={!isDraft}>
+                <Sel
+                  value={toStoreId}
+                  onChange={e => {
+                    const nextId = e.target.value
+                    setToStoreId(nextId)
+                    if (fromStoreId && fromStoreId === nextId) {
+                      setFromStoreId('')
+                    }
+                  }}
+                  disabled={!isDraft}
+                >
                   <option value="">— Sélectionner —</option>
-                  {toStores.map(s => (
-                    <option key={s.id} value={s.id} disabled={String(s.id) === fromStoreId}>
-                      {s.name}
-                    </option>
-                  ))}
+                  {toStores.map(s => {
+                    const isSameAsSource = String(s.id) === fromStoreId
+                    return (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={isSameAsSource}
+                        className={isSameAsSource ? 'text-gray-400 bg-gray-100' : ''}
+                      >
+                        {s.name}
+                      </option>
+                    )
+                  })}
                 </Sel>
               </div>
             </div>

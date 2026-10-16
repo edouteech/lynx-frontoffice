@@ -119,6 +119,8 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
   const [addQty, setAddQty] = useState('1')
   const [addCost, setAddCost] = useState('')
 
+  const catalogStoreId = orderIsCentral ? purchasingCenterId : storeId
+
   // search / filter on items table
   const [searchQuery, setSearchQuery] = useState('')
   const [searchBy, setSearchBy] = useState<'name' | 'category'>('name')
@@ -201,7 +203,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         per_page: 20,
         search: productSearchQuery.trim() || undefined,
         category_id: filterCategoryId ? Number(filterCategoryId) : null,
-        store_id: storeId ? Number(storeId) : null,
+        store_id: catalogStoreId ? Number(catalogStoreId) : null,
       })
         .then(res => {
           if (cancelled) return
@@ -213,7 +215,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         .finally(() => { if (!cancelled) setProductResultsLoading(false) })
     }, 300)
     return () => { cancelled = true; clearTimeout(timeout) }
-  }, [productSearchQuery, filterCategoryId, storeId])
+  }, [productSearchQuery, filterCategoryId, catalogStoreId])
 
   // ── Charger la page suivante en arrivant en bas de la liste ────────────────
   function handleProductDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
@@ -227,7 +229,7 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
       per_page: 20,
       search: productSearchQuery.trim() || undefined,
       category_id: filterCategoryId ? Number(filterCategoryId) : null,
-      store_id: storeId ? Number(storeId) : null,
+      store_id: catalogStoreId ? Number(catalogStoreId) : null,
     })
       .then(res => {
         setProductResults(prev => [...prev, ...res.data])
@@ -358,6 +360,10 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
       return
     }
     if (!storeId) { setError('Veuillez sélectionner un magasin.'); return }
+    if (orderIsCentral && purchasingCenterId && storeId && purchasingCenterId === storeId) {
+      setError('Le magasin destinataire ne peut pas être identique à la centrale d\'achat.')
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -536,9 +542,33 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                   <span className="text-red-500">*</span>
                 </label>
                 {orderIsCentral ? (
-                  <Sel value={purchasingCenterId} onChange={e => setPurchasingCenterId(e.target.value)} disabled={!canEdit}>
+                  <Sel
+                    value={purchasingCenterId}
+                    onChange={e => {
+                      const nextId = e.target.value
+                      setPurchasingCenterId(nextId)
+                      setSelectedProduct(null)
+                      setProductSearchQuery('')
+                      if (storeId && storeId === nextId) {
+                        setStoreId('')
+                      }
+                    }}
+                    disabled={!canEdit}
+                  >
                     <option value="">— Choisir une centrale —</option>
-                    {purchasingCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {purchasingCenters.map(c => {
+                      const isSameAsDest = orderIsCentral && storeId === String(c.id)
+                      return (
+                        <option
+                          key={c.id}
+                          value={c.id}
+                          disabled={isSameAsDest}
+                          className={isSameAsDest ? 'text-gray-400 bg-gray-100' : ''}
+                        >
+                          {c.name}
+                        </option>
+                      )
+                    })}
                   </Sel>
                 ) : (
                   <Sel value={supplierId} onChange={e => setSupplierId(e.target.value)} disabled={!canEdit}>
@@ -551,9 +581,33 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Magasin destinataire <span className="text-red-500">*</span>
                 </label>
-                <Sel value={storeId} onChange={e => setStoreId(e.target.value)} disabled={!canEdit}>
+                <Sel
+                  value={storeId}
+                  onChange={e => {
+                    const nextId = e.target.value
+                    setStoreId(nextId)
+                    if (orderIsCentral && purchasingCenterId && purchasingCenterId === nextId) {
+                      setPurchasingCenterId('')
+                      setSelectedProduct(null)
+                      setProductSearchQuery('')
+                    }
+                  }}
+                  disabled={!canEdit}
+                >
                   <option value="">— Choisir un magasin —</option>
-                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {stores.map(s => {
+                    const isCentralSource = orderIsCentral && purchasingCenterId === String(s.id)
+                    return (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={isCentralSource}
+                        className={isCentralSource ? 'text-gray-400 bg-gray-100' : ''}
+                      >
+                        {s.name}
+                      </option>
+                    )
+                  })}
                 </Sel>
               </div>
             </div>
@@ -608,9 +662,18 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                     type="text"
                     value={selectedProduct ? selectedProduct.name : ''}
                     readOnly
-                    onClick={() => setShowProductDropdown(!showProductDropdown)}
-                    placeholder="Sélectionner un produit..."
-                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 cursor-pointer bg-white"
+                    onClick={() => {
+                      if (orderIsCentral && !purchasingCenterId) return
+                      setShowProductDropdown(!showProductDropdown)
+                    }}
+                    placeholder={
+                      orderIsCentral && !purchasingCenterId
+                        ? "— Choisissez d'abord une centrale d'achat —"
+                        : "Sélectionner un produit..."
+                    }
+                    className={`w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 bg-white ${
+                      orderIsCentral && !purchasingCenterId ? 'cursor-not-allowed bg-gray-50 text-gray-400' : 'cursor-pointer'
+                    }`}
                   />
                   {showProductDropdown && (
                     <div className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg" onScroll={handleProductDropdownScroll}>

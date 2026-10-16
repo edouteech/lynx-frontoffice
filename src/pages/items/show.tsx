@@ -10,6 +10,7 @@ import { fetchStockMovements, type MovementType, type StockMovement } from '../.
 import { fetchStores } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Product, Store } from '../../types/api'
+import { OwnerOnly } from '../../components/Can'
 
 // ─── shared helpers ───────────────────────────────────────────────────────────
 
@@ -438,15 +439,17 @@ export default function ItemShowPage() {
               <Pencil className="h-4 w-4" />
               Modifier
             </button>
-            <button
-              type="button"
-              onClick={() => void handleDelete()}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Supprimer
-            </button>
+            <OwnerOnly>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Supprimer
+              </button>
+            </OwnerOnly>
           </div>
         </div>
       </div>

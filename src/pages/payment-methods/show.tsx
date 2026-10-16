@@ -11,6 +11,7 @@ import { getApiErrorMessage } from '../../lib/apiError'
 import { ToggleSwitch } from '../../components/ToggleSwitch'
 import type { PaymentMethod, Store } from '../../types/api'
 import { PaymentMethodCreateModal } from './create'
+import { OwnerOnly } from '../../components/Can'
 
 export default function PaymentMethodShow() {
   const { id } = useParams<{ id: string }>()
@@ -162,15 +163,17 @@ export default function PaymentMethodShow() {
               <Pencil className="h-4 w-4" />
               Modifier
             </button>
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deleting ? 'Suppression…' : 'Supprimer'}
-            </button>
+            <OwnerOnly>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </OwnerOnly>
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { ClipboardCheck, Loader2, Plus, Printer, X } from 'lucide-react'
 import { fetchInventories, deleteInventory } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory } from '../../types/api'
+import { OwnerOnly } from '../../components/Can'
 
 function StatusBadge({ status }: { status: Inventory['status'] }) {
   return status === 'applied'
@@ -177,13 +178,15 @@ export default function InventoriesIndex() {
                           Imprimer
                         </button>
                         {inv.status === 'draft' && (
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(inv)}
-                            className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                          >
-                            Supprimer
-                          </button>
+                          <OwnerOnly>
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(inv)}
+                              className="rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                              Supprimer
+                            </button>
+                          </OwnerOnly>
                         )}
                       </div>
                     </td>

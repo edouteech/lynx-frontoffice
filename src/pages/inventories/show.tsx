@@ -10,6 +10,7 @@ import {
 } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory, InventoryItem } from '../../types/api'
+import { OwnerOnly } from '../../components/Can'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -276,15 +277,17 @@ export default function InventoryShowPage() {
 
             {isDraft && (
               <>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                >
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Supprimer
-                </button>
+                <OwnerOnly>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    disabled={deleting}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Supprimer
+                  </button>
+                </OwnerOnly>
                 <button
                   type="button"
                   onClick={() => void handleApply()}
