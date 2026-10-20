@@ -2,7 +2,12 @@
 const OWNER_ROLE_NAME = 'Owner'
 
 export function isOwnerRoleName(name: string): boolean {
-  return name.trim().toLowerCase() === OWNER_ROLE_NAME.toLowerCase()
+  const norm = name.trim().toLowerCase()
+  return (
+    norm === OWNER_ROLE_NAME.toLowerCase() ||
+    norm === 'propriétaire' ||
+    norm === 'proprietaire'
+  )
 }
 
 export function isOwnerRole(role: { name: string }): boolean {

@@ -121,6 +121,7 @@ export default function StockAdjustmentsIndex() {
       variant: 'danger',
       onClick: a => void handleDelete(a),
       show: a => a.status !== 'applied',
+      ownerOnly: true,
     },
   ], [navigate, handleDelete])
 

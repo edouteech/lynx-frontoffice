@@ -128,6 +128,7 @@ export default function RolesIndex() {
         variant: 'danger',
         show: (r) => !isOwnerRole(r),
         onClick: (r) => void handleDelete(r),
+        ownerOnly: true,
       },
     ],
     [handleDelete]

@@ -132,7 +132,7 @@ export default function PurchaseOrdersIndex({ type }: Props) {
       icon: Trash2,
       variant: 'danger',
       onClick: o => void handleDelete(o),
-      permission: 'admin_panel.orders.create_or_edit',
+      ownerOnly: true,
     },
   ], [navigate, handleDelete, type])
 

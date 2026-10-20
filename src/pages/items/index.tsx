@@ -442,7 +442,7 @@ export default function ItemsIndex() {
   const actions: Action<Product>[] = useMemo(() => [
     { label: 'Voir', icon: Eye, variant: 'default', onClick: p => navigate(`/items/${p.id}`) },
     { label: 'Modifier', icon: Pencil, variant: 'primary', onClick: p => navigate(`/items/${p.id}/edit`) },
-    { label: 'Supprimer', icon: Trash2, variant: 'danger', onClick: p => void handleDelete(p) },
+    { label: 'Supprimer', icon: Trash2, variant: 'danger', onClick: p => void handleDelete(p), ownerOnly: true },
   ], [navigate, handleDelete])
 
   return (

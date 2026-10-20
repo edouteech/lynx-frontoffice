@@ -269,6 +269,7 @@ export default function VatRatesIndex() {
         variant: 'danger',
         onClick: (t) => void handleDelete(t),
         show: canManage,
+        ownerOnly: true,
       },
     ],
     [startEdit, handleDelete, canManage]

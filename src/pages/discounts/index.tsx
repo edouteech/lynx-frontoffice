@@ -481,6 +481,7 @@ export default function DiscountsIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (d) => void handleDelete(d),
+        ownerOnly: true,
       },
     ],
     [startEdit, handleDelete]

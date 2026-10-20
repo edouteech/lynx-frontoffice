@@ -240,6 +240,7 @@ export default function ItemCategoriesIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (c) => void handleDelete(c),
+        ownerOnly: true,
       },
     ],
     [startEdit, handleDelete]

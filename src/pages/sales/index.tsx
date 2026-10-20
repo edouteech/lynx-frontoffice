@@ -187,6 +187,7 @@ export default function SalesIndex() {
       icon: Trash2,
       variant: 'danger',
       onClick: s => void handleDelete(s),
+      ownerOnly: true,
     },
   ], [navigate, handleDelete])
 

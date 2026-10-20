@@ -152,6 +152,7 @@ export default function FavoritesIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (f) => void handleDelete(f),
+        ownerOnly: true,
       },
     ],
     [handleDelete]

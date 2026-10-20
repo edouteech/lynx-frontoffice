@@ -143,6 +143,7 @@ export default function OptionsIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (o) => void handleDelete(o),
+        ownerOnly: true,
       },
     ],
     [handleDelete]

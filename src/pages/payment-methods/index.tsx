@@ -199,6 +199,7 @@ export default function PaymentMethodsIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (pm) => void handleDelete(pm),
+        ownerOnly: true,
       },
     ],
     [handleDelete, navigate]

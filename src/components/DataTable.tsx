@@ -248,11 +248,6 @@ export default function DataTable<T extends object>({
   const effectiveActions = useMemo(() => {
     return actions.filter((action) => {
       if (action.ownerOnly && !isOwnerUser) return false
-      const isDelete =
-        action.variant === 'danger' ||
-        (action.label && action.label.toLowerCase().includes('supprim')) ||
-        (action.label && action.label.toLowerCase().includes('effac'))
-      if (isDelete && !isOwnerUser) return false
       return true
     })
   }, [actions, isOwnerUser])

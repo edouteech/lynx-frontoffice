@@ -182,6 +182,7 @@ export default function StoresIndex() {
         icon: Trash2,
         variant: 'danger',
         onClick: (m) => void handleDelete(m),
+        ownerOnly: true,
       },
     ],
     [navigate, handleDelete]

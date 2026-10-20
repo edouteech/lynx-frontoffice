@@ -432,6 +432,7 @@ export default function RestaurantOptionPage() {
         icon: Trash2,
         variant: 'danger',
         onClick: (opt) => void handleDelete(opt),
+        ownerOnly: true,
       },
     ],
     [handleDelete]

@@ -119,6 +119,7 @@ export default function StockTransfersIndex() {
       variant: 'danger',
       onClick: t => void handleDelete(t),
       show: t => t.status !== 'confirmed',
+      ownerOnly: true,
     },
   ], [navigate, handleDelete])
 

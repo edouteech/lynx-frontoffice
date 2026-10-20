@@ -131,6 +131,7 @@ export default function SuppliersIndex() {
       icon: Trash2,
       variant: 'danger',
       onClick: s => void handleDelete(s),
+      ownerOnly: true,
     },
   ], [handleDelete])
 

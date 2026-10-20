@@ -425,6 +425,7 @@ export default function KitchenPrinterPage() {
         icon: Trash2,
         variant: 'danger',
         onClick: (kp) => void handleDelete(kp),
+        ownerOnly: true,
       },
     ],
     [handleDelete]
