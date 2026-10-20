@@ -70,8 +70,8 @@ function Toggle({ checked, onChange, label, disabled = false }: { checked: boole
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      {title && <div className="border-b border-gray-100 px-6 py-3"><p className="text-sm font-semibold text-gray-700">{title}</p></div>}
-      <div className="p-6">{children}</div>
+      {title && <div className="border-b border-gray-100 px-4 sm:px-6 py-3"><p className="text-sm font-semibold text-gray-700">{title}</p></div>}
+      <div className="p-4 sm:p-6">{children}</div>
     </div>
   )
 }
@@ -934,23 +934,23 @@ export default function ItemFormPage() {
   }
 
   return (
-    <div className=" space-y-6">
+    <div className="space-y-5">
 
-      {/* ─── sticky header ─────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className=" flex items-center justify-between px-6 py-3">
+      {/* ─── Sticky Header Card ─────────────────────────────────────── */}
+      <div className="sticky top-0 z-20 rounded-xl border border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => navigate('/items')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h1 className="text-base font-bold text-gray-900">{isEdit ? `Modifier « ${name} »` : 'Nouvel article'}</h1>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-gray-900 truncate">{isEdit ? `Modifier « ${name} »` : 'Nouvel article'}</h1>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button type="button" onClick={() => navigate('/items')}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              className="flex-1 sm:flex-none rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
             {storesSaveSuccess && (
@@ -968,7 +968,7 @@ export default function ItemFormPage() {
                 (isEdit && tab === 'options' && optionsSaving) ||
                 ((!isEdit || (tab !== 'stores' && tab !== 'options')) && saving)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
             >
               {(isEdit && tab === 'stores' ? storesSaving : isEdit && tab === 'options' ? optionsSaving : saving)
                 ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -979,7 +979,7 @@ export default function ItemFormPage() {
         </div>
 
         {/* tabs */}
-        <div className=" flex gap-0 px-6">
+        <div className="flex overflow-x-auto border-t border-gray-100 px-4 sm:px-6">
           {([
             ['article', 'Article'],
             ['stores', 'Magasins'],
@@ -991,7 +991,7 @@ export default function ItemFormPage() {
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 border-b-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
                 tab === key
                   ? 'border-[#0F2E4A] text-[#0F2E4A]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -1004,12 +1004,10 @@ export default function ItemFormPage() {
       </div>
 
       {error && (
-        <div className=" px-6 pt-4">
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
       )}
 
-      <div className=" px-6 py-6 space-y-5">
+      <div className="space-y-5">
 
         {/* ════════════════════════════ ARTICLE TAB ═══════════════════════════ */}
         {tab === 'article' && (
@@ -1187,7 +1185,7 @@ export default function ItemFormPage() {
             )}
 
             {/* Checkboxes globales */}
-            <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
                 <input
                   ref={allAvailabilityRef}

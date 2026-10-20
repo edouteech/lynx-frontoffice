@@ -1,33 +1,33 @@
 @import "tailwindcss";
 
-/* Hide browser native date picker indicators (calendar icon only) */
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="date"]::-webkit-inner-spin-button,
-input[type="date"]::-webkit-clear-button,
+/* Native date inputs styling - responsive & accessible */
+input[type="date"] {
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Specific class to explicitly hide indicator if needed */
 .no-calendar-icon::-webkit-calendar-picker-indicator,
 .no-calendar-icon::-webkit-inner-spin-button,
 .no-calendar-icon::-webkit-clear-button {
   display: none !important;
-  -webkit-appearance: none !important;
   opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
   pointer-events: none !important;
-  background: transparent !important;
-  color: transparent !important;
-}
-
-input[type="date"],
-.no-calendar-icon {
-  -webkit-appearance: none;
-  -moz-appearance: textfield;
 }
 
 /* Style the native time picker indicator nicely */
 input[type="time"]::-webkit-calendar-picker-indicator {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: pointer;
   filter: grayscale(1);
   transition: opacity 0.2s ease;

@@ -125,56 +125,72 @@ export default function StockMovementsPage() {
   const lastPage   = result?.last_page ?? 1
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* ─── header ─────────────────────────────────────────────────────── */}
-      <div className="border-b border-gray-200 bg-white px-8 py-5">
+      {/* ─── Header Card ─────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:px-6 sm:py-5 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F2E4A]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0F2E4A]">
             <ClipboardList className="h-5 w-5 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Historique des stocks</h1>
-            <p className="text-sm text-gray-500">Tous les mouvements de stock — ventes, commandes, ajustements, transferts, inventaires</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Historique des stocks</h1>
+            <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 sm:line-clamp-none">
+              Tous les mouvements de stock — ventes, commandes, ajustements, transferts, inventaires
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="px-8 py-6 space-y-5">
+      <div className="space-y-5">
 
         {/* ─── filter bar ──────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end gap-3 sm:gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:px-6 sm:py-4 shadow-sm">
 
           {/* Date début */}
-          <div>
+          <div className="w-full lg:w-auto">
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Date début</label>
             <input
               type="date"
               value={pendingFromDate}
               onChange={e => setPendingFromDate(e.target.value)}
-              className="h-9 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              onClick={e => {
+                try {
+                  e.currentTarget.showPicker?.()
+                } catch {
+                  // fallback
+                }
+              }}
+              className="h-9 w-full cursor-pointer rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
             />
           </div>
 
           {/* Date fin */}
-          <div>
+          <div className="w-full lg:w-auto">
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Date fin</label>
             <input
               type="date"
               value={pendingToDate}
               onChange={e => setPendingToDate(e.target.value)}
-              className="h-9 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              onClick={e => {
+                try {
+                  e.currentTarget.showPicker?.()
+                } catch {
+                  // fallback
+                }
+              }}
+              className="h-9 w-full cursor-pointer rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
             />
           </div>
 
           {/* Magasin */}
-          <div>
+          <div className="w-full lg:w-auto">
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Magasin</label>
             <div className="relative">
               <select
                 value={pendingStore}
                 onChange={e => setPendingStore(e.target.value)}
-                className="h-9 appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-8 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                className="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-8 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
               >
                 <option value="">Tous les magasins</option>
                 {stores.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
@@ -184,15 +200,17 @@ export default function StockMovementsPage() {
           </div>
 
           {/* Bouton filtrer */}
-          <button
-            type="button"
-            onClick={applyFilters}
-            disabled={loading}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#0F2E4A] px-5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-60"
-          >
-            <Filter className="h-4 w-4" />
-            Filtrer
-          </button>
+          <div className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto pt-1 sm:pt-0">
+            <button
+              type="button"
+              onClick={applyFilters}
+              disabled={loading}
+              className="inline-flex h-9 w-full lg:w-auto items-center justify-center gap-2 rounded-lg bg-[#0F2E4A] px-5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-60"
+            >
+              <Filter className="h-4 w-4" />
+              Filtrer
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -203,9 +221,9 @@ export default function StockMovementsPage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
 
           {/* table header info */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-3">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 sm:px-6 py-3">
             <p className="text-sm font-semibold text-gray-700">
-              La liste des historiques des stocks
+              Historique des mouvements
             </p>
             {!loading && (
               <p className="text-xs text-gray-400">{totalItems.toLocaleString('fr-FR')} mouvement{totalItems > 1 ? 's' : ''}</p>
@@ -307,11 +325,11 @@ export default function StockMovementsPage() {
 
               {/* ─── pagination ──────────────────────────────────────── */}
               {lastPage > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3">
-                  <p className="text-xs text-gray-500">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 px-4 sm:px-6 py-3">
+                  <p className="text-xs text-gray-500 text-center sm:text-left">
                     Page {page} / {lastPage} · {totalItems.toLocaleString('fr-FR')} résultat{totalItems > 1 ? 's' : ''}
                   </p>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <button
                       type="button"
                       disabled={page <= 1 || loading}

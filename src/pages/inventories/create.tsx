@@ -101,28 +101,43 @@ export default function InventoryCreatePage() {
     <div className="space-y-6">
 
       {/* header */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className=" flex max-w-2xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => navigate('/inventories')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+      <div className="sticky top-0 z-20 rounded-xl border border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm max-w-2xl">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate('/inventories')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95"
+            >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <h1 className="text-base font-bold text-gray-900">Nouvel inventaire</h1>
+            <h1 className="text-sm sm:text-base font-bold text-gray-900 truncate">Nouvel inventaire</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-5 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Créer l'inventaire
-          </button>
+
+          <div className="w-full sm:w-auto">
+            <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/inventories')}
+                className="rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-95 flex items-center justify-center text-center"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#0F2E4A] px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50 active:scale-95 shadow-sm text-center"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                <span>Créer l'inventaire</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className=" max-w-2xl px-6 py-6 space-y-5">
+      <div className="max-w-2xl space-y-5">
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
@@ -130,10 +145,10 @@ export default function InventoryCreatePage() {
 
         {/* ── Étape 1 : paramètres ────────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-3">
+          <div className="border-b border-gray-100 px-4 sm:px-6 py-3">
             <p className="text-sm font-semibold text-gray-700">Paramètres de l'inventaire</p>
           </div>
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-5">
 
             {/* Magasin */}
             <div>
@@ -143,7 +158,7 @@ export default function InventoryCreatePage() {
               <select
                 value={storeId}
                 onChange={e => setStoreId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 bg-white"
               >
                 <option value="">Sélectionner un magasin</option>
                 {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -153,7 +168,7 @@ export default function InventoryCreatePage() {
             {/* Type */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Type d'inventaire</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {([
                   ['full',    'Inventaire complet',  'Tous les articles avec suivi de stock'],
                   ['partial', 'Inventaire partiel',  'Articles sélectionnés uniquement'],
@@ -199,13 +214,13 @@ export default function InventoryCreatePage() {
         {/* ── Étape 2 : sélection articles (partiel) ──────────────────── */}
         {type === 'partial' && (
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-3 flex items-center justify-between">
+            <div className="border-b border-gray-100 px-4 sm:px-6 py-3 flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-700">Articles à inventorier</p>
               {selected.size > 0 && (
                 <span className="text-xs font-medium text-[#3B82F6]">{selected.size} sélectionné{selected.size > 1 ? 's' : ''}</span>
               )}
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
 
               {/* Sélectionnés */}
               {selectedProducts.length > 0 && (

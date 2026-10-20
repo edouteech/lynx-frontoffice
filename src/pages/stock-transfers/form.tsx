@@ -27,7 +27,22 @@ function Sel(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 }
 
 function Inp(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 disabled:bg-gray-50 disabled:text-gray-500 ${props.className ?? ''}`} />
+  return (
+    <input
+      {...props}
+      onClick={(e) => {
+        if (props.type === 'date' || props.type === 'time') {
+          try {
+            e.currentTarget.showPicker?.()
+          } catch {}
+        }
+        props.onClick?.(e)
+      }}
+      className={`w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 disabled:bg-gray-50 disabled:text-gray-500 ${
+        props.type === 'date' ? 'cursor-pointer' : ''
+      } ${props.className ?? ''}`}
+    />
+  )
 }
 
 // ── Pending item (mode création) ──────────────────────────────────────────────
@@ -386,66 +401,73 @@ export default function StockTransferForm() {
     <div className=" space-y-6">
 
       {/* ── Header sticky ─────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className=" flex  items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => navigate('/stock-transfers')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+      <div className="sticky top-0 z-20 rounded-xl border border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate('/stock-transfers')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95"
+            >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-gray-900">
+            <div className="min-w-0 flex items-center gap-2 flex-wrap">
+              <h1 className="text-sm sm:text-base font-bold text-gray-900 truncate">
                 {isEdit ? `Transfert #${id!.padStart(4, '0')}` : 'Nouveau transfert'}
               </h1>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta.className}`}>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta.className}`}>
                 {statusMeta.label}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => navigate('/stock-transfers')}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Annuler
-            </button>
-            {isEdit && (
+          <div className="w-full sm:w-auto">
+            <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:items-center sm:justify-end">
               <button
                 type="button"
-                onClick={() => navigate(`/stock-transfers/${id}/print`)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => navigate('/stock-transfers')}
+                className="rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-95 flex items-center justify-center text-center"
               >
-                <Printer className="h-4 w-4 text-gray-500" />
-                Imprimer
+                Annuler
               </button>
-            )}
-            {/* Valider (seulement edit + soumis + droits de validation) */}
-            {isEdit && status === 'submitted' && canValidate && (
-              <button
-                type="button"
-                onClick={() => void handleConfirm()}
-                disabled={confirming || saving || displayItems.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
-              >
-                {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Valider le transfert
-              </button>
-            )}
-            {isDraft && (
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer
-              </button>
-            )}
+              {isEdit && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/stock-transfers/${id}/print`)}
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 active:scale-95 text-center"
+                >
+                  <Printer className="h-4 w-4 text-gray-500" />
+                  <span>Imprimer</span>
+                </button>
+              )}
+              {isEdit && status === 'submitted' && canValidate && (
+                <button
+                  type="button"
+                  onClick={() => void handleConfirm()}
+                  disabled={confirming || saving || displayItems.length === 0}
+                  className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-green-300 bg-green-50 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50 active:scale-95 text-center"
+                >
+                  {confirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  <span>Valider le transfert</span>
+                </button>
+              )}
+              {isDraft && (
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#0F2E4A] px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50 active:scale-95 shadow-sm text-center"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <span>Enregistrer</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className=" space-y-5 px-6 py-6">
+      <div className="space-y-5">
 
         {/* Messages */}
         {error && (
@@ -482,7 +504,7 @@ export default function StockTransferForm() {
             </div>
           </div>
 
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-4 sm:px-6 pb-6 space-y-4">
             {/* Magasin source + destination */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -581,13 +603,13 @@ export default function StockTransferForm() {
         {/* ══════════════════ AJOUT D'ARTICLE ══════════════════════════════════ */}
         {isDraft && (
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-3">
+            <div className="border-b border-gray-100 px-4 sm:px-6 py-3">
               <p className="text-sm font-semibold text-gray-700">Ajouter un article</p>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex flex-wrap items-end gap-3">
                 {/* Catégorie */}
-                <div className="w-44">
+                <div className="w-full sm:w-44">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
                   <Sel value={filterCategoryId} onChange={e => { setFilterCategoryId(e.target.value); setSelectedProduct(null); setProductSearchQuery('') }}>
                     <option value="">Toutes</option>
@@ -596,7 +618,7 @@ export default function StockTransferForm() {
                 </div>
 
                 {/* Produit */}
-                <div className="flex-1 min-w-[200px] relative" data-product-dropdown>
+                <div className="w-full sm:flex-1 min-w-0 sm:min-w-[200px] relative" data-product-dropdown>
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">
                     Article <span className="text-red-500">*</span>
                   </label>
@@ -651,7 +673,7 @@ export default function StockTransferForm() {
                 </div>
 
                 {/* Quantité */}
-                <div className="w-32">
+                <div className="w-full sm:w-32">
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
                   <Inp type="number" min="0.001" value={addQty} onChange={e => setAddQty(e.target.value)} placeholder="1" />
                 </div>
@@ -660,7 +682,7 @@ export default function StockTransferForm() {
                   type="button"
                   onClick={() => void handleAddItem()}
                   disabled={!selectedProduct}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40 active:scale-95 shadow-sm"
                 >
                   <Plus className="h-4 w-4" /> Ajouter
                 </button>
@@ -672,16 +694,18 @@ export default function StockTransferForm() {
         {/* ══════════════════ TABLEAU DES ARTICLES ═════════════════════════════ */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           {/* Barre de recherche */}
-          <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-3">
-            <p className="text-sm font-semibold text-gray-700 mr-2">Articles</p>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Rechercher…"
-              className="w-52 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
-            />
-            <span className="ml-auto text-xs text-gray-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <p className="text-sm font-semibold text-gray-700 mr-2">Articles</p>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Rechercher…"
+                className="w-full sm:w-52 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              />
+            </div>
+            <span className="text-xs text-gray-400">
               {displayItems.length} article{displayItems.length !== 1 ? 's' : ''} · {totalQty.toLocaleString('fr-FR')} unité{totalQty !== 1 ? 's' : ''} au total
             </span>
           </div>

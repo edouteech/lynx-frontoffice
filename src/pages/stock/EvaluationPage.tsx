@@ -36,11 +36,11 @@ function StoreSelector({
   onChange: (v: string) => void
 }) {
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-10 appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+        className="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
       >
         <option value="">Tous les magasins</option>
         {stores.map(s => (
@@ -62,11 +62,11 @@ function CategorySelector({
   onChange: (v: string) => void
 }) {
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-10 appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+        className="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
       >
         <option value="">Toutes les catégories</option>
         {categories.map(c => (
@@ -99,10 +99,10 @@ function SummaryCard({
   }[accent]
 
   return (
-    <div className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm border-l-4 ${border}`}>
+    <div className={`rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm border-l-4 ${border}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="mt-1 text-xs text-gray-500">{sub}</p>}
+      <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
+      {sub && <p className="mt-1 text-xs text-gray-500 line-clamp-1">{sub}</p>}
     </div>
   )
 }
@@ -273,20 +273,20 @@ export default function StockEvaluationPage() {
   const totalItems = paginated?.total ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* ─── header ──────────────────────────────────────────────────── */}
-      <div className="border-b border-gray-200 bg-white px-8 py-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* ─── Header Card ─────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:px-6 sm:py-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F2E4A]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0F2E4A]">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
                 {type === 'dashboard' ? 'Stock Global' : 'Évaluation de stock'}
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 sm:line-clamp-none">
                 {type === 'dashboard' 
                   ? 'Aperçu global de la valeur de votre stock' 
                   : 'Valorisation et marges de votre catalogue'}
@@ -294,37 +294,39 @@ export default function StockEvaluationPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                placeholder="Rechercher un article, une référence…"
-                className="h-10 w-64 rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
-              />
-            </div>
-            <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} />
-            <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
-            <button
-              type="button"
-              onClick={() => void handleExportXlsx()}
-              disabled={exporting}
-              title="Exporter tous les articles correspondant aux filtres actuels"
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60 transition-colors"
-            >
-              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Exporter Excel
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void handleExportXlsx()}
+            disabled={exporting}
+            title="Exporter tous les articles correspondant aux filtres actuels"
+            className="w-full sm:w-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60 transition-colors"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Exporter Excel
+          </button>
         </div>
       </div>
 
-      <div className="px-8 py-6 space-y-6">
+      <div className="space-y-5">
+
+        {/* ─── filter bar ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:px-6 sm:py-4 shadow-sm">
+          <div className="relative flex-1 min-w-[200px] sm:col-span-2 lg:col-span-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Rechercher un article, une référence…"
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+            />
+          </div>
+          <CategorySelector categories={categories} value={categoryId} onChange={setCategoryId} />
+          <StoreSelector stores={stores} value={storeId} onChange={setStoreId} />
+        </div>
 
         {/* ─── summary cards ───────────────────────────────────────────── */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             label="Articles affichés"
             value={String(totalItems)}
@@ -507,11 +509,11 @@ export default function StockEvaluationPage() {
 
               {/* ─── pagination ───────────────────────────────────────── */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
-                  <p className="text-xs text-gray-500">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 px-4 sm:px-5 py-3">
+                  <p className="text-xs text-gray-500 text-center sm:text-left">
                     {totalItems} article{totalItems > 1 ? 's' : ''} — page {page} / {totalPages}
                   </p>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <button
                       type="button"
                       disabled={!hasPrev || loading}

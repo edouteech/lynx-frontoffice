@@ -200,7 +200,14 @@ function HistoryDrawer({
               type="date"
               value={pendingFromDate}
               onChange={e => setPendingFromDate(e.target.value)}
-              className="h-8 rounded-lg border border-gray-300 px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
+              onClick={e => {
+                try {
+                  e.currentTarget.showPicker?.()
+                } catch {
+                  // fallback
+                }
+              }}
+              className="h-8 cursor-pointer rounded-lg border border-gray-300 px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
             />
           </div>
           <div>
@@ -209,7 +216,14 @@ function HistoryDrawer({
               type="date"
               value={pendingToDate}
               onChange={e => setPendingToDate(e.target.value)}
-              className="h-8 rounded-lg border border-gray-300 px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
+              onClick={e => {
+                try {
+                  e.currentTarget.showPicker?.()
+                } catch {
+                  // fallback
+                }
+              }}
+              className="h-8 cursor-pointer rounded-lg border border-gray-300 px-2.5 text-xs text-gray-700 focus:border-[#3B82F6] focus:outline-none"
             />
           </div>
           <div>

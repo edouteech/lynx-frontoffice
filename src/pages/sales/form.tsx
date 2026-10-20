@@ -2133,21 +2133,21 @@ export default function SaleForm() {
 
   return (
 
-    <div className=" space-y-6">
+    <div className="space-y-5">
 
 
 
       {/* ── Header sticky ─────────────────────────────────────────────────── */}
 
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
+      <div className="sticky top-0 z-20 rounded-xl border border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm">
 
-        <div className=" flex  items-center justify-between px-6 py-3">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
 
           <div className="flex items-center gap-3">
 
             <button type="button" onClick={() => navigate('/sales')}
 
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
 
               <ArrowLeft className="h-4 w-4" />
 
@@ -2173,7 +2173,7 @@ export default function SaleForm() {
 
 
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
 
             {isConfirmed ? (
 
@@ -2181,7 +2181,7 @@ export default function SaleForm() {
 
                 <button type="button" onClick={() => navigate('/sales')}
 
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  className="flex-1 sm:flex-none rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
 
                   Liste des ventes
 
@@ -2189,7 +2189,7 @@ export default function SaleForm() {
 
                 <button type="button" onClick={handleNewSale}
 
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
 
                   <Plus className="h-4 w-4" />
 
@@ -2205,7 +2205,7 @@ export default function SaleForm() {
 
                   disabled={printing || !currentSale}
 
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#1D4ED8] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1e40af] disabled:opacity-50"
 
                 >
 
@@ -2223,7 +2223,7 @@ export default function SaleForm() {
 
                 <button type="button" onClick={() => navigate('/sales')}
 
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  className="flex-1 sm:flex-none rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
 
                   Annuler
 
@@ -2237,7 +2237,7 @@ export default function SaleForm() {
 
                   disabled={saving}
 
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
 
                 >
 
@@ -2259,7 +2259,7 @@ export default function SaleForm() {
 
 
 
-      <div className=" space-y-5 px-6 py-6">
+      <div className="space-y-5">
 
 
 
@@ -2812,13 +2812,13 @@ export default function SaleForm() {
 
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
 
               <div className="flex flex-wrap items-end gap-3">
 
                 {/* Catégorie */}
 
-                <div className="w-44">
+                <div className="w-full sm:w-44">
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Catégorie</label>
 
@@ -2836,7 +2836,7 @@ export default function SaleForm() {
 
                 {/* Produit */}
 
-                <div className="flex-1 min-w-[200px] relative" data-product-dropdown>
+                <div className="w-full sm:flex-1 sm:min-w-[200px] relative" data-product-dropdown>
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">
 
@@ -2937,7 +2937,7 @@ export default function SaleForm() {
 
                 {/* Quantité */}
 
-                <div className="w-28">
+                <div className="flex-1 sm:flex-none sm:w-28">
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Quantité</label>
 
@@ -2949,7 +2949,7 @@ export default function SaleForm() {
 
                 {/* Prix unitaire */}
 
-                <div className="w-36">
+                <div className="flex-1 sm:flex-none sm:w-36">
 
                   <label className="mb-1.5 block text-xs font-medium text-gray-600">Prix unit. (CFA)</label>
 
@@ -2967,7 +2967,7 @@ export default function SaleForm() {
 
                   disabled={!selectedProduct}
 
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-40"
 
                 >
 
@@ -3423,15 +3423,15 @@ export default function SaleForm() {
 
           {/* Footer : remise + frais + totaux */}
 
-          <div className="border-t border-gray-100 px-6 py-4">
+          <div className="border-t border-gray-100 p-4 sm:px-6 sm:py-4">
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
               {/* Remise et frais */}
 
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
 
-                <div className="w-52">
+                <div className="w-full sm:w-52">
 
                   <label className="mb-1 block text-xs font-medium text-gray-600">Remise globale (%)</label>
 
@@ -3455,7 +3455,7 @@ export default function SaleForm() {
 
                 </div>
 
-                <div className="w-52">
+                <div className="w-full sm:w-52">
 
                   <label className="mb-1 block text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
 
@@ -3483,7 +3483,7 @@ export default function SaleForm() {
 
               {/* Récap totaux */}
 
-              <div className="min-w-[240px] space-y-1.5 text-sm">
+              <div className="w-full sm:w-auto sm:min-w-[240px] space-y-1.5 text-sm">
 
                 <div className="flex justify-between text-gray-600">
 

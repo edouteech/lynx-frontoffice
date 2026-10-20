@@ -17,6 +17,7 @@ export interface FetchProductsParams {
   only_trashed?: boolean
   search?: string
   type?: 'simple' | 'composite'
+  for_order?: boolean
 }
 
 export async function fetchProducts(params: FetchProductsParams | number = 1): Promise<Paginated<Product>> {
@@ -32,6 +33,7 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
       ...(p.only_trashed ? { only_trashed: true } : {}),
       ...(p.search      ? { search: p.search }             : {}),
       ...(p.type        ? { type: p.type }                   : {}),
+      ...(p.for_order   ? { for_order: true }              : {}),
     }
   })
   return res.data

@@ -65,10 +65,10 @@ export default function Navbar({ onLogoutClick, onMenuClick }: NavbarProps) {
             {showOrgMenu && (
               <>
                 <div 
-                  className="fixed inset-0 z-10" 
+                  className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] lg:bg-transparent" 
                   onClick={() => setShowOrgMenu(false)}
                 ></div>
-                <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 z-20">
+                <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 z-50">
                   <div className="px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                       Mes Entreprises
@@ -123,10 +123,79 @@ export default function Navbar({ onLogoutClick, onMenuClick }: NavbarProps) {
           </div>
         </div>
 
-        {/* Mobile Title */}
-        <h1 className="text-lg font-bold text-gray-900 lg:hidden">
-          {currentOrganization?.name || 'Lynx'}
-        </h1>
+        {/* Mobile Organization Switcher */}
+        <div className="relative lg:hidden">
+          <button
+            type="button"
+            onClick={() => setShowOrgMenu(!showOrgMenu)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-left shadow-sm transition-all hover:bg-gray-50 active:scale-95"
+          >
+            <Building className="h-4 w-4 text-blue-600 shrink-0" />
+            <span className="text-sm font-bold text-gray-900 truncate max-w-[130px] sm:max-w-[220px]">
+              {currentOrganization?.name || 'Sélectionner...'}
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-200 shrink-0 ${showOrgMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showOrgMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]" 
+                onClick={() => setShowOrgMenu(false)}
+              ></div>
+              <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 z-50">
+                <div className="px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Mes Entreprises
+                  </p>
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {user?.organization_memberships?.map((membership) => (
+                    <button
+                      key={membership.organization_id}
+                      onClick={() => {
+                        setActiveOrganizationId(membership.organization_id)
+                        setShowOrgMenu(false)
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                        activeOrganizationId === membership.organization_id
+                          ? 'bg-blue-50 text-blue-700 font-semibold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                          activeOrganizationId === membership.organization_id
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          <Building className="h-4 w-4" />
+                        </div>
+                        <span className="truncate max-w-[160px]">{membership.organization?.name}</span>
+                      </div>
+                      {activeOrganizationId === membership.organization_id && (
+                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="my-1 h-px bg-gray-100"></div>
+                
+                <button
+                  onClick={() => {
+                    navigate('/userprofile')
+                    setShowOrgMenu(false)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Gérer les entreprises
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">

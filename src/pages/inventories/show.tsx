@@ -238,19 +238,19 @@ export default function InventoryShowPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* ─── sticky header ──────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className=" flex  items-center justify-between px-6 py-3">
+      <div className="sticky top-0 z-20 rounded-xl border border-gray-200 bg-white/95 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => navigate('/inventories')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-gray-900">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base font-bold text-gray-900 truncate">
                   Inventaire — {inventory.store?.name}
                 </h1>
                 {isApplied
@@ -265,11 +265,11 @@ export default function InventoryShowPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <Printer className="h-4 w-4" />
               Imprimer
@@ -282,7 +282,7 @@ export default function InventoryShowPage() {
                     type="button"
                     onClick={() => void handleDelete()}
                     disabled={deleting}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     Supprimer
@@ -292,7 +292,7 @@ export default function InventoryShowPage() {
                   type="button"
                   onClick={() => void handleApply()}
                   disabled={applying}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Appliquer au stock
@@ -301,7 +301,7 @@ export default function InventoryShowPage() {
             )}
 
             {isApplied && (
-              <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-emerald-600 py-1">
                 <CheckCircle2 className="h-4 w-4" />
                 Appliqué le {new Date(inventory.applied_at!).toLocaleDateString('fr-FR')}
               </div>
@@ -311,23 +311,21 @@ export default function InventoryShowPage() {
       </div>
 
       {error && (
-        <div className=" px-6 pt-4">
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
       )}
 
-      <div className=" px-6 py-5 space-y-5">
+      <div className="space-y-5">
 
         {/* ─── infos + progression ─────────────────────────────────── */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
           {[
             { label: 'Articles',   value: String(totalItems) },
             { label: 'Comptés',    value: `${filledNow} / ${totalItems}` },
             { label: 'Progression', value: `${pct}%` },
           ].map(c => (
-            <div key={c.label} className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+            <div key={c.label} className="rounded-xl border border-gray-200 bg-white px-4 sm:px-5 py-3 sm:py-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{c.label}</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{c.value}</p>
+              <p className="mt-1 text-xl sm:text-2xl font-bold text-gray-900">{c.value}</p>
               {c.label === 'Progression' && (
                 <div className="mt-2 h-1.5 w-full rounded-full bg-gray-200">
                   <div className="h-1.5 rounded-full bg-[#3B82F6] transition-all" style={{ width: `${pct}%` }} />
@@ -348,16 +346,16 @@ export default function InventoryShowPage() {
         {/* ─── tableau des articles ─────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Category filter and search */}
-          <div className="border-b border-gray-200 px-5 py-3 bg-gray-50">
-            <div className="flex items-center gap-4 flex-wrap">
+          <div className="border-b border-gray-200 px-4 sm:px-5 py-3 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               {/* Category dropdown */}
               {categories.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Catégorie :</label>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">Catégorie :</label>
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+                    className="w-full sm:w-auto rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
                   >
                     <option value="all">Toutes</option>
                     {categories.map(cat => (
@@ -367,8 +365,8 @@ export default function InventoryShowPage() {
                 </div>
               )}
               {/* Search input */}
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Article :</label>
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex items-center gap-2 flex-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">Article :</label>
                 <input
                   type="text"
                   value={searchQuery}
