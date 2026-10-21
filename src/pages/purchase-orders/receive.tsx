@@ -137,14 +137,7 @@ export default function PurchaseOrderReceive() {
                 type="date"
                 value={receivedAt}
                 onChange={e => setReceivedAt(e.target.value)}
-                onClick={e => {
-                  try {
-                    e.currentTarget.showPicker?.()
-                  } catch {
-                    // fallback
-                  }
-                }}
-                className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 

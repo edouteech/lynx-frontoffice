@@ -35,19 +35,7 @@ function Inp(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      onClick={(e) => {
-        if (props.type === 'date' || props.type === 'time') {
-          try {
-            e.currentTarget.showPicker?.()
-          } catch {
-            // fallback if showPicker is unsupported
-          }
-        }
-        props.onClick?.(e)
-      }}
-      className={`w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 disabled:bg-gray-50 disabled:text-gray-500 ${
-        props.type === 'date' ? 'cursor-pointer' : ''
-      } ${props.className ?? ''}`}
+      className={`w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm placeholder-gray-400 transition focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 disabled:bg-gray-50 disabled:text-gray-500 ${props.className ?? ''}`}
     />
   )
 }

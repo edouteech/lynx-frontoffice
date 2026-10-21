@@ -154,14 +154,7 @@ export default function StockMovementsPage() {
               type="date"
               value={pendingFromDate}
               onChange={e => setPendingFromDate(e.target.value)}
-              onClick={e => {
-                try {
-                  e.currentTarget.showPicker?.()
-                } catch {
-                  // fallback
-                }
-              }}
-              className="h-9 w-full cursor-pointer rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              className="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
             />
           </div>
 
@@ -172,14 +165,7 @@ export default function StockMovementsPage() {
               type="date"
               value={pendingToDate}
               onChange={e => setPendingToDate(e.target.value)}
-              onClick={e => {
-                try {
-                  e.currentTarget.showPicker?.()
-                } catch {
-                  // fallback
-                }
-              }}
-              className="h-9 w-full cursor-pointer rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              className="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
             />
           </div>
 
