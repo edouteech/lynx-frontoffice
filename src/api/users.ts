@@ -13,10 +13,12 @@ export interface UserStoreRoleRow {
 
 export async function fetchUsers(
   page = 1,
-  q?: string
+  q?: string,
+  per_page?: number
 ): Promise<Paginated<User>> {
   const params: Record<string, string | number> = { page }
   if (q?.trim()) params.q = q.trim()
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<User>>('/users', { params })
   return data
 }

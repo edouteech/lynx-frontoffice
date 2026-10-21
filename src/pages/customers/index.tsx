@@ -232,6 +232,10 @@ export default function CustomersIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="clients"
+        onExportAll={async () => {
+          const res = await fetchCustomers(1, undefined, false, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un client…"
         serverPagination={

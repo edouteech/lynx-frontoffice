@@ -124,6 +124,10 @@ export default function TrashStores() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="magasins_supprimes"
+        onExportAll={async () => {
+          const res = await fetchStores(1, undefined, true, false, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un magasin supprimé…"
         pagination={false}

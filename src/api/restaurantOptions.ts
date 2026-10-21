@@ -2,10 +2,13 @@ import { api } from './apiClient'
 import type { Paginated, RestaurantOption } from '../types/api'
 
 export async function fetchRestaurantOptions(
-  page = 1
+  page = 1,
+  per_page?: number
 ): Promise<Paginated<RestaurantOption>> {
+  const params: Record<string, string | number> = { page }
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<RestaurantOption>>('/restaurant-options', {
-    params: { page },
+    params,
   })
   return data
 }

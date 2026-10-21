@@ -562,29 +562,35 @@ export default function ItemsIndex() {
               <ChevronDown className="h-4 w-4 text-gray-400" />
             </button>
             {exportMenuOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => void handleExportFile('csv')}
-                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleExportFile('xlsx')}
-                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  Excel (XLSX)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleExportPdf()}
-                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  PDF
-                </button>
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setExportMenuOpen(false)}
+                />
+                <div className="absolute left-0 sm:left-auto sm:right-0 z-20 mt-2 w-44 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => void handleExportFile('csv')}
+                    className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleExportFile('xlsx')}
+                    className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Excel (XLSX)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleExportPdf()}
+                    className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    PDF
+                  </button>
+                </div>
+              </>
             )}
           </div>
         }

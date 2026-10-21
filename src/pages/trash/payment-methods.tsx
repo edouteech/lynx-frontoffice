@@ -138,6 +138,10 @@ export default function TrashPaymentMethods() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="moyens_de_paiement_supprimes"
+        onExportAll={async () => {
+          const res = await fetchPaymentMethods(1, true, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un moyen supprimé…"
         pagination={false}

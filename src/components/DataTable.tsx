@@ -337,7 +337,19 @@ export default function DataTable<T extends object>({
     if (onExportAll) {
       setExportLoading(true)
       try {
-        const allItems = await onExportAll()
+        let allItems = await onExportAll()
+        if (searchTerm && !onSearch) {
+          const q = searchTerm.toLowerCase()
+          allItems = allItems.filter((item) =>
+            columns.some((col) => {
+              const v = getNestedValue(
+                item as Record<string, unknown>,
+                String(col.key)
+              )
+              return v?.toString().toLowerCase().includes(q)
+            })
+          )
+        }
         return allItems.map(formatItemToExportRow)
       } finally {
         setExportLoading(false)
@@ -417,7 +429,12 @@ export default function DataTable<T extends object>({
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                   {exportOpen && (
-                    <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setExportOpen(false)}
+                      />
+                      <div className="absolute left-0 sm:left-auto sm:right-0 z-20 mt-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
                       {[
                         {
                           key: 'csv',
@@ -460,19 +477,6 @@ export default function DataTable<T extends object>({
                             })
                           },
                         },
-                        {
-                          key: 'print',
-                          label: 'Imprimer le tableau',
-                          onClick: () => {
-                            handleExportAction((rows) => {
-                              printTable({
-                                title,
-                                headers: exportHeaders,
-                                rows,
-                              })
-                            })
-                          },
-                        },
                       ].map((it) => (
                         <button
                           key={it.key}
@@ -486,7 +490,8 @@ export default function DataTable<T extends object>({
                         </button>
                       ))}
                     </div>
-                  )}
+                  </>
+                )}
                 </div>
               )}
             </div>

@@ -60,6 +60,7 @@ export async function fetchAllProducts(params: FetchProductsParams = {}): Promis
       ...(params.store_id    ? { store_id: params.store_id }       : {}),
       ...(params.category_id ? { category_id: params.category_id } : {}),
       ...(params.stock_alert ? { stock_alert: params.stock_alert } : {}),
+      ...(params.only_trashed ? { only_trashed: true }             : {}),
       ...(params.search      ? { search: params.search }           : {}),
       ...(params.type        ? { type: params.type }               : {}),
     },

@@ -5,12 +5,14 @@ export async function fetchFavorites(
   page = 1,
   q?: string,
   status?: 'active' | 'inactive',
-  storeId?: number | string
+  storeId?: number | string,
+  per_page?: number
 ): Promise<Paginated<Favorite>> {
   const params: Record<string, string | number> = { page }
   if (q?.trim()) params.q = q.trim()
   if (status) params.status = status
   if (storeId != null && String(storeId) !== '') params.store_id = Number(storeId)
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<Favorite>>('/favorites', { params })
   return data
 }

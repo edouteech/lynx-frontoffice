@@ -352,6 +352,17 @@ export default function CashRegistersIndex() {
         onSearch={(q) => setSearch(q)}
         customFilters={customFilters}
         exportFilename="caisses"
+        onExportAll={async () => {
+          const res = await fetchCashRegisters(
+            1,
+            statusFilter || undefined,
+            storeFilter ? Number(storeFilter) : undefined,
+            false,
+            debouncedSearch || undefined,
+            -1
+          )
+          return res.data
+        }}
         printable={true}
         emptyMessage="Aucune caisse trouvée."
         serverPagination={{

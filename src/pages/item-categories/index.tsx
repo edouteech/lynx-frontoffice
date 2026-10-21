@@ -373,6 +373,10 @@ export default function ItemCategoriesIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="categories"
+        onExportAll={async () => {
+          const res = await fetchItemCategories(1, false, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une catégorie…"
         pagination={false}

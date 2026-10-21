@@ -186,6 +186,10 @@ export default function OptionsIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="options"
+        onExportAll={async () => {
+          const res = await fetchOptions(1, undefined, undefined, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une option…"
         pagination={false}

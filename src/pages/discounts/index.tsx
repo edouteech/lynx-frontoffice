@@ -1003,6 +1003,10 @@ export default function DiscountsIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="reductions"
+        onExportAll={async () => {
+          const res = await fetchDiscounts(1, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une réduction…"
         pagination={false}

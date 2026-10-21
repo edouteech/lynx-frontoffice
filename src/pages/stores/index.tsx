@@ -246,6 +246,10 @@ export default function StoresIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="magasins"
+        onExportAll={async () => {
+          const res = await fetchStores(1, statusFilter || undefined, false, false, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un magasin…"
         customFilters={statusSelect}

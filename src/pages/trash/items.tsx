@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw, Package } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
-import { fetchProducts, restoreProduct } from '../../api/products'
+import { fetchAllProducts, fetchProducts, restoreProduct } from '../../api/products'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Product } from '../../types/api'
 
@@ -189,6 +189,7 @@ export default function TrashItems() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="articles_supprimes"
+        onExportAll={() => fetchAllProducts({ only_trashed: true })}
         searchable
         searchPlaceholder="Rechercher un article supprimé…"
         pagination={false}

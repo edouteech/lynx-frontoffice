@@ -303,6 +303,10 @@ export default function UsersIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="utilisateurs"
+        onExportAll={async () => {
+          const res = await fetchUsers(1, debouncedQ || undefined, -1)
+          return res.data
+        }}
         searchable={false}
         customFilters={searchFilter}
         serverPagination={

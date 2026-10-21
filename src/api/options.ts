@@ -5,12 +5,14 @@ export async function fetchOptions(
   page = 1,
   q?: string,
   status?: 'active' | 'inactive',
-  productId?: number | string
+  productId?: number | string,
+  per_page?: number
 ): Promise<Paginated<Option>> {
   const params: Record<string, string | number> = { page }
   if (q?.trim()) params.q = q.trim()
   if (status) params.status = status
   if (productId != null && String(productId) !== '') params.product_id = Number(productId)
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<Option>>('/options', { params })
   return data
 }

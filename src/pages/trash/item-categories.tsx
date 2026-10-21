@@ -124,6 +124,10 @@ export default function TrashItemCategories() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="categories_supprimees"
+        onExportAll={async () => {
+          const res = await fetchItemCategories(1, true, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une catégorie supprimée…"
         pagination={false}

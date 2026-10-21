@@ -3,10 +3,12 @@ import { api } from './apiClient'
 
 export async function fetchVatRates(
   page = 1,
-  only_trashed?: boolean
+  only_trashed?: boolean,
+  per_page?: number
 ): Promise<Paginated<VatRate>> {
   const params: Record<string, string | number | boolean> = { page }
   if (only_trashed) params.only_trashed = true
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<VatRate>>('/vat-rates', { params })
   return data
 }

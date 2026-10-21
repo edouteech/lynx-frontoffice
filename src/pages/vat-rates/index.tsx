@@ -375,6 +375,10 @@ export default function VatRatesIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="tva"
+        onExportAll={async () => {
+          const res = await fetchVatRates(1, false, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une TVA…"
         pagination={false}

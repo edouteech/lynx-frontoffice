@@ -99,6 +99,7 @@ export default function SalesInvoicesPage() {
   /* data */
   const [sales, setSales] = useState<Sale[]>([])
   const [stores, setStores] = useState<StoreType[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -122,6 +123,7 @@ export default function SalesInvoicesPage() {
     try {
       const res = await fetchSales({
         page,
+        search: searchQuery.trim() || null,
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
         status: appliedStatus !== 'all' ? appliedStatus : null,
         channel: appliedChannel || null,
@@ -137,7 +139,7 @@ export default function SalesInvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, appliedStoreId, appliedStatus, appliedChannel, appliedFrom, appliedTo])
+  }, [page, searchQuery, appliedStoreId, appliedStatus, appliedChannel, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
 
@@ -402,10 +404,15 @@ export default function SalesInvoicesPage() {
           title="Liste des factures"
           searchable
           searchPlaceholder="Rechercher une facture..."
+          onSearch={(q) => {
+            setSearchQuery(q)
+            setPage(1)
+          }}
           exportFilename="factures-ventes"
           onExportAll={async () => {
             const res = await fetchSales({
               per_page: -1,
+              search: searchQuery.trim() || null,
               store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
               status: appliedStatus !== 'all' ? appliedStatus : null,
               channel: appliedChannel || null,

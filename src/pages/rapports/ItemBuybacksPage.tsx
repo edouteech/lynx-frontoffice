@@ -96,6 +96,7 @@ export default function ItemBuybacksPage() {
   /* data */
   const [sales, setSales] = useState<Sale[]>([])
   const [stores, setStores] = useState<StoreType[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([
     { id: 'all', name: 'Tous les employés' },
   ])
@@ -145,6 +146,7 @@ export default function ItemBuybacksPage() {
       const res = await fetchSales({
         page,
         type_facture: 'RA',
+        search: searchQuery.trim() || null,
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
         seller_name: appliedEmployeeId !== 'all' ? appliedEmployeeId : null,
         from: appliedFrom || null,
@@ -159,7 +161,7 @@ export default function ItemBuybacksPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, appliedStoreId, appliedEmployeeId, appliedFrom, appliedTo])
+  }, [page, searchQuery, appliedStoreId, appliedEmployeeId, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
 
@@ -368,11 +370,16 @@ export default function ItemBuybacksPage() {
           title="Historique des rachats"
           searchable
           searchPlaceholder="Rechercher un n° d'opération..."
+          onSearch={(q) => {
+            setSearchQuery(q)
+            setPage(1)
+          }}
           exportFilename="rachats-articles"
           onExportAll={async () => {
             const res = await fetchSales({
               per_page: -1,
               type_facture: 'RA',
+              search: searchQuery.trim() || null,
               store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
               seller_name: appliedEmployeeId !== 'all' ? appliedEmployeeId : null,
               from: appliedFrom || null,

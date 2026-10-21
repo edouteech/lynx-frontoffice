@@ -138,6 +138,10 @@ export default function TrashCustomers() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="clients_supprimes"
+        onExportAll={async () => {
+          const res = await fetchCustomers(1, undefined, true, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un client supprimé…"
         pagination={false}

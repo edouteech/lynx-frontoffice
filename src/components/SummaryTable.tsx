@@ -119,56 +119,62 @@ export default function SummaryTable<T extends object>({
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                   {exportOpen && (
-                    <div className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            if (exportFilename) {
-                              exportToCsv({
-                                headers: exportHeaders,
-                                rows: exportRows,
-                                filename: exportFilename,
-                              });
-                            }
-                            setExportOpen(false);
-                          }}
-                          className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          CSV
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (exportFilename) {
-                              exportToXlsx({
-                                headers: exportHeaders,
-                                rows: exportRows,
-                                filename: exportFilename,
-                              });
-                            }
-                            setExportOpen(false);
-                          }}
-                          className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Excel
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (exportFilename) {
-                              exportToPdf({
-                                headers: exportHeaders,
-                                rows: exportRows,
-                                filename: exportFilename,
-                                title: title,
-                              });
-                            }
-                            setExportOpen(false);
-                          }}
-                          className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          PDF
-                        </button>
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setExportOpen(false)}
+                      />
+                      <div className="absolute left-0 sm:left-auto sm:right-0 z-20 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              if (exportFilename) {
+                                exportToCsv({
+                                  headers: exportHeaders,
+                                  rows: exportRows,
+                                  filename: exportFilename,
+                                });
+                              }
+                              setExportOpen(false);
+                            }}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            CSV
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (exportFilename) {
+                                exportToXlsx({
+                                  headers: exportHeaders,
+                                  rows: exportRows,
+                                  filename: exportFilename,
+                                });
+                              }
+                              setExportOpen(false);
+                            }}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Excel
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (exportFilename) {
+                                exportToPdf({
+                                  headers: exportHeaders,
+                                  rows: exportRows,
+                                  filename: exportFilename,
+                                  title: title,
+                                });
+                              }
+                              setExportOpen(false);
+                            }}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            PDF
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               )}

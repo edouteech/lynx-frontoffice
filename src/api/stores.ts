@@ -5,12 +5,14 @@ export async function fetchStores(
   page = 1,
   statusFilter?: string,
   only_trashed?: boolean,
-  all?: boolean
+  all?: boolean,
+  per_page?: number
 ): Promise<Paginated<Store>> {
   const params: Record<string, string | number | boolean> = { page }
   if (statusFilter) params.status = statusFilter
   if (only_trashed) params.only_trashed = true
   if (all) params.all = true
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<Store>>('/stores', { params })
   return data
 }

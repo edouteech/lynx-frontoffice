@@ -476,6 +476,10 @@ export default function KitchenPrinterPage() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="imprimantes-cuisine"
+        onExportAll={async () => {
+          const res = await fetchKitchenPrinters(1, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une imprimante…"
         serverPagination={

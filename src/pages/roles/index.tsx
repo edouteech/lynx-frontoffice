@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Shield, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
-import { deleteRole, fetchRoles } from '../../api/roles'
+import { deleteRole, fetchAllRoles, fetchRoles } from '../../api/roles'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Role } from '../../types/api'
 import { isOwnerRole } from '../../lib/ownerRole'
@@ -177,6 +177,7 @@ export default function RolesIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="roles"
+        onExportAll={fetchAllRoles}
         searchable
         searchPlaceholder="Rechercher un rôle…"
         pagination={false}

@@ -1,9 +1,10 @@
 import type { Discount, Paginated, ValidityConfig } from '../types/api'
 import { api } from './apiClient'
 
-export async function fetchDiscounts(page = 1, store_id?: number): Promise<Paginated<Discount>> {
+export async function fetchDiscounts(page = 1, store_id?: number, per_page?: number): Promise<Paginated<Discount>> {
   const params: Record<string, string | number> = { page }
   if (store_id) params.store_id = store_id
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<Discount>>('/discounts', { params })
   return data
 }

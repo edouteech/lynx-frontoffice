@@ -261,6 +261,10 @@ export default function PaymentMethodsIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="moyens-de-paiement"
+        onExportAll={async () => {
+          const res = await fetchPaymentMethods(1, false, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un moyen…"
         serverPagination={

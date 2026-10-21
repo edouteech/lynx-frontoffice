@@ -151,6 +151,10 @@ export default function TrashVatRates() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="tva_supprimees"
+        onExportAll={async () => {
+          const res = await fetchVatRates(1, true, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une TVA supprimée…"
         pagination={false}

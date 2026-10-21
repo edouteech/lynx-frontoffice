@@ -483,6 +483,10 @@ export default function RestaurantOptionPage() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="options-de-restauration"
+        onExportAll={async () => {
+          const res = await fetchRestaurantOptions(1, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une option…"
         serverPagination={

@@ -4,11 +4,13 @@ import { api } from './apiClient'
 export async function fetchPaymentMethods(
   page = 1,
   only_trashed?: boolean,
-  store_id?: number | string
+  store_id?: number | string,
+  per_page?: number
 ): Promise<Paginated<PaymentMethod>> {
   const params: Record<string, string | number | boolean> = { page }
   if (only_trashed) params.only_trashed = true
   if (store_id) params.store_id = store_id
+  if (per_page !== undefined) params.per_page = per_page
   const { data } = await api.get<Paginated<PaymentMethod>>('/payment-methods', {
     params,
   })

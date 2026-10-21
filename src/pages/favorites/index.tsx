@@ -195,6 +195,10 @@ export default function FavoritesIndex() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="favoris"
+        onExportAll={async () => {
+          const res = await fetchFavorites(1, undefined, undefined, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher un favori…"
         pagination={false}

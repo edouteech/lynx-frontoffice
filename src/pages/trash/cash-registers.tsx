@@ -122,6 +122,10 @@ export default function TrashCashRegisters() {
         actions={actions}
         loading={loading && !paginated}
         exportFilename="caisses_supprimees"
+        onExportAll={async () => {
+          const res = await fetchCashRegisters(1, undefined, undefined, true, undefined, -1)
+          return res.data
+        }}
         searchable
         searchPlaceholder="Rechercher une caisse supprimée…"
         pagination={false}
