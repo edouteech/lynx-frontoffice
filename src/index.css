@@ -1,53 +1,10 @@
 @import "tailwindcss";
 
-/* Native date inputs styling - responsive & accessible */
-input[type="date"] {
-  cursor: pointer;
-}
-
+/* Native date & time inputs styling */
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  opacity: 0.7;
-  padding: 6px;
-  margin-right: -4px;
-  border-radius: 6px;
-  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator:hover,
-input[type="date"]::-webkit-calendar-picker-indicator:active {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.06);
-}
-
-/* Optimisation pour appareils tactiles / mobiles : zone de touche élargie */
-@media (pointer: coarse), (max-width: 768px) {
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    padding: 10px;
-    margin-right: -6px;
-    font-size: 1.25rem;
-    min-width: 24px;
-    min-height: 24px;
-  }
-}
-
-/* Specific class to explicitly hide indicator if needed */
-.no-calendar-icon::-webkit-calendar-picker-indicator,
-.no-calendar-icon::-webkit-inner-spin-button,
-.no-calendar-icon::-webkit-clear-button {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Style the native time picker indicator nicely */
 input[type="time"]::-webkit-calendar-picker-indicator {
-  opacity: 0.6;
   cursor: pointer;
-  filter: grayscale(1);
-  transition: opacity 0.2s ease;
-}
-
-input[type="time"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
 }
