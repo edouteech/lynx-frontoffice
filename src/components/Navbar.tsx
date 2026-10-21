@@ -65,7 +65,7 @@ export default function Navbar({ onLogoutClick, onMenuClick }: NavbarProps) {
             {showOrgMenu && (
               <>
                 <div 
-                  className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] lg:bg-transparent" 
+                  className="fixed inset-0 z-40" 
                   onClick={() => setShowOrgMenu(false)}
                 ></div>
                 <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 z-50">
@@ -140,7 +140,7 @@ export default function Navbar({ onLogoutClick, onMenuClick }: NavbarProps) {
           {showOrgMenu && (
             <>
               <div 
-                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]" 
+                className="fixed inset-0 z-40" 
                 onClick={() => setShowOrgMenu(false)}
               ></div>
               <div className="absolute left-0 mt-2 w-72 origin-top-left rounded-2xl border border-gray-100 bg-white p-2 shadow-xl ring-1 ring-black/5 z-50">
