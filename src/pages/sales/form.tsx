@@ -3,11 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import {
-
-  AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, FileText, Loader2,
-
-  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2
-
+  AlertTriangle, ArrowLeft, ArrowRight, Check, ChevronDown, FileText, Loader2,
+  LockOpen, Plus, Receipt, Save, ShoppingBag, Store as StoreIcon, Trash2, Wallet
 } from 'lucide-react'
 
 import { pdf } from '@react-pdf/renderer'
@@ -1451,528 +1448,464 @@ export default function SaleForm() {
 
 
 
-  if (step === 'select_store') {
-
+  function SetupStepper({ currentStep }: { currentStep: 1 | 2 | 3 }) {
+    const steps = [
+      { num: 1, label: 'Magasin', desc: 'Point de vente' },
+      { num: 2, label: 'Caisse', desc: 'Poste d’encaissement' },
+      { num: 3, label: 'Session', desc: 'Ouverture de caisse' },
+    ]
     return (
-
-      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
-
-        <div className="mx-auto max-w-5xl space-y-8">
-
-          <div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
-
-            <p className="mt-1 text-sm font-medium text-gray-500">Étape 1 sur 3</p>
-
-          </div>
-
-
-
-          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm">
-
-            <h2 className="text-xl font-bold text-gray-900">Sélectionnez un magasin</h2>
-
-            <p className="mt-1 text-sm text-gray-500">Choisissez le magasin où vous souhaitez effectuer la vente.</p>
-
-
-
-            <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-
-              {stores.map(store => (
-
-                <button
-
-                  key={store.id}
-
-                  type="button"
-
-                  onClick={() => handleSelectStore(store.id)}
-
-                  className="flex items-center justify-between p-5 rounded-2xl border border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md transition-all cursor-pointer text-left group"
-
+      <div className="flex items-center justify-between max-w-md mx-auto mb-6 px-2">
+        {steps.map((s, idx) => {
+          const isDone = s.num < currentStep
+          const isCurrent = s.num === currentStep
+          return (
+            <div key={s.num} className="flex items-center flex-1 last:flex-none">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl font-bold text-xs sm:text-sm transition-all shadow-sm ${
+                    isDone
+                      ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                      : isCurrent
+                      ? 'bg-[#0F2E4A] text-white ring-4 ring-[#0F2E4A]/10 shadow-blue-900/20'
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
                 >
-
-                  <div className="flex items-center gap-4">
-
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100">
-
-                      <StoreIcon className="h-6 w-6" />
-
-                    </div>
-
-                    <div>
-
-                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
-
-                        {store.name}
-
-                      </p>
-
-                      {store.address && (
-
-                        <p className="mt-1 text-xs text-gray-500 line-clamp-1">{store.address}</p>
-
-                      )}
-
-                    </div>
-
-                  </div>
-
-                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
-
-                </button>
-
-              ))}
-
+                  {isDone ? <Check className="h-4 w-4" /> : s.num}
+                </div>
+                <div className="hidden sm:block">
+                  <p
+                    className={`text-xs font-bold leading-tight ${
+                      isCurrent ? 'text-gray-900' : isDone ? 'text-emerald-700' : 'text-gray-400'
+                    }`}
+                  >
+                    {s.label}
+                  </p>
+                  <p className="text-[10px] text-gray-400 leading-tight">{s.desc}</p>
+                </div>
+              </div>
+              {idx < steps.length - 1 && (
+                <div
+                  className={`mx-2 sm:mx-3 h-0.5 flex-1 rounded-full transition-colors ${
+                    s.num < currentStep ? 'bg-emerald-500' : 'bg-gray-200'
+                  }`}
+                />
+              )}
             </div>
-
-          </div>
-
-        </div>
-
+          )
+        })}
       </div>
-
     )
-
   }
 
+  if (step === 'select_store') {
+    return (
+      <div className="py-2 sm:py-6 max-w-5xl mx-auto space-y-6">
+        {/* Top Header Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white/95 p-4 sm:p-6 shadow-sm backdrop-blur-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/sales')}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm active:scale-95 transition"
+                title="Retour à la liste des ventes"
+                aria-label="Retour"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+                    Configuration de la caisse
+                  </h1>
+                  <span className="hidden sm:inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-100">
+                    Étape 1/3
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Sélectionnez le magasin où vous souhaitez opérer.
+                </p>
+              </div>
+            </div>
 
+            <button
+              type="button"
+              onClick={() => navigate('/sales')}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
+            >
+              Annuler
+            </button>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <SetupStepper currentStep={1} />
+          </div>
+        </div>
+
+        {/* Content Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <StoreIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Sélectionnez un magasin</h2>
+              <p className="text-xs sm:text-sm text-gray-500">Choisissez le point de vente pour cette vente.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {stores.map(store => (
+              <button
+                key={store.id}
+                type="button"
+                onClick={() => handleSelectStore(store.id)}
+                className="group flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/20 hover:shadow-md transition-all active:scale-[0.99] cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-blue-500/25 transition-all">
+                    <StoreIcon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight group-hover:text-blue-600 transition-colors truncate">
+                      {store.name}
+                    </p>
+                    {store.address ? (
+                      <p className="mt-1 text-xs text-gray-500 truncate">{store.address}</p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-gray-400">Point de vente actif</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors ml-2">
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (step === 'select_register') {
-
     const selectedStore = stores.find(s => String(s.id) === storeId)
 
     return (
-
-      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
-
-        <div className="mx-auto max-w-5xl space-y-8">
-
-          <div className="flex items-center gap-3">
-
-            <button
-
-              type="button"
-
-              onClick={() => setStep('select_store')}
-
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm transition"
-
-            >
-
-              <ArrowLeft className="h-5 w-5" />
-
-            </button>
-
-            <div>
-
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
-
-              <p className="mt-1 text-sm font-medium text-gray-500">Étape 2 sur 3</p>
-
+      <div className="py-2 sm:py-6 max-w-5xl mx-auto space-y-6">
+        {/* Top Header Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white/95 p-4 sm:p-6 shadow-sm backdrop-blur-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('select_store')}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm active:scale-95 transition"
+                title="Changer de magasin"
+                aria-label="Retour"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+                    Configuration de la caisse
+                  </h1>
+                  <span className="hidden sm:inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-100">
+                    Étape 2/3
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Choisissez la caisse à utiliser pour ce point de vente.
+                </p>
+              </div>
             </div>
 
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 hidden sm:inline">Magasin :</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
+                <StoreIcon className="h-3.5 w-3.5" />
+                {selectedStore?.name ?? '—'}
+              </span>
+            </div>
           </div>
 
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <SetupStepper currentStep={2} />
+          </div>
+        </div>
 
+        {/* Content Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Sélectionnez une caisse</h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Magasin actif : <span className="font-semibold text-gray-800">{selectedStore?.name ?? '—'}</span>
+              </p>
+            </div>
+          </div>
 
-          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm">
+          {loadingRegisters ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-3" />
+              <p className="text-sm font-medium text-gray-500">Chargement des caisses...</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {cashRegisters.map(register => {
+                const isActive = register.status === 'active'
+                const hasSession = !!register.open_session
+                const lockedByOther = hasSession && register.open_session?.is_mine === false
+                const selectable = isActive && !lockedByOther
 
-            <h2 className="text-xl font-bold text-gray-900">Sélectionnez une caisse</h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-
-              Magasin : <span className="font-semibold text-gray-800">{selectedStore?.name ?? '—'}</span>
-
-            </p>
-
-
-
-            {loadingRegisters ? (
-
-              <div className="flex items-center justify-center py-12">
-
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-
-              </div>
-
-            ) : cashRegisters.length === 0 ? (
-
-              <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-
-                <button
-
-                  type="button"
-
-                  onClick={() => {
-
-                    setCashRegisterId('')
-
-                    localStorage.setItem('lynx_sales_store_id', storeId)
-
-                    localStorage.setItem('lynx_sales_cash_register_id', 'none')
-
-                    setStep('sale_form')
-
-                  }}
-
-                  className="flex items-center justify-between p-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50/30 hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer group transition-all text-left"
-
-                >
-
-                  <div className="flex items-center gap-4">
-
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#3B82F6] transition-colors">
-
-                      <ShoppingBag className="h-6 w-6" />
-
-                    </div>
-
-                    <div>
-
-                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
-
-                        Continuer sans caisse
-
-                      </p>
-
-                      <p className="mt-1 text-xs text-gray-500">
-
-                        Vente directe sans session de caisse
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
-
-                </button>
-
-              </div>
-
-            ) : (
-
-              <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-
-                {cashRegisters.map(register => {
-
-                  const isActive = register.status === 'active'
-
-                  const hasSession = !!register.open_session
-
-                  const lockedByOther = hasSession && register.open_session?.is_mine === false
-
-                  const selectable = isActive && !lockedByOther
-
-                  return (
-
-                    <button
-
-                      key={register.id}
-
-                      type="button"
-
-                      disabled={!selectable}
-
-                      onClick={() => void handleSelectRegister(register)}
-
-                      className={`flex items-center justify-between p-5 rounded-2xl border transition-all text-left group
-
-                        ${!selectable
-
-                          ? 'border-gray-150 bg-gray-50 opacity-60 cursor-not-allowed'
-
-                          : 'border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer'}`}
-
-                    >
-
-                      <div className="flex items-center gap-4">
-
-                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors
-
-                          ${lockedByOther
-
+                return (
+                  <button
+                    key={register.id}
+                    type="button"
+                    disabled={!selectable}
+                    onClick={() => void handleSelectRegister(register)}
+                    className={`group flex items-center justify-between p-4 sm:p-5 rounded-2xl border transition-all text-left ${
+                      !selectable
+                        ? 'border-gray-200 bg-gray-50/70 opacity-60 cursor-not-allowed'
+                        : 'border-gray-200 bg-white hover:border-[#3B82F6] hover:bg-gradient-to-r hover:from-blue-50/40 hover:to-indigo-50/20 hover:shadow-md cursor-pointer active:scale-[0.99]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all ${
+                          lockedByOther
                             ? 'bg-orange-50 text-orange-600'
-
                             : hasSession
-
-                            ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
-
-                            : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}`}>
-
-                          <div className={`h-3 w-3 rounded-full ${lockedByOther ? 'bg-orange-500' : hasSession ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-
-                        </div>
-
-                        <div>
-
-                          <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
-
-                            {register.name}
-
-                          </p>
-
-                          <p className={`mt-1 text-xs font-medium ${lockedByOther ? 'text-orange-600' : hasSession ? 'text-emerald-600' : 'text-gray-500'}`}>
-
-                            {lockedByOther ? 'Occupée (autre appareil)' : hasSession ? 'Active' : 'Fermée'}
-
-                          </p>
-
-                        </div>
-
+                            ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-emerald-500/25'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-blue-500/25'
+                        }`}
+                      >
+                        <Wallet className="h-5 w-5" />
                       </div>
 
-                      <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
-
-                    </button>
-
-                  )
-
-                })}
-
-                {/* Special card to continue without register */}
-
-                <button
-
-                  type="button"
-
-                  onClick={() => {
-
-                    setCashRegisterId('')
-
-                    localStorage.setItem('lynx_sales_store_id', storeId)
-
-                    localStorage.setItem('lynx_sales_cash_register_id', 'none')
-
-                    setStep('sale_form')
-
-                  }}
-
-                  className="flex items-center justify-between p-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50/30 hover:border-[#3B82F6] hover:bg-blue-50/10 hover:shadow-md cursor-pointer group transition-all text-left"
-
-                >
-
-                  <div className="flex items-center gap-4">
-
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#3B82F6] transition-colors">
-
-                      <ShoppingBag className="h-6 w-6" />
-
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight group-hover:text-blue-600 transition-colors truncate">
+                          {register.name}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              lockedByOther
+                                ? 'bg-orange-500'
+                                : hasSession
+                                ? 'bg-emerald-500 animate-pulse'
+                                : 'bg-gray-300'
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-semibold ${
+                              lockedByOther
+                                ? 'text-orange-600'
+                                : hasSession
+                                ? 'text-emerald-600'
+                                : 'text-gray-500'
+                            }`}
+                          >
+                            {lockedByOther ? 'Occupée (autre appareil)' : hasSession ? 'Session active' : 'Fermée'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-
-                      <p className="font-semibold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors">
-
-                        Continuer sans caisse
-
-                      </p>
-
-                      <p className="mt-1 text-xs text-gray-500">
-
-                        Vente directe sans session de caisse
-
-                      </p>
-
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors ml-2">
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </div>
+                  </button>
+                )
+              })}
 
+              {/* Special card: Continuer sans caisse */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCashRegisterId('')
+                  localStorage.setItem('lynx_sales_store_id', storeId)
+                  localStorage.setItem('lynx_sales_cash_register_id', 'none')
+                  setStep('sale_form')
+                }}
+                className="group flex items-center justify-between p-4 sm:p-5 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 hover:border-blue-400 hover:bg-blue-50/20 hover:shadow-md cursor-pointer transition-all active:scale-[0.99] text-left"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 group-hover:border-blue-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">
+                    <ShoppingBag className="h-5 w-5" />
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight group-hover:text-blue-600 transition-colors truncate">
+                        Continuer sans caisse
+                      </p>
+                      <span className="rounded-full bg-gray-200/80 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
+                        Direct
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 truncate">
+                      Vente directe sans session de caisse
+                    </p>
+                  </div>
+                </div>
 
-                  <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-500" />
-
-                </button>
-
-              </div>
-
-            )}
-
-          </div>
-
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 group-hover:border-blue-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors ml-2">
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            </div>
+          )}
         </div>
-
       </div>
-
     )
-
   }
 
-
-
   if (step === 'open_session') {
-
     const selectedStore = stores.find(s => String(s.id) === storeId)
-
     const selectedRegister = cashRegisters.find(r => String(r.id) === cashRegisterId)
 
-
-
     return (
-
-      <div className="min-h-screen bg-[#F8FAFC] px-6 py-12 lg:px-10">
-
-        <div className="mx-auto max-w-xl space-y-8">
-
+      <div className="py-2 sm:py-6 max-w-2xl mx-auto space-y-6">
+        {/* Top Header Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white/95 p-4 sm:p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-3">
-
             <button
-
               type="button"
-
               onClick={() => setStep('select_register')}
-
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm transition"
-
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:shadow-sm active:scale-95 transition"
+              title="Changer de caisse"
+              aria-label="Retour"
             >
-
               <ArrowLeft className="h-5 w-5" />
-
             </button>
-
             <div>
-
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Configuration de la caisse</h1>
-
-              <p className="mt-1 text-sm font-medium text-gray-500">Étape 3 sur 3</p>
-
-            </div>
-
-          </div>
-
-
-
-          <div className="rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm space-y-6">
-
-            <div>
-
-              <h2 className="text-xl font-bold text-gray-900 font-sans">Ouvrir la session de caisse</h2>
-
-              <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
-
-                Magasin : <span className="font-semibold text-gray-800">{selectedStore?.name ?? '—'}</span>
-
-                <br />
-
-                Caisse : <span className="font-semibold text-gray-800">{selectedRegister?.name ?? '—'}</span>
-
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+                  Configuration de la caisse
+                </h1>
+                <span className="hidden sm:inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-100">
+                  Étape 3/3
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Ouverture obligatoire de la session de caisse pour commencer à encaisser.
               </p>
-
             </div>
-
-
-
-            {openingError && (
-
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-
-                {openingError}
-
-              </div>
-
-            )}
-
-
-
-            <div className="space-y-4">
-
-              <div>
-
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-
-                  Solde d'ouverture (CFA) <span className="text-red-500">*</span>
-
-                </label>
-
-                <p className="mb-2 text-xs text-gray-500">
-
-                  Comptez le montant physiquement présent dans la caisse avant d'ouvrir la session.
-
-                </p>
-
-                <input
-
-                  type="number"
-
-                  min="0"
-
-                  step="1"
-
-                  value={openingBalance}
-
-                  autoFocus
-
-                  onChange={e => setOpeningBalance(e.target.value)}
-
-                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-semibold"
-
-                />
-
-
-
-              </div>
-
-
-
-              <div>
-
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Note (optionnelle)</label>
-
-                <textarea
-
-                  value={openingNote}
-
-                  onChange={e => setOpeningNote(e.target.value)}
-
-                  rows={3}
-
-                  placeholder="Observations, remarques…"
-
-                  className="w-full rounded-lg border border-gray-300 px-3.5 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-
-                />
-
-              </div>
-
-            </div>
-
-
-
-            <button
-
-              type="button"
-
-              disabled={openingSubmitting}
-
-              onClick={() => void handleOpenSession()}
-
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/10 active:scale-95 transition disabled:opacity-65"
-
-            >
-
-              {openingSubmitting ? (
-
-                <Loader2 className="h-5 w-5 animate-spin" />
-
-              ) : (
-
-                <LockOpen className="h-5 w-5" />
-
-              )}
-
-              Ouvrir la caisse et commencer à vendre
-
-            </button>
-
           </div>
 
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <SetupStepper currentStep={3} />
+          </div>
         </div>
 
+        {/* Content Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-8 shadow-sm space-y-6">
+          {/* Summary Pills */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                <StoreIcon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase text-gray-400">Magasin</p>
+                <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{selectedStore?.name ?? '—'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <Wallet className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase text-gray-400">Caisse</p>
+                <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{selectedRegister?.name ?? '—'}</p>
+              </div>
+            </div>
+          </div>
+
+          {openingError && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+              <span>{openingError}</span>
+            </div>
+          )}
+
+          <div className="space-y-5">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-800">
+                Solde d'ouverture (fond de caisse) <span className="text-red-500">*</span>
+              </label>
+              <p className="mb-2 text-xs text-gray-500">
+                Comptez le montant d'espèces présent dans le tiroir au démarrage de la session.
+              </p>
+
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={openingBalance}
+                  autoFocus
+                  onChange={e => setOpeningBalance(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 pl-4 pr-16 py-3 text-base sm:text-lg font-bold text-gray-900 focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition"
+                  placeholder="0"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  CFA
+                </span>
+              </div>
+
+              {/* Quick suggestion amounts */}
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {['0', '10000', '25000', '50000', '100000'].map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setOpeningBalance(amt)}
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 transition"
+                  >
+                    {Number(amt).toLocaleString('fr-FR')} CFA
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-800">
+                Note d'ouverture <span className="text-xs font-normal text-gray-400">(optionnelle)</span>
+              </label>
+              <textarea
+                value={openingNote}
+                onChange={e => setOpeningNote(e.target.value)}
+                rows={3}
+                placeholder="Ex : Fond de caisse vérifié, pièces de 500, billets..."
+                className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={openingSubmitting}
+            onClick={() => void handleOpenSession()}
+            className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 py-3.5 text-sm sm:text-base font-bold text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-[0.99] transition disabled:opacity-65"
+          >
+            {openingSubmitting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <LockOpen className="h-5 w-5" />
+            )}
+            <span>Ouvrir la caisse et commencer à vendre</span>
+          </button>
+        </div>
       </div>
-
     )
-
   }
 
 
