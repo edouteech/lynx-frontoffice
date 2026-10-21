@@ -39,6 +39,7 @@ import {
   Trash2,
   Settings2,
   Globe,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/useAuth'
 import { useGeneralSetting } from '../contexts/useGeneralSetting'
@@ -227,7 +228,13 @@ const navItems: NavItem[] = [
   },
 ]
 
-export default function Sidebar(_props: { onLogoutClick?: () => void }) {
+export default function Sidebar({
+  onLogoutClick: _onLogoutClick,
+  onClose,
+}: {
+  onLogoutClick?: () => void
+  onClose?: () => void
+}) {
   const {
     user,
     currentOrganization,
@@ -344,6 +351,7 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
 
   const handleNavigation = (path: string) => {
     navigate(`/${path}`)
+    onClose?.()
   }
 
   const isParentActive = (item: NavItem) =>
@@ -462,19 +470,22 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
   }
 
   return (
-    <div className="fixed z-50 flex h-full w-64 flex-col bg-[#0F2E4A] shadow-2xl backdrop-blur-xl">
-      <div className="shrink-0 border-b border-white/10 p-6">
-        <div className="flex flex-col items-center w-full">
+    <div className="flex h-full w-64 flex-col bg-[#0F2E4A] shadow-2xl backdrop-blur-xl">
+      <div className="shrink-0 border-b border-white/10 p-4 lg:p-6">
+        <div className="flex items-center justify-between w-full gap-2">
           <button
             type="button"
-            onClick={() => window.location.reload()}
-            className="flex min-h-[5.5rem] w-full items-center justify-center rounded-2xl p-2 cursor-pointer"
+            onClick={() => {
+              navigate('/dashboard')
+              onClose?.()
+            }}
+            className="flex min-h-[4.5rem] flex-1 items-center justify-center rounded-2xl p-2 cursor-pointer"
           >
             {currentOrganization?.logo ? (
               <img
                 src={resolveBackendUrl(currentOrganization.logo) ?? ''}
                 alt={`${currentOrganization?.name || 'Lynx'}`}
-                className="max-h-20 max-w-full object-contain drop-shadow-md transition-all duration-300"
+                className="max-h-16 max-w-full object-contain drop-shadow-md transition-all duration-300"
                 onError={(e) => {
                   ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                 }}
@@ -484,6 +495,16 @@ export default function Sidebar(_props: { onLogoutClick?: () => void }) {
                 {currentOrganization?.name || 'Lynx'}
               </span>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors lg:hidden"
+            aria-label="Fermer le menu"
+            title="Fermer"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
       </div>

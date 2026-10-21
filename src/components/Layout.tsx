@@ -1,13 +1,20 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import { useAuth } from '../contexts/useAuth'
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { logout, activeOrganizationId } = useAuth()
+  const location = useLocation()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  // Automatically close mobile sidebar when navigating to any page
+  useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [location.pathname, location.search])
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -23,7 +30,10 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex w-full min-h-screen bg-[#EFF6FF]">
       {/* Sidebar - Desktop always visible, Mobile toggleable */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Sidebar onLogoutClick={() => setShowLogoutConfirm(true)} />
+        <Sidebar 
+          onLogoutClick={() => setShowLogoutConfirm(true)} 
+          onClose={() => setIsSidebarOpen(false)}
+        />
       </div>
 
       {/* Mobile Sidebar Overlay */}
