@@ -68,3 +68,9 @@ export async function toggleCashRegisterStatus(
   return updateCashRegister(id, { status: newStatus })
 }
 
+export async function forceReleaseCashRegister(id: number | string): Promise<{ message: string; cash_register: CashRegister }> {
+  const { data } = await api.post<{ message: string; cash_register: CashRegister }>(`/cash-registers/${id}/force-release`)
+  return data
+}
+
+
