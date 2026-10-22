@@ -226,7 +226,7 @@ export default function InvoicePage() {
               {currentOrganization?.company_registration_number && <p><span className="font-bold text-[#1E293B]">RCCM :</span> {currentOrganization.company_registration_number}</p>}
               {currentOrganization?.phone && <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {currentOrganization.phone}</p>}
               {currentOrganization?.address && <p><span className="font-bold text-[#1E293B]">Adresse :</span> {currentOrganization.address}</p>}
-              {sale.seller_name && <p><span className="font-bold text-[#1E293B]">Vendeur :</span> {sale.seller_name}</p>}
+              {(sale.seller_name || sale.cashier_name) && <p><span className="font-bold text-[#1E293B]">Vendeur :</span> {sale.seller_name || sale.cashier_name}</p>}
             </div>
           </div>
 

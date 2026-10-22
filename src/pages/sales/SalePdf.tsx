@@ -202,8 +202,8 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
               {organization?.address && (
                 <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Adresse : </Text><Text style={s.partyLineValue}>{organization.address}</Text></View>
               )}
-              {sale.seller_name && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Vendeur : </Text><Text style={s.partyLineValue}>{sale.seller_name}</Text></View>
+              {(sale.seller_name || sale.cashier_name) && (
+                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Vendeur : </Text><Text style={s.partyLineValue}>{sale.seller_name || sale.cashier_name}</Text></View>
               )}
             </View>
 

@@ -159,7 +159,7 @@ export default function SaleForm() {
 
   const isEdit = !!id
 
-  const { currentOrganization } = useAuth()
+  const { currentOrganization, user } = useAuth()
 
 
 
@@ -1278,6 +1278,8 @@ export default function SaleForm() {
         const createFn = isBeninCountry(currentOrganization?.country) ? createSaleDgi : createSale
 
         const sale = await createFn({
+
+          seller_name:          user?.name ?? null,
 
           store_id:             Number(storeId),
 

@@ -81,6 +81,7 @@ export interface CreateSalePayload {
   server_id?: number | null
   server_name?: string | null
   cashier_name?: string | null
+  seller_name?: string | null
   type_facture?: string | null
   country?: string | null
   code_dgi?: string | null
