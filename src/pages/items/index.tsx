@@ -68,9 +68,15 @@ function StockModal({ product, onClose }: { product: Product; onClose: () => voi
   const unit = product.sold_by === 'weight' ? 'kg' : product.sold_by === 'surface' ? 'm²' : 'unité(s)'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
           <div>
             <p className="text-base font-semibold text-gray-900">{product.name}</p>
             <p className="text-xs text-gray-400">Stock par magasin</p>
@@ -78,13 +84,13 @@ function StockModal({ product, onClose }: { product: Product; onClose: () => voi
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 overflow-y-auto flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-[#3B82F6]" />
@@ -96,7 +102,7 @@ function StockModal({ product, onClose }: { product: Product; onClose: () => voi
           ) : (
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Magasin</th>
                     <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Quantité</th>
@@ -107,17 +113,32 @@ function StockModal({ product, onClose }: { product: Product; onClose: () => voi
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {entries.map(e => {
-                    const belowAlert = e.min_stock_alert != null && Number(e.quantity) <= Number(e.min_stock_alert)
+                    const qty = Number(e.quantity)
+                    const isOutOfStock = qty <= 0
+                    const isLowStock = !isOutOfStock && e.min_stock_alert != null && qty <= Number(e.min_stock_alert)
+
+                    const dotColor = isOutOfStock
+                      ? 'bg-red-500'
+                      : isLowStock
+                      ? 'bg-orange-400'
+                      : 'bg-green-500'
+
+                    const qtyTextColor = isOutOfStock
+                      ? 'text-red-600'
+                      : isLowStock
+                      ? 'text-orange-600'
+                      : 'text-gray-900'
+
                     return (
                       <tr key={e.store_id} className="hover:bg-gray-50">
                         <td className="px-4 py-2.5 font-medium text-gray-900">
                           <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${belowAlert ? 'bg-orange-400' : 'bg-green-400'}`} />
-                            {e.store_name}
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
+                            <span className="truncate">{e.store_name}</span>
                           </div>
                         </td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${belowAlert ? 'text-orange-600' : 'text-gray-900'}`}>
-                          {Number(e.quantity).toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">{unit}</span>
+                        <td className={`px-4 py-2.5 text-right font-semibold ${qtyTextColor}`}>
+                          {qty.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">{unit}</span>
                         </td>
                         {entries.some(e2 => e2.min_stock_alert != null) && (
                           <td className="px-4 py-2.5 text-right text-xs text-gray-400">
@@ -134,7 +155,7 @@ function StockModal({ product, onClose }: { product: Product; onClose: () => voi
         </div>
 
         {!loading && !error && entries.length > 0 && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3">
+          <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 shrink-0 bg-gray-50/50">
             <span className="text-xs text-gray-500">Total tous magasins</span>
             <span className="text-sm font-bold text-gray-900">
               {total.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-400">{unit}</span>
