@@ -109,6 +109,7 @@ export default function SalesInvoicesPage() {
   /* pagination serveur : ce rapport ne récupérait avant que la page 1 (max 50 lignes),
      sans moyen d'aller plus loin — les factures plus anciennes étaient invisibles. */
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [lastPage, setLastPage] = useState(1)
   const [total, setTotal] = useState(0)
 
@@ -123,6 +124,7 @@ export default function SalesInvoicesPage() {
     try {
       const res = await fetchSales({
         page,
+        per_page: pageSize,
         search: searchQuery.trim() || null,
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
         status: appliedStatus !== 'all' ? appliedStatus : null,
@@ -139,9 +141,14 @@ export default function SalesInvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, searchQuery, appliedStoreId, appliedStatus, appliedChannel, appliedFrom, appliedTo])
+  }, [page, pageSize, searchQuery, appliedStoreId, appliedStatus, appliedChannel, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
+
+  const handleSearch = useCallback((q: string) => {
+    setSearchQuery(q)
+    setPage(1)
+  }, [])
 
   const applyFilters = () => {
     setAppliedStoreId(storeId)
@@ -404,10 +411,7 @@ export default function SalesInvoicesPage() {
           title="Liste des factures"
           searchable
           searchPlaceholder="Rechercher une facture..."
-          onSearch={(q) => {
-            setSearchQuery(q)
-            setPage(1)
-          }}
+          onSearch={handleSearch}
           exportFilename="factures-ventes"
           onExportAll={async () => {
             const res = await fetchSales({
@@ -422,11 +426,17 @@ export default function SalesInvoicesPage() {
             return res.data
           }}
           getRowId={(r) => String(r.id)}
+          pageSizeOptions={[10, 25, 50, 100]}
           serverPagination={{
             currentPage: page,
             lastPage,
             total,
+            pageSize,
             onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size)
+              setPage(1)
+            },
             disabled: loading,
           }}
         />

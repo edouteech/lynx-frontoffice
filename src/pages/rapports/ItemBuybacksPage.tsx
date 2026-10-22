@@ -107,6 +107,7 @@ export default function ItemBuybacksPage() {
   const [stats, setStats] = useState<SalesStats | null>(null)
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [lastPage, setLastPage] = useState(1)
   const [total, setTotal] = useState(0)
 
@@ -145,6 +146,7 @@ export default function ItemBuybacksPage() {
     try {
       const res = await fetchSales({
         page,
+        per_page: pageSize,
         type_facture: 'RA',
         search: searchQuery.trim() || null,
         store_id: appliedStoreId !== 'all' ? Number(appliedStoreId) : null,
@@ -161,9 +163,14 @@ export default function ItemBuybacksPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, searchQuery, appliedStoreId, appliedEmployeeId, appliedFrom, appliedTo])
+  }, [page, pageSize, searchQuery, appliedStoreId, appliedEmployeeId, appliedFrom, appliedTo])
 
   useEffect(() => { void load() }, [load])
+
+  const handleSearch = useCallback((q: string) => {
+    setSearchQuery(q)
+    setPage(1)
+  }, [])
 
   const applyFilters = () => {
     setAppliedStoreId(storeId)
@@ -370,10 +377,7 @@ export default function ItemBuybacksPage() {
           title="Historique des rachats"
           searchable
           searchPlaceholder="Rechercher un n° d'opération..."
-          onSearch={(q) => {
-            setSearchQuery(q)
-            setPage(1)
-          }}
+          onSearch={handleSearch}
           exportFilename="rachats-articles"
           onExportAll={async () => {
             const res = await fetchSales({
@@ -388,11 +392,17 @@ export default function ItemBuybacksPage() {
             return res.data
           }}
           getRowId={(r) => String(r.id)}
+          pageSizeOptions={[10, 25, 50, 100]}
           serverPagination={{
             currentPage: page,
             lastPage,
             total,
+            pageSize,
             onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size)
+              setPage(1)
+            },
             disabled: loading,
           }}
         />

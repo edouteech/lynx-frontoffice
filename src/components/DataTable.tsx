@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -153,11 +153,20 @@ export default function DataTable<T extends object>({
   const [exportLoading, setExportLoading] = useState(false)
   const [jumpPageInput, setJumpPageInput] = useState('')
 
+  const onSearchRef = useRef(onSearch)
+  onSearchRef.current = onSearch
+  const prevSearchTerm = useRef(searchTerm)
+
   useEffect(() => {
-    if (!onSearch) return
-    const timeout = setTimeout(() => onSearch(searchTerm), 300)
+    // Ne pas déclencher si le texte n'a pas changé (évite d'invoquer onSearch
+    // au montage ou lors d'un re-render/changement de page du composant parent)
+    if (prevSearchTerm.current === searchTerm) return
+    prevSearchTerm.current = searchTerm
+
+    if (!onSearchRef.current) return
+    const timeout = setTimeout(() => onSearchRef.current?.(searchTerm), 300)
     return () => clearTimeout(timeout)
-  }, [searchTerm, onSearch])
+  }, [searchTerm])
 
   const processed = useMemo(() => {
     let result = [...data]
