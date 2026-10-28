@@ -4,7 +4,7 @@ import {
   ArrowLeft, ChevronDown, ChevronUp, CircleSlash, Loader2,
   Lock, LockOpen, Pencil, Plus, Power, PowerOff, User,
 } from 'lucide-react'
-import { fetchCashRegister, toggleCashRegisterStatus, updateCashRegister } from '../../api/cashRegisters'
+import { fetchCashRegister, forceReleaseCashRegister, toggleCashRegisterStatus, updateCashRegister } from '../../api/cashRegisters'
 import { fetchCashRegisterSessions } from '../../api/cashRegisterSessions'
 import { fetchStore } from '../../api/stores'
 import { getApiErrorMessage } from '../../lib/apiError'
@@ -237,6 +237,8 @@ export default function CashRegisterShow() {
   useEffect(() => { void load() }, [load])
   useEffect(() => { void loadSessions() }, [loadSessions])
 
+  const [releasing, setReleasing] = useState(false)
+
   async function handleToggleStatus() {
     if (!cashRegister) return
     const action = cashRegister.status === 'active' ? 'désactiver' : 'activer'
@@ -260,6 +262,22 @@ export default function CashRegisterShow() {
       setCashRegister(updated)
     } catch (e) {
       setError(getApiErrorMessage(e))
+    }
+  }
+
+  async function handleForceRelease() {
+    if (!cashRegister) return
+    const msg = `Voulez-vous forcer la libération de la caisse « ${cashRegister.name} » assignée à ${cashRegister.assigned_user_name ?? 'un utilisateur'} ?`
+    if (!window.confirm(msg)) return
+    setReleasing(true)
+    setError(null)
+    try {
+      const res = await forceReleaseCashRegister(cashRegister.id)
+      setCashRegister(res.cash_register)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setReleasing(false)
     }
   }
 
@@ -330,6 +348,18 @@ export default function CashRegisterShow() {
                 ? <><PowerOff className="h-4 w-4" />{toggling ? 'Désactivation…' : 'Désactiver'}</>
                 : <><Power className="h-4 w-4" />{toggling ? 'Activation…' : 'Activer'}</>}
             </button>
+            {cashRegister.is_assigned && (
+              <button
+                type="button"
+                disabled={releasing}
+                onClick={() => void handleForceRelease()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors shadow-sm"
+                title="Libérer la caisse (en cas d'oubli de déconnexion ou problème tablette)"
+              >
+                <LockOpen className="h-4 w-4" />
+                {releasing ? 'Libération…' : 'Libérer la caisse'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -348,6 +378,12 @@ export default function CashRegisterShow() {
               ${cashRegister.is_available ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-orange-100 text-orange-700 border border-orange-200'}`}>
               {cashRegister.is_available ? 'Disponible' : 'Occupée'}
             </span>
+            {cashRegister.is_assigned && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
+                <Lock className="h-3 w-3" />
+                Assignée à : {cashRegister.assigned_user_name ?? 'Caissier'}
+              </span>
+            )}
             {openSession && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />

@@ -284,6 +284,13 @@ export interface CashRegister {
   store_id: number
   status: string
   is_available: boolean
+  assigned_user_id?: number | null
+  assigned_token_id?: number | null
+  assigned_at?: string | null
+  is_assigned?: boolean
+  assigned_to_me?: boolean
+  assigned_user_name?: string | null
+  can_open?: boolean
   organization_id: number
   open_session?: CashRegisterSession | null
   last_session?: CashRegisterSession | null

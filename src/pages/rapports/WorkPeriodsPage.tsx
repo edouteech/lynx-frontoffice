@@ -174,7 +174,9 @@ export default function WorkPeriodsPage() {
   /* ================= FILTER LOGIC ================= */
   const filteredRows = useMemo(() => {
     const fromTs = appliedFrom ? new Date(appliedFrom).getTime() : Number.NEGATIVE_INFINITY
-    const toTs = appliedTo ? new Date(appliedTo).getTime() : Number.POSITIVE_INFINITY
+    const toTs = appliedTo
+      ? new Date(appliedTo.length === 16 ? `${appliedTo}:59.999` : appliedTo).getTime()
+      : Number.POSITIVE_INFINITY
 
     return rows.filter((r) => {
       if (appliedStoreId !== 'all' && r.store_id !== Number(appliedStoreId)) return false
