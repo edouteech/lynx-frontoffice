@@ -18,7 +18,8 @@ function fmtMoney(v: number): string {
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+  const date = new Date(d)
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 // Date/heure MECeF renvoyée par la DGI, stockée telle quelle ("YYYY-MM-DD HH:mm:ss")
@@ -31,9 +32,6 @@ function fmtDgiDateTime(d: string | null | undefined): string | null {
   return `${day}/${mo}/${y} ${h}:${mi}:${s}`
 }
 
-// Libellé du/des moyen(s) de paiement — détaille chaque montant si la vente est réglée
-// par plusieurs moyens à la fois (sale.payment_method reste alors null côté API, cf.
-// SaleController::buildSaleHeader()), sinon reprend simplement le moyen unique.
 function paymentSummary(sale: Sale): string | null {
   if (sale.payments && sale.payments.length > 1) {
     return sale.payments
@@ -45,60 +43,59 @@ function paymentSummary(sale: Sale): string | null {
 
 const PRINT_STYLES = `
   @media print {
-    /* Force l'impression des couleurs de fond */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      box-sizing: border-box !important;
     }
 
-    /* Supprimer les ombres et les marges de page */
-    body {
+    html, body {
       margin: 0 !important;
       padding: 0 !important;
       background: white !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
     }
 
-    /* Masquer la barre d'outils */
     .invoice-toolbar {
       display: none !important;
     }
 
-    /* Retirer les marges et ombres du conteneur */
+    .invoice-page-container {
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      min-height: auto !important;
+    }
+
     .invoice-wrapper {
       box-shadow: none !important;
+      border: none !important;
       margin: 0 !important;
-      max-width: 100% !important;
-      width: 100% !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      min-height: 297mm !important;
+      max-width: 210mm !important;
+      padding: 0 !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
 
-    /* Éviter les coupures de page au mauvais endroit */
-    .invoice-header-block {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .invoice-parties {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    table {
-      page-break-inside: auto;
-    }
-
+    .invoice-header-block,
+    .invoice-parties,
+    .invoice-totals,
+    .invoice-footer,
     tr {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .invoice-totals {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .invoice-footer {
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
   }
 `
@@ -141,7 +138,7 @@ export default function InvoicePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     )
@@ -149,54 +146,54 @@ export default function InvoicePage() {
 
   if (error || !sale) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white p-8">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <p className="text-red-600">{error ?? 'Facture introuvable.'}</p>
       </div>
     )
   }
 
   const items = sale.items ?? []
-  const subtotal = items.reduce((acc, it) => acc + (it.quantity * it.unit_price), 0)
+  const subtotal = items.reduce((acc, item) => acc + item.quantity * item.unit_price, 0)
   const extraFees = sale.extra_fees ?? 0
-  // sale.total = valeur enregistrée en base, fiable. On ne recalcule que si absent (repli,
-  // vieilles ventes) — jamais quand le back nous l'a fourni.
   const total = sale.total ?? (subtotal * (1 - (sale.discount_percentage ?? 0) / 100) + extraFees)
-  // Le montant de remise affiché est dérivé du total réel, pas recalculé depuis le
-  // pourcentage (qui n'a que 2 décimales en base et ferait dériver l'addition).
   const discount = subtotal - total + extraFees
   const invoiceNumber = sale.invoice_number ?? `#${String(sale.id).padStart(4, '0')}`
 
-  const logoUrl = receiptSetting?.printed_receipt_logo
-    ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
-    : null
+  const logoUrl = receiptSetting?.printed_receipt_logo_data_url
+    || (receiptSetting?.printed_receipt_logo
+      ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
+      : null)
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white pb-10">
+    <div className="invoice-page-container min-h-screen bg-slate-200/80 pb-10 print:pb-0 print:bg-white flex flex-col items-center">
 
-      {/* Toolbar — masquée à l'impression via la classe CSS */}
-      <div className="invoice-toolbar print:hidden sticky top-0 z-10 flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3 shadow-sm">
-        <span className="text-sm font-semibold text-gray-700">{invoiceNumber}</span>
+      {/* Toolbar — collée au haut du navigateur, masquée à l'impression */}
+      <div className="invoice-toolbar print:hidden sticky top-0 z-10 w-full flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3 shadow-sm mb-8">
+        <span className="text-sm font-semibold text-gray-800">{invoiceNumber}</span>
         <button
           type="button"
           onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2563EB]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#3B82F6] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#2563EB] shadow-sm"
         >
           <Printer className="h-4 w-4" />
           Imprimer
         </button>
       </div>
 
-      {/* Corps de la facture */}
-      <div className="invoice-wrapper mx-auto max-w-[900px] bg-white shadow-md print:shadow-none my-8 print:my-0 pb-16">
+      {/* Vraie feuille A4 physique : 210mm x 297mm */}
+      <div
+        className="invoice-wrapper w-[210mm] max-w-[210mm] min-h-[297mm] bg-white shadow-2xl border border-gray-300/80 rounded-[2px] flex flex-col text-[#1E293B] print:my-0 print:border-none print:shadow-none"
+        style={{ boxSizing: 'border-box' }}
+      >
 
         {/* Bloc en-tête */}
         <div
-          className="invoice-header-block px-10 py-10 mb-12 flex justify-between items-start"
+          className="invoice-header-block px-10 py-9 mb-8 flex justify-between items-start"
           style={{ backgroundColor: '#F3F6FA' }}
         >
           <div>
-            <h1 className="text-3xl font-black text-[#1E293B] mb-6 uppercase tracking-wider">Facture</h1>
-            <div className="space-y-3 text-sm font-semibold text-[#64748B]">
+            <h1 className="text-3xl font-black text-[#1E293B] mb-4 uppercase tracking-wider">Facture</h1>
+            <div className="space-y-1.5 text-xs font-bold text-[#64748B]">
               <p className="uppercase">Date : {fmtDate(sale.sale_date ?? sale.created_at)}</p>
               <p className="uppercase">Facture N° : {invoiceNumber}</p>
               {sale.store && (
@@ -208,69 +205,79 @@ export default function InvoicePage() {
             <img
               src={logoUrl}
               alt={currentOrganization?.name ?? 'Logo'}
-              className="max-h-24 max-w-[200px] object-contain"
+              className="max-h-20 max-w-[160px] object-contain"
             />
           )}
         </div>
 
         {/* Bloc parties */}
-        <div className="invoice-parties flex justify-between gap-16 mb-12 px-10">
+        <div className="invoice-parties flex justify-between gap-12 mb-8 px-10">
           {/* Entreprise */}
           <div className="flex-1">
-            <div className="border-b-2 border-[#1E293B] mb-5">
-              <h2 className="text-sm font-black text-[#1E293B] uppercase tracking-widest pb-2">Entreprise</h2>
+            <div className="border-b-2 border-[#1E293B] mb-3 pb-1">
+              <h2 className="text-xs font-bold text-[#1E293B] uppercase tracking-wider">Entreprise</h2>
             </div>
-            <div className="space-y-2.5 text-sm text-[#475569]">
-              <p className="text-lg font-bold text-[#1E293B] mb-3">{currentOrganization?.name ?? ''}</p>
-              {currentOrganization?.tax_id && <p><span className="font-bold text-[#1E293B]">IFU :</span> {currentOrganization.tax_id}</p>}
-              {currentOrganization?.company_registration_number && <p><span className="font-bold text-[#1E293B]">RCCM :</span> {currentOrganization.company_registration_number}</p>}
-              {currentOrganization?.phone && <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {currentOrganization.phone}</p>}
-              {currentOrganization?.address && <p><span className="font-bold text-[#1E293B]">Adresse :</span> {currentOrganization.address}</p>}
-              {(sale.seller_name || sale.cashier_name) && <p><span className="font-bold text-[#1E293B]">Vendeur :</span> {sale.seller_name || sale.cashier_name}</p>}
+            <div className="space-y-1.5 text-xs text-[#475569]">
+              <p className="text-sm font-bold text-[#1E293B] mb-2">{currentOrganization?.name ?? ''}</p>
+              {currentOrganization?.tax_id && (
+                <p><span className="font-bold text-[#1E293B]">IFU :</span> {currentOrganization.tax_id}</p>
+              )}
+              {currentOrganization?.company_registration_number && (
+                <p><span className="font-bold text-[#1E293B]">RCCM :</span> {currentOrganization.company_registration_number}</p>
+              )}
+              {currentOrganization?.phone && (
+                <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {currentOrganization.phone}</p>
+              )}
+              {currentOrganization?.address && (
+                <p><span className="font-bold text-[#1E293B]">Adresse :</span> {currentOrganization.address}</p>
+              )}
+              {(sale.seller_name || sale.cashier_name) && (
+                <p><span className="font-bold text-[#1E293B]">Vendeur :</span> {sale.seller_name || sale.cashier_name}</p>
+              )}
             </div>
           </div>
 
           {/* Client */}
           <div className="flex-1">
-            <div className="border-b-2 border-[#1E293B] mb-5 text-right">
-              <h2 className="text-sm font-black text-[#1E293B] uppercase tracking-widest pb-2">Client</h2>
+            <div className="border-b-2 border-[#1E293B] mb-3 pb-1 text-right">
+              <h2 className="text-xs font-bold text-[#1E293B] uppercase tracking-wider">Client</h2>
             </div>
-            <div className="space-y-2.5 text-sm text-[#475569] text-right">
+            <div className="space-y-1.5 text-xs text-[#475569] text-right">
               {sale.customer_name ? (
                 <>
-                  <p className="text-lg font-bold text-[#1E293B] mb-3">{sale.customer_name}</p>
+                  <p className="text-sm font-bold text-[#1E293B] mb-2">{sale.customer_name}</p>
                   {sale.customer_phone && <p><span className="font-bold text-[#1E293B]">Téléphone :</span> {sale.customer_phone}</p>}
                   {sale.customer_email && <p><span className="font-bold text-[#1E293B]">E-mail :</span> {sale.customer_email}</p>}
                   {sale.customer_tax_id && <p><span className="font-bold text-[#1E293B]">NIF :</span> {sale.customer_tax_id}</p>}
                 </>
               ) : (
-                <p className="italic text-gray-400">Client anonyme</p>
+                <p className="italic text-[#9CA3AF]">Client anonyme</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Tableau des articles */}
-        <div className="px-10 mb-10">
-          <table className="w-full text-base border-collapse">
+        <div className="px-10 mb-8">
+          <table className="w-full text-xs border-collapse">
             <thead>
-              <tr style={{ backgroundColor: '#304169', color: 'white' }} className="text-sm">
-                <th className="py-4 px-4 text-left font-semibold border-r border-[#4A5D8A] w-1/2">Description</th>
-                <th className="py-4 px-4 text-center font-semibold border-r border-[#4A5D8A]">Prix Unitaire TTC</th>
-                <th className="py-4 px-4 text-center font-semibold border-r border-[#4A5D8A] w-24">Qté</th>
-                <th className="py-4 px-4 text-right font-semibold">Total TTC</th>
+              <tr style={{ backgroundColor: '#304169', color: 'white' }}>
+                <th className="py-3 px-3.5 text-left font-bold border-r border-[#4A5D8A]">Description</th>
+                <th className="py-3 px-3.5 text-center font-bold border-r border-[#4A5D8A] w-40">Prix Unitaire TTC</th>
+                <th className="py-3 px-3.5 text-center font-bold border-r border-[#4A5D8A] w-16">Qté</th>
+                <th className="py-3 px-3.5 text-right font-bold w-40">Total TTC</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-[#E2E8F0]">
-                  <td className="py-4 px-4 text-[#1E293B] border-r border-[#E2E8F0]">
+                  <td className="py-3 px-3.5 text-[#1E293B] border-r border-[#E2E8F0]">
                     {item.product_name}
-                    {item.product_sku && <span className="ml-1.5 text-sm text-gray-500">({item.product_sku})</span>}
+                    {item.product_sku && <span className="ml-1.5 text-[11px] text-[#64748B]">({item.product_sku})</span>}
                   </td>
-                  <td className="py-4 px-4 text-center text-[#475569] border-r border-[#E2E8F0]">{fmtMoney(item.unit_price)}</td>
-                  <td className="py-4 px-4 text-center text-[#475569] border-r border-[#E2E8F0]">{item.quantity}</td>
-                  <td className="py-4 px-4 text-right font-medium text-[#1E293B]">{fmtMoney(item.quantity * item.unit_price)}</td>
+                  <td className="py-3 px-3.5 text-center text-[#475569] border-r border-[#E2E8F0]">{fmtMoney(item.unit_price)}</td>
+                  <td className="py-3 px-3.5 text-center text-[#475569] border-r border-[#E2E8F0]">{item.quantity}</td>
+                  <td className="py-3 px-3.5 text-right font-bold text-[#1E293B]">{fmtMoney(item.quantity * item.unit_price)}</td>
                 </tr>
               ))}
             </tbody>
@@ -278,38 +285,38 @@ export default function InvoicePage() {
         </div>
 
         {/* Totaux */}
-        <div className="invoice-totals px-10 flex justify-end mb-12">
+        <div className="invoice-totals px-10 flex justify-end mb-8">
           <div
-            className="w-[360px] border border-[#E2E8F0] p-6 space-y-4"
+            className="w-[290px] border border-[#E2E8F0] p-4 space-y-2.5"
             style={{ backgroundColor: '#FAFAFA' }}
           >
             {discount > 0 && (
-              <div className="flex justify-between text-base font-bold text-[#475569]">
+              <div className="flex justify-between text-xs font-bold text-[#475569]">
                 <span>Remise{sale.discount_percentage ? ` (${sale.discount_percentage}%)` : ''}</span>
                 <span>-{fmtMoney(discount)}</span>
               </div>
             )}
             {extraFees > 0 && (
-              <div className="flex justify-between text-base font-bold text-[#475569]">
+              <div className="flex justify-between text-xs font-bold text-[#475569]">
                 <span>Frais supplémentaires</span>
                 <span>+{fmtMoney(extraFees)}</span>
               </div>
             )}
-            <div className="flex justify-between text-base font-bold text-[#475569] pb-4 border-b-2 border-[#1E293B]">
+            <div className="flex justify-between text-xs font-bold text-[#475569] pb-2.5 border-b-2 border-[#1E293B]">
               <span className="uppercase">Total</span>
               <span>{fmtMoney(total)}</span>
             </div>
-            <div className="flex justify-between font-black text-[#1E293B] text-lg pt-1">
-              <span className="uppercase tracking-wide">Net à payer</span>
+            <div className="flex justify-between font-black text-[#1E293B] text-sm pt-1">
+              <span className="uppercase tracking-wider">Net à payer</span>
               <span>{fmtMoney(total)}</span>
             </div>
           </div>
         </div>
 
-        {/* Pied de facture */}
-        <div className="invoice-footer px-10">
+        {/* Pied de facture calé en bas de la feuille A4 */}
+        <div className="invoice-footer px-10 mt-auto pb-10 flex flex-col justify-end">
           {(paymentSummary(sale) || sale.cash_register) && (
-            <div className="mb-6 flex gap-8 text-sm text-[#475569] border-t border-[#E2E8F0] pt-6">
+            <div className="mb-5 flex gap-8 text-xs text-[#475569]">
               {paymentSummary(sale) && (
                 <div>
                   <span className="font-bold text-[#1E293B]">Paiement : </span>
@@ -327,7 +334,7 @@ export default function InvoicePage() {
 
           {sale.note && (
             <div
-              className="mb-6 border border-[#E2E8F0] px-5 py-4 text-sm text-[#475569] italic"
+              className="mb-5 border border-[#E2E8F0] px-4 py-3 text-xs text-[#475569] italic"
               style={{ backgroundColor: '#F8FAFC' }}
             >
               {sale.note}
@@ -335,8 +342,8 @@ export default function InvoicePage() {
           )}
 
           {sale.code_dgi && (
-            <div className="mb-6 flex items-center gap-6 border-t border-[#E2E8F0] pt-6">
-              <QRCodeSVG value={sale.code_dgi} size={96} />
+            <div className="mb-5 flex items-center gap-5 border-t border-[#E2E8F0] pt-4">
+              <QRCodeSVG value={sale.code_dgi} size={72} />
               <div className="space-y-1 text-xs text-[#475569]">
                 <p className="font-bold uppercase tracking-wide text-[#1E293B]">Facture normalisée — DGI</p>
                 {sale.dgi_mecef_code && <p>Code MECeF/DGI : <span className="font-mono">{sale.dgi_mecef_code}</span></p>}
@@ -348,10 +355,15 @@ export default function InvoicePage() {
           )}
 
           {receiptSetting?.footer_text && (
-            <div className="border-t border-[#E2E8F0] pt-6 text-center text-xs text-[#94A3B8] whitespace-pre-line">
+            <div className="border-t border-[#E2E8F0] pt-3 text-center text-xs text-[#94A3B8] whitespace-pre-line mb-3">
               {receiptSetting.footer_text}
             </div>
           )}
+
+          <div className="border-t border-[#E2E8F0] pt-3 text-center text-[10px] text-[#94A3B8]">
+            <p>Facture générée par Lynx, solutions de gestion de caisse, facturation et stock.</p>
+            <p>Plus de détails sur lynx-solution.com</p>
+          </div>
         </div>
 
       </div>

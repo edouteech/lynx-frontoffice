@@ -8,22 +8,28 @@ const s = StyleSheet.create({
     fontFamily: 'Helvetica',
     fontSize: 10,
     paddingTop: 0,
-    paddingBottom: 48,
+    paddingBottom: 24,
     paddingHorizontal: 0,
     color: '#1E293B',
+    flexDirection: 'column',
   },
 
   // header
-  headerBlock: { backgroundColor: '#F3F6FA', padding: 36, marginBottom: 36, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerBlock: { backgroundColor: '#F3F6FA', padding: 36, marginBottom: 28, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { fontSize: 24, fontFamily: 'Helvetica-Bold', color: '#1E293B', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 },
   invoiceDate: { fontSize: 10, color: '#64748B', fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', marginBottom: 6 },
   invoiceNum: { fontSize: 10, color: '#64748B', fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', marginBottom: 6 },
   storeName: { fontSize: 10, color: '#64748B', fontFamily: 'Helvetica-Bold', textTransform: 'uppercase' },
 
-  contentWrapper: { paddingHorizontal: 36 },
+  contentWrapper: {
+    paddingHorizontal: 36,
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
 
   // parties (entreprise / client)
-  partiesRow: { flexDirection: 'row', gap: 36, marginBottom: 36 },
+  partiesRow: { flexDirection: 'row', gap: 36, marginBottom: 28 },
   partyCol: { flex: 1 },
   partyHeaderContainer: { borderBottomWidth: 1.5, borderBottomColor: '#1E293B', marginBottom: 12, paddingBottom: 4 },
   partyHeaderContainerRight: { borderBottomWidth: 1.5, borderBottomColor: '#1E293B', marginBottom: 12, paddingBottom: 4, alignItems: 'flex-end' },
@@ -37,7 +43,7 @@ const s = StyleSheet.create({
   partyMuted: { fontSize: 10, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'right' },
   
   // table
-  tableBox: { marginBottom: 36 },
+  tableBox: { marginBottom: 28 },
   tableHeader: { flexDirection: 'row', backgroundColor: '#304169' },
   thCol: { paddingVertical: 10, paddingHorizontal: 10, borderRightWidth: 1, borderRightColor: '#4A5D8A' },
   thColLast: { paddingVertical: 10, paddingHorizontal: 10 },
@@ -62,7 +68,7 @@ const s = StyleSheet.create({
   cellTextRightBold: { fontSize: 10, color: '#1E293B', fontFamily: 'Helvetica-Bold', textAlign: 'right' },
 
   // financial summary
-  financialContainer: { alignItems: 'flex-end', marginBottom: 36 },
+  financialContainer: { alignItems: 'flex-end', marginBottom: 24 },
   financialBox: { width: 260, backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E2E8F0', padding: 16 },
   finRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   finLabel: { fontSize: 10, color: '#475569', fontFamily: 'Helvetica-Bold' },
@@ -72,24 +78,35 @@ const s = StyleSheet.create({
   finNetLabel: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#1E293B', textTransform: 'uppercase', letterSpacing: 0.5 },
   finNetValue: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#1E293B', textAlign: 'right' },
 
-  // footer info
-  footerInfoBorder: { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 16 },
-  paymentRow: { flexDirection: 'row', gap: 24, marginBottom: 16 },
+  // bottom section
+  bottomSection: { paddingTop: 8 },
+  paymentRow: { flexDirection: 'row', gap: 24, marginBottom: 12 },
   paymentTextRow: { flexDirection: 'row' },
   paymentLabel: { fontSize: 10, color: '#1E293B', fontFamily: 'Helvetica-Bold' },
   paymentValue: { fontSize: 10, color: '#475569' },
 
-  noteBox: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 16 },
+  noteBox: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', padding: 12, marginBottom: 12 },
   noteText: { fontSize: 10, color: '#475569', fontStyle: 'italic' },
 
   // DGI (facture normalisée)
-  dgiRow: { flexDirection: 'row', gap: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 16, marginBottom: 16 },
+  dgiRow: { flexDirection: 'row', gap: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, marginBottom: 12 },
   dgiQr: { width: 70, height: 70 },
+
+  customFooterText: {
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 8,
+    marginBottom: 8,
+    fontSize: 9,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
 
   // footer
   footer: {
-    position: 'absolute', bottom: 24, left: 36, right: 36,
-    borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 8,
     alignItems: 'center',
   },
   footerText: { fontSize: 9, color: '#94A3B8', textAlign: 'center' },
@@ -154,9 +171,10 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
 
   const saleDateTime = sale.sale_date ?? sale.created_at
 
-  const logoUrl = receiptSetting?.printed_receipt_logo
-    ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
-    : null
+  const logoUrl = receiptSetting?.printed_receipt_logo_data_url
+    || (receiptSetting?.printed_receipt_logo
+      ? resolveBackendUrl(receiptSetting.printed_receipt_logo)
+      : null)
   
   return (
     <Document title={invoiceNumber} author={organization?.name ?? 'Lynx'}>
@@ -182,117 +200,119 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
         </View>
 
         <View style={s.contentWrapper}>
-          {/* ── parties entreprise / client ── */}
-          <View style={s.partiesRow}>
-            {/* Entreprise */}
-            <View style={s.partyCol}>
-              <View style={s.partyHeaderContainer}>
-                <Text style={s.partyLabel}>Entreprise</Text>
+          <View>
+            {/* ── parties entreprise / client ── */}
+            <View style={s.partiesRow}>
+              {/* Entreprise */}
+              <View style={s.partyCol}>
+                <View style={s.partyHeaderContainer}>
+                  <Text style={s.partyLabel}>Entreprise</Text>
+                </View>
+                <Text style={s.partyName}>{organization?.name ?? '—'}</Text>
+                {organization?.tax_id && (
+                  <View style={s.partyTextRow}><Text style={s.partyLineLabel}>IFU : </Text><Text style={s.partyLineValue}>{organization.tax_id}</Text></View>
+                )}
+                {organization?.company_registration_number && (
+                  <View style={s.partyTextRow}><Text style={s.partyLineLabel}>RCCM : </Text><Text style={s.partyLineValue}>{organization.company_registration_number}</Text></View>
+                )}
+                {organization?.phone && (
+                  <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Téléphone : </Text><Text style={s.partyLineValue}>{organization.phone}</Text></View>
+                )}
+                {organization?.address && (
+                  <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Adresse : </Text><Text style={s.partyLineValue}>{organization.address}</Text></View>
+                )}
+                {(sale.seller_name || sale.cashier_name) && (
+                  <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Vendeur : </Text><Text style={s.partyLineValue}>{sale.seller_name || sale.cashier_name}</Text></View>
+                )}
               </View>
-              <Text style={s.partyName}>{organization?.name ?? '—'}</Text>
-              {organization?.tax_id && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>IFU : </Text><Text style={s.partyLineValue}>{organization.tax_id}</Text></View>
-              )}
-              {organization?.company_registration_number && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>RCCM : </Text><Text style={s.partyLineValue}>{organization.company_registration_number}</Text></View>
-              )}
-              {organization?.phone && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Téléphone : </Text><Text style={s.partyLineValue}>{organization.phone}</Text></View>
-              )}
-              {organization?.address && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Adresse : </Text><Text style={s.partyLineValue}>{organization.address}</Text></View>
-              )}
-              {(sale.seller_name || sale.cashier_name) && (
-                <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Vendeur : </Text><Text style={s.partyLineValue}>{sale.seller_name || sale.cashier_name}</Text></View>
-              )}
+
+              {/* Client */}
+              <View style={s.partyCol}>
+                <View style={s.partyHeaderContainerRight}>
+                  <Text style={s.partyLabel}>Client</Text>
+                </View>
+                {sale.customer_name ? (
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[s.partyName, { textAlign: 'right' }]}>{sale.customer_name}</Text>
+                    {sale.customer_phone && (
+                      <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Téléphone : </Text><Text style={s.partyLineValue}>{sale.customer_phone}</Text></View>
+                    )}
+                    {sale.customer_email && (
+                      <View style={s.partyTextRow}><Text style={s.partyLineLabel}>E-mail : </Text><Text style={s.partyLineValue}>{sale.customer_email}</Text></View>
+                    )}
+                    {sale.customer_tax_id && (
+                      <View style={s.partyTextRow}><Text style={s.partyLineLabel}>NIF : </Text><Text style={s.partyLineValue}>{sale.customer_tax_id}</Text></View>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={s.partyMuted}>Client anonyme</Text>
+                )}
+              </View>
             </View>
 
-            {/* Client */}
-            <View style={s.partyCol}>
-              <View style={s.partyHeaderContainerRight}>
-                <Text style={s.partyLabel}>Client</Text>
+            {/* ── table ── */}
+            <View style={s.tableBox}>
+              <View style={s.tableHeader}>
+                <View style={[s.thCol, s.colArticle]}><Text style={s.thText}>Description</Text></View>
+                <View style={[s.thCol, s.colPrice]}><Text style={s.thTextCenter}>Prix Unitaire TTC</Text></View>
+                <View style={[s.thCol, s.colQty]}><Text style={s.thTextCenter}>Qté</Text></View>
+                <View style={[s.thColLast, s.colTotal]}><Text style={s.thTextRight}>Total TTC</Text></View>
               </View>
-              {sale.customer_name ? (
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[s.partyName, { textAlign: 'right' }]}>{sale.customer_name}</Text>
-                  {sale.customer_phone && (
-                    <View style={s.partyTextRow}><Text style={s.partyLineLabel}>Téléphone : </Text><Text style={s.partyLineValue}>{sale.customer_phone}</Text></View>
-                  )}
-                  {sale.customer_email && (
-                    <View style={s.partyTextRow}><Text style={s.partyLineLabel}>E-mail : </Text><Text style={s.partyLineValue}>{sale.customer_email}</Text></View>
-                  )}
-                  {sale.customer_tax_id && (
-                    <View style={s.partyTextRow}><Text style={s.partyLineLabel}>NIF : </Text><Text style={s.partyLineValue}>{sale.customer_tax_id}</Text></View>
-                  )}
+
+              {items.map((item) => (
+                <View key={item.id} style={s.row} wrap={false}>
+                  <View style={[s.tdCol, s.colArticle]}>
+                    <Text style={s.productName}>{item.product_name}</Text>
+                    {(item.product_category || item.product_sku) && (
+                      <Text style={s.productSub}>
+                        {[item.product_category, item.product_sku].filter(Boolean).join(' · ')}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={[s.tdCol, s.colPrice]}>
+                    <Text style={s.cellTextCenter}>{fmt(item.unit_price)} XOF</Text>
+                  </View>
+                  <View style={[s.tdCol, s.colQty]}>
+                    <Text style={s.cellTextCenter}>{item.quantity}</Text>
+                  </View>
+                  <View style={[s.tdColLast, s.colTotal]}>
+                    <Text style={s.cellTextRightBold}>{fmt(item.quantity * item.unit_price)} XOF</Text>
+                  </View>
                 </View>
-              ) : (
-                <Text style={s.partyMuted}>Client anonyme</Text>
-              )}
+              ))}
+            </View>
+
+            {/* ── financial summary ── */}
+            <View style={s.financialContainer}>
+              <View style={s.financialBox}>
+                {discountAmount > 0 && (
+                  <View style={s.finRow}>
+                    <Text style={s.finLabel}>Remise{sale.discount_percentage ? ` (${sale.discount_percentage}%)` : ''}</Text>
+                    <Text style={s.finValue}>−{fmt(discountAmount)} XOF</Text>
+                  </View>
+                )}
+                {extraFees > 0 && (
+                  <View style={s.finRow}>
+                    <Text style={s.finLabel}>Frais supplémentaires</Text>
+                    <Text style={s.finValue}>+{fmt(extraFees)} XOF</Text>
+                  </View>
+                )}
+                <View style={s.finTotalContainer}>
+                  <View style={s.finRow}>
+                    <Text style={[s.finLabel, { textTransform: 'uppercase' }]}>Total</Text>
+                    <Text style={s.finValue}>{fmt(netAPayer)} XOF</Text>
+                  </View>
+                </View>
+                <View style={s.finNetRow}>
+                  <Text style={s.finNetLabel}>NET À PAYER</Text>
+                  <Text style={s.finNetValue}>{fmt(netAPayer)} XOF</Text>
+                </View>
+              </View>
             </View>
           </View>
 
-          {/* ── table ── */}
-          <View style={s.tableBox}>
-            <View style={s.tableHeader}>
-              <View style={[s.thCol, s.colArticle]}><Text style={s.thText}>Description</Text></View>
-              <View style={[s.thCol, s.colPrice]}><Text style={s.thTextCenter}>Prix Unitaire TTC</Text></View>
-              <View style={[s.thCol, s.colQty]}><Text style={s.thTextCenter}>Qté</Text></View>
-              <View style={[s.thColLast, s.colTotal]}><Text style={s.thTextRight}>Total TTC</Text></View>
-            </View>
-
-            {items.map((item) => (
-              <View key={item.id} style={s.row} wrap={false}>
-                <View style={[s.tdCol, s.colArticle]}>
-                  <Text style={s.productName}>{item.product_name}</Text>
-                  {(item.product_category || item.product_sku) && (
-                    <Text style={s.productSub}>
-                      {[item.product_category, item.product_sku].filter(Boolean).join(' · ')}
-                    </Text>
-                  )}
-                </View>
-                <View style={[s.tdCol, s.colPrice]}>
-                  <Text style={s.cellTextCenter}>{fmt(item.unit_price)} XOF</Text>
-                </View>
-                <View style={[s.tdCol, s.colQty]}>
-                  <Text style={s.cellTextCenter}>{item.quantity}</Text>
-                </View>
-                <View style={[s.tdColLast, s.colTotal]}>
-                  <Text style={s.cellTextRightBold}>{fmt(item.quantity * item.unit_price)} XOF</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* ── financial summary ── */}
-          <View style={s.financialContainer}>
-            <View style={s.financialBox}>
-              {discountAmount > 0 && (
-                <View style={s.finRow}>
-                  <Text style={s.finLabel}>Remise{sale.discount_percentage ? ` (${sale.discount_percentage}%)` : ''}</Text>
-                  <Text style={s.finValue}>−{fmt(discountAmount)} XOF</Text>
-                </View>
-              )}
-              {extraFees > 0 && (
-                <View style={s.finRow}>
-                  <Text style={s.finLabel}>Frais supplémentaires</Text>
-                  <Text style={s.finValue}>+{fmt(extraFees)} XOF</Text>
-                </View>
-              )}
-              <View style={s.finTotalContainer}>
-                <View style={s.finRow}>
-                  <Text style={[s.finLabel, { textTransform: 'uppercase' }]}>Total</Text>
-                  <Text style={s.finValue}>{fmt(netAPayer)} XOF</Text>
-                </View>
-              </View>
-              <View style={s.finNetRow}>
-                <Text style={s.finNetLabel}>NET À PAYER</Text>
-                <Text style={s.finNetValue}>{fmt(netAPayer)} XOF</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ── footer info ── */}
-          <View style={s.footerInfoBorder}>
+          {/* ── bottom section (calé en bas comme sur InvoicePage) ── */}
+          <View style={s.bottomSection}>
             {(paymentSummary(sale) || sale.cash_register) && (
               <View style={s.paymentRow}>
                 {paymentSummary(sale) && (
@@ -336,15 +356,20 @@ export default function SalePdf({ sale, organization, receiptSetting, dgiQrDataU
                 </View>
               </View>
             )}
-          </View>
-        </View>
 
-        {/* ── footer ── */}
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>
-            Facture générée par Lynx, solutions de gestion de caisse, facturation et stock.
-          </Text>
-          <Text style={s.footerText}>Plus de détails sur lynx-solution.com</Text>
+            {receiptSetting?.footer_text && (
+              <Text style={s.customFooterText}>
+                {receiptSetting.footer_text}
+              </Text>
+            )}
+
+            <View style={s.footer}>
+              <Text style={s.footerText}>
+                Facture générée par Lynx, solutions de gestion de caisse, facturation et stock.
+              </Text>
+              <Text style={s.footerText}>Plus de détails sur lynx-solution.com</Text>
+            </View>
+          </View>
         </View>
 
       </Page>

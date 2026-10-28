@@ -51,6 +51,8 @@ import Swal from 'sweetalert2'
 import QRCode from 'qrcode'
 
 import SalePdf from './SalePdf'
+import { fetchReceiptSetting } from '../../api/receiptSetting'
+import type { ReceiptSetting } from '../../types/receiptSetting'
 
 import type { CashRegister, Customer, ItemCategory, PaymentMethod, Product, RestaurantOption, Sale, SaleItem, Store } from '../../types/api'
 import type { GeneralSetting } from '../../types/generalSetting'
@@ -1405,31 +1407,37 @@ export default function SaleForm() {
 
 
   async function handlePdf() {
-
     const sale = currentSale
-
     if (!sale) return
-
     setPrinting(true)
-
     try {
-
       const dgiQrDataUrl = sale.code_dgi ? await QRCode.toDataURL(sale.code_dgi, { margin: 1, width: 200 }) : null
 
-      const blob = await pdf(<SalePdf sale={sale} organization={currentOrganization} dgiQrDataUrl={dgiQrDataUrl} />).toBlob()
+      let receiptSetting: ReceiptSetting | null = null
+      const targetStoreId = sale.store_id || (storeId ? Number(storeId) : null)
+      if (targetStoreId) {
+        try {
+          receiptSetting = await fetchReceiptSetting(targetStoreId)
+        } catch {
+          /* silent — no receipt setting configured */
+        }
+      }
+
+      const blob = await pdf(
+        <SalePdf
+          sale={sale}
+          organization={currentOrganization}
+          receiptSetting={receiptSetting}
+          dgiQrDataUrl={dgiQrDataUrl}
+        />
+      ).toBlob()
 
       const url  = URL.createObjectURL(blob)
-
       window.open(url, '_blank')
-
       setTimeout(() => URL.revokeObjectURL(url), 60_000)
-
     } finally {
-
       setPrinting(false)
-
     }
-
   }
 
 

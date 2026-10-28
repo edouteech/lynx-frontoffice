@@ -6,6 +6,7 @@ export interface ReceiptSetting {
   footer_text: string | null
   sent_receipt_logo: string | null
   printed_receipt_logo: string | null
+  printed_receipt_logo_data_url?: string | null
   created_at: string
   updated_at: string
 }
