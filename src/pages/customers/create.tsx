@@ -69,6 +69,14 @@ export function CustomerCreateModal({
         return
       }
     }
+
+    if (aib) {
+      const ifuDigits = ifu.trim().replace(/\D/g, '')
+      if (ifuDigits.length !== 13) {
+        setError('Un numéro IFU valide (13 chiffres) est obligatoire pour activer l\'AIB.')
+        return
+      }
+    }
     
     const payload = {
       name: customerName.trim(),

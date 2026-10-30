@@ -1150,6 +1150,14 @@ export default function SaleForm() {
       }
     }
 
+    if (newCustomerAib) {
+      const ifuDigits = newCustomerIfu.trim().replace(/\D/g, '')
+      if (ifuDigits.length !== 13) {
+        setCustomerError('Un numéro IFU valide (13 chiffres) est obligatoire pour appliquer l\'AIB.')
+        return
+      }
+    }
+
 
 
     setCreatingCustomer(true)
@@ -1246,6 +1254,15 @@ export default function SaleForm() {
     if (!isEdit && pendingItems.length === 0) { setError('Ajoutez au moins un article avant d\'enregistrer.'); return }
 
     if (requiresCustomerBalance && !customerId) { setError('Veuillez sélectionner un client pour un paiement par compte client.'); return }
+
+    const selectedCustomer = customerId ? customers.find(c => String(c.id) === customerId) : null
+    if (selectedCustomer?.aib && isBeninCountry(currentOrganization?.country)) {
+      const ifuDigits = (selectedCustomer.tax_id ?? '').trim().replace(/\D/g, '')
+      if (ifuDigits.length !== 13) {
+        setError('Impossible d\'appliquer l\'AIB : ce client n\'a pas de numéro IFU valide (13 chiffres). Veuillez modifier sa fiche avant de valider la vente.')
+        return
+      }
+    }
 
     if (isMixedPayment) {
       const incompleteRow = payments.find(p => !p.methodId || !(parseFloat(p.amount) > 0))
