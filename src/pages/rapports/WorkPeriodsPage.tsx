@@ -43,6 +43,35 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value)
 }
 
+
+function formatPeriod(openedAtStr?: string | null, closedAtStr?: string | null, fallback?: string): string {
+  if (!openedAtStr) return fallback ?? ''
+  const opened = new Date(openedAtStr)
+  if (isNaN(opened.getTime())) return fallback ?? ''
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const formatDate = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+  const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+
+  if (!closedAtStr) {
+    return `${formatDate(opened)} • ${formatTime(opened)} → En cours`
+  }
+
+  const closed = new Date(closedAtStr)
+  if (isNaN(closed.getTime())) return fallback ?? ''
+
+  const isSameDay =
+    opened.getFullYear() === closed.getFullYear() &&
+    opened.getMonth() === closed.getMonth() &&
+    opened.getDate() === closed.getDate()
+
+  if (isSameDay) {
+    return `${formatDate(opened)} • ${formatTime(opened)} → ${formatTime(closed)}`
+  }
+
+  return `${formatDate(opened)} • ${formatTime(opened)} → ${formatDate(closed)} • ${formatTime(closed)}`
+}
+
 function toDateTimeLocalValue(d: Date, time: string = '00:00') {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${time}`
@@ -444,10 +473,10 @@ export default function WorkPeriodsPage() {
                     {/* Période / Opérateur */}
                     {(d.period || d.operator_name) && (
                       <div className="grid grid-cols-2 gap-3">
-                        {d.period && (
+                        {(d.period || selectedSession.opened_at) && (
                           <div className="rounded-xl bg-gray-50 p-4">
                             <div className="text-xs font-semibold text-gray-500 uppercase">Période</div>
-                            <div className="mt-1 font-medium text-gray-900">{d.period}</div>
+                            <div className="mt-1 font-medium text-gray-900">{formatPeriod(selectedSession.opened_at, selectedSession.closed_at, d.period)}</div>
                           </div>
                         )}
                         {d.operator_name && (
