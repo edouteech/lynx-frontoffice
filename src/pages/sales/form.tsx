@@ -838,6 +838,8 @@ export default function SaleForm() {
       fetchProducts({
         page: 1,
         per_page: 20,
+        store_id: storeId ? Number(storeId) : undefined,
+        for_sale: true,
         search: productSearchQuery.trim() || undefined,
         category_id: filterCategoryId ? Number(filterCategoryId) : null,
       })
@@ -851,7 +853,7 @@ export default function SaleForm() {
         .finally(() => { if (!cancelled) setProductResultsLoading(false) })
     }, 300)
     return () => { cancelled = true; clearTimeout(timeout) }
-  }, [productSearchQuery, filterCategoryId])
+  }, [productSearchQuery, filterCategoryId, storeId])
 
   // ── Charger la page suivante en arrivant en bas de la liste ────────────────
   function handleProductDropdownScroll(e: React.UIEvent<HTMLDivElement>) {
@@ -863,6 +865,8 @@ export default function SaleForm() {
     fetchProducts({
       page: nextPage,
       per_page: 20,
+      store_id: storeId ? Number(storeId) : undefined,
+      for_sale: true,
       search: productSearchQuery.trim() || undefined,
       category_id: filterCategoryId ? Number(filterCategoryId) : null,
     })
@@ -2642,7 +2646,7 @@ export default function SaleForm() {
 
                                 setSelectedProduct(p)
 
-                                setAddPrice(p.selling_price != null ? String(p.selling_price) : '0')
+                                setAddPrice(p.store_selling_price != null ? String(p.store_selling_price) : (p.selling_price != null ? String(p.selling_price) : '0'))
 
                                 setProductSearchQuery('')
 

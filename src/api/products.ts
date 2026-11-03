@@ -18,6 +18,7 @@ export interface FetchProductsParams {
   search?: string
   type?: 'simple' | 'composite'
   for_order?: boolean
+  for_sale?: boolean
 }
 
 export async function fetchProducts(params: FetchProductsParams | number = 1): Promise<Paginated<Product>> {
@@ -34,6 +35,7 @@ export async function fetchProducts(params: FetchProductsParams | number = 1): P
       ...(p.search      ? { search: p.search }             : {}),
       ...(p.type        ? { type: p.type }                   : {}),
       ...(p.for_order   ? { for_order: true }              : {}),
+      ...(p.for_sale    ? { for_sale: true }               : {}),
     }
   })
   return res.data
@@ -48,6 +50,7 @@ export async function exportProducts(params: FetchProductsParams & { format?: 'x
       ...(params.stock_alert ? { stock_alert: params.stock_alert } : {}),
       ...(params.search      ? { search: params.search }           : {}),
       ...(params.type        ? { type: params.type }               : {}),
+      ...(params.for_sale    ? { for_sale: true }                  : {}),
       ...(params.format      ? { format: params.format }           : {}),
     },
   })
@@ -63,6 +66,7 @@ export async function fetchAllProducts(params: FetchProductsParams = {}): Promis
       ...(params.only_trashed ? { only_trashed: true }             : {}),
       ...(params.search      ? { search: params.search }           : {}),
       ...(params.type        ? { type: params.type }               : {}),
+      ...(params.for_sale    ? { for_sale: true }                  : {}),
     },
   })
   return res.data

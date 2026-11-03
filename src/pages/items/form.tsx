@@ -163,9 +163,7 @@ export default function ItemFormPage() {
   const [storeAvailability, setStoreAvailability] = useState<Record<number, boolean>>({})
   const [storeForSale, setStoreForSale] = useState<Record<number, boolean>>({})
   const [storesLoading, setStoresLoading] = useState(false)
-  const [storesSaving, setStoresSaving] = useState(false)
-  const [storesSaveSuccess, setStoresSaveSuccess] = useState(false)
-  const [storesLoaded, setStoresLoaded] = useState(false)
+      const [storesLoaded, setStoresLoaded] = useState(false)
 
   // refs pour les checkboxes globales (état indéterminé)
   const allAvailabilityRef = useRef<HTMLInputElement>(null)
@@ -213,8 +211,7 @@ export default function ItemFormPage() {
   const [linkedOptionIds, setLinkedOptionIds] = useState<number[]>([])
   const [optionsLoading, setOptionsLoading] = useState(false)
   const [optionsLoaded, setOptionsLoaded] = useState(false)
-  const [optionsSaving, setOptionsSaving] = useState(false)
-  const [optionSearch, setOptionSearch] = useState('')
+    const [optionSearch, setOptionSearch] = useState('')
   const [showNewOptionForm, setShowNewOptionForm] = useState(false)
   const [newOptionName, setNewOptionName] = useState('')
   const [newOptionStatus, setNewOptionStatus] = useState<'active' | 'inactive'>('active')
@@ -554,6 +551,27 @@ export default function ItemFormPage() {
       if (isEdit) {
         await updateProduct(id!, payload)
         if (imageFile) await handleUploadNow(id!)
+        if (storesLoaded) {
+          const storesPayload = stores.map(s => {
+            const priceEntry = storePrices.find(e => e.store_id === s.id)
+            const price = parseFloat(priceEdits[s.id] ?? String(priceEntry?.selling_price ?? defaultSellingPrice))
+            return {
+              store_id: s.id,
+              available: storeAvailability[s.id] ?? true,
+              for_sale: storeForSale[s.id] ?? true,
+              selling_price: isNaN(price) ? defaultSellingPrice : price,
+              tax_inclusive: taxInclusive,
+              ...(trackInventory ? {
+                quantity: parseFloat(stockEdits[s.id] ?? '0') || 0,
+                min_stock_alert: stockAlertEdits[s.id] ? (parseFloat(stockAlertEdits[s.id]) || null) : null,
+              } : {}),
+            }
+          })
+          await bulkSaveProductStores(id!, storesPayload)
+        }
+        if (optionsLoaded) {
+          await syncProductOptions(id!, linkedOptionIds)
+        }
         navigate('/items', { state: { flash: `Article « ${payload.name} » modifié avec succès.` } })
         return
       } else {
@@ -610,52 +628,6 @@ export default function ItemFormPage() {
       setError(getApiErrorMessage(err))
     } finally {
       setSaving(false)
-    }
-  }
-
-  // ── Save global magasins (mode édition) ─────────────────────────────────────
-  async function saveAllStores() {
-    if (!currentId) return
-    setStoresSaving(true)
-    setError(null)
-    try {
-      const storesPayload = stores.map(s => {
-        const priceEntry = storePrices.find(e => e.store_id === s.id)
-        const price = parseFloat(priceEdits[s.id] ?? String(priceEntry?.selling_price ?? defaultSellingPrice))
-        return {
-          store_id: s.id,
-          available: storeAvailability[s.id] ?? true,
-          for_sale: storeForSale[s.id] ?? true,
-          selling_price: isNaN(price) ? defaultSellingPrice : price,
-          tax_inclusive: taxInclusive,
-          ...(trackInventory ? {
-            quantity: parseFloat(stockEdits[s.id] ?? '0') || 0,
-            min_stock_alert: stockAlertEdits[s.id] ? (parseFloat(stockAlertEdits[s.id]) || null) : null,
-          } : {}),
-        }
-      })
-      await bulkSaveProductStores(currentId, storesPayload)
-      setStoresLoaded(false) // recharge les données fraîches depuis l'API
-      setStoresSaveSuccess(true)
-      setTimeout(() => setStoresSaveSuccess(false), 3000)
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setStoresSaving(false)
-    }
-  }
-
-  // ── Save options (mode édition) ─────────────────────────────────────────────
-  async function saveOptions() {
-    if (!currentId) return
-    setOptionsSaving(true)
-    setError(null)
-    try {
-      await syncProductOptions(currentId, linkedOptionIds)
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setOptionsSaving(false)
     }
   }
 
@@ -953,26 +925,13 @@ export default function ItemFormPage() {
               className="flex-1 sm:flex-none rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50">
               Annuler
             </button>
-            {storesSaveSuccess && (
-              <span className="text-xs font-medium text-green-600">Enregistré ✓</span>
-            )}
-            <button
+                        <button
               type="button"
-              onClick={() => void (
-                isEdit && tab === 'stores' ? saveAllStores() :
-                isEdit && tab === 'options' ? saveOptions() :
-                handleSave()
-              )}
-              disabled={
-                (isEdit && tab === 'stores' && storesSaving) ||
-                (isEdit && tab === 'options' && optionsSaving) ||
-                ((!isEdit || (tab !== 'stores' && tab !== 'options')) && saving)
-              }
+              onClick={() => void handleSave()}
+              disabled={saving}
               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#0F2E4A] px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#1a4068] disabled:opacity-50"
             >
-              {(isEdit && tab === 'stores' ? storesSaving : isEdit && tab === 'options' ? optionsSaving : saving)
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <Save className="h-4 w-4" />}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Enregistrer
             </button>
           </div>

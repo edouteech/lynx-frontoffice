@@ -344,6 +344,11 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
       setPendingEdits(prev => { const n = { ...prev }; delete n[itemId]; return n })
       return
     }
+    const target = items.find(i => i.id === itemId)
+    if (target && target.received_quantity > 0) {
+      setError(`Impossible de supprimer l'article "${target.product_name}" car ${target.received_quantity.toLocaleString('fr-FR')} unité(s) ont déjà été réceptionnées.`)
+      return
+    }
     try {
       await removePurchaseOrderItem(id!, itemId)
       setItems(prev => prev.filter(i => i.id !== itemId))
@@ -392,6 +397,19 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
         })
         navigate(`/${orderIsCentral ? 'central-orders' : 'purchase-orders'}/${order.id}`, { replace: true })
       } else {
+        const invalidItem = items.find(i => {
+          if (!i.received_quantity || i.received_quantity <= 0) return false
+          const newQty = itemEdits[i.id]?.quantity !== undefined
+            ? parseFloat(itemEdits[i.id].quantity)
+            : i.quantity
+          return !isNaN(newQty) && newQty < i.received_quantity
+        })
+        if (invalidItem) {
+          setError(`La quantité commandée de l'article "${invalidItem.product_name}" ne peut pas être inférieure à la quantité déjà livrée (${invalidItem.received_quantity.toLocaleString('fr-FR')}).`)
+          setSaving(false)
+          return
+        }
+
         await updatePurchaseOrder(id!, {
           supplier_id: orderIsCentral ? null : Number(supplierId),
           purchasing_center_id: orderIsCentral ? Number(purchasingCenterId) : null,
@@ -841,18 +859,31 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         {/* Stock commandé — éditable */}
                         <td className="px-4 py-3 text-right">
                           {canEdit ? (
-                            <input
-                              type="number" min="0.001"
-                              value={currentQty}
-                              onChange={e => {
-                                if (isEdit) {
-                                  setItemEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], quantity: e.target.value } }))
-                                } else {
-                                  setPendingEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], quantity: e.target.value } }))
-                                }
-                              }}
-                              className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
-                            />
+                            <div className="relative inline-flex items-center">
+                              <input
+                                type="number"
+                                min={isEdit && item.received_quantity > 0 ? item.received_quantity : 0.001}
+                                value={currentQty}
+                                title={isEdit && item.received_quantity > 0 ? `Minimum requis : ${item.received_quantity} (déjà livré)` : undefined}
+                                onChange={e => {
+                                  if (isEdit) {
+                                    setItemEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], quantity: e.target.value } }))
+                                  } else {
+                                    setPendingEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], quantity: e.target.value } }))
+                                  }
+                                }}
+                                className={`w-24 rounded-lg border px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 ${
+                                  isEdit && item.received_quantity > 0 && (parseFloat(currentQty) || 0) < item.received_quantity
+                                    ? 'border-red-400 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-500/20'
+                                    : 'border-gray-300 focus:border-[#3B82F6] focus:ring-[#3B82F6]/20'
+                                }`}
+                              />
+                              {isEdit && item.received_quantity > 0 && (
+                                <span className="absolute -bottom-3.5 right-0 text-[10px] text-amber-600 font-medium whitespace-nowrap pointer-events-none">
+                                  min. {item.received_quantity.toLocaleString('fr-FR')}
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="font-medium text-gray-700">{item.quantity.toLocaleString('fr-FR')}</span>
                           )}
@@ -904,13 +935,24 @@ export default function PurchaseOrderForm({ isCentral = false }: Props) {
                         {canEdit && (
                           <td className="px-4 py-3 text-center">
                             <Can code="admin_panel.orders.create_or_edit">
-                              <button
-                                type="button"
-                                onClick={() => void handleRemoveItem(item.id)}
-                                className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {isEdit && item.received_quantity > 0 ? (
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Cet article a déjà été réceptionné et ne peut pas être supprimé."
+                                  className="rounded-lg p-1.5 text-gray-300 cursor-not-allowed"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleRemoveItem(item.id)}
+                                  className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                             </Can>
                           </td>
                         )}
