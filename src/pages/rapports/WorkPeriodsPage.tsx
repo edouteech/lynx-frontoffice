@@ -228,24 +228,17 @@ export default function WorkPeriodsPage() {
   const columns: Column<Row>[] = useMemo(
     () => [
       {
-        key: 'id',
-        label: 'ID Session',
+        key: 'cash_register_name',
+        label: 'Caisse',
         sortable: true,
-        nowrap: true,
         render: (v) => (
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-violet-50 text-violet-600">
               <History className="h-4 w-4" />
             </div>
-            <span className="font-bold text-gray-900">{String(v)}</span>
+            <span className="font-semibold text-gray-800">{String(v)}</span>
           </div>
         ),
-      },
-      {
-        key: 'cash_register_name',
-        label: 'Caisse',
-        sortable: true,
-        render: (v) => <span className="font-medium text-gray-700">{String(v)}</span>
       },
       {
         key: 'store_name',
@@ -306,17 +299,19 @@ export default function WorkPeriodsPage() {
       },
       {
         key: 'actions',
-        label: '',
+        label: 'Actions',
         sortable: false,
         align: 'right',
         render: (_, row) => (
-          <button
-            onClick={() => setSelectedSession(row)}
-            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
-            title="Voir les détails complets"
-          >
-            <Eye className="h-5 w-5" />
-          </button>
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => setSelectedSession(row)}
+              className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+              title="Voir les détails complets"
+            >
+              <Eye className="h-5 w-5" />
+            </button>
+          </div>
         )
       }
     ],
