@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -42,7 +43,12 @@ export default function TrashItemCategories() {
 
   const handleRestore = useCallback(
     async (c: ItemCategory) => {
-      if (!window.confirm(`Restaurer la catégorie « ${c.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Restaurer la catégorie',
+        text: `Restaurer la catégorie « ${c.name} » ?`,
+        confirmButtonText: 'Restaurer',
+      })
+      if (!ok) return
       setError(null)
       setSuccess(null)
       try {

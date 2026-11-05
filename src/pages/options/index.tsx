@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -68,7 +69,12 @@ export default function OptionsIndex() {
 
   const handleDelete = useCallback(
     async (o: Option) => {
-      if (!window.confirm(`Supprimer l'option « ${o.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: "Supprimer l'option",
+        text: `Supprimer l'option « ${o.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteOption(o.id)

@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2, ClipboardList } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -369,7 +370,12 @@ export default function RestaurantOptionPage() {
 
   const handleDelete = useCallback(
     async (opt: RestaurantOption) => {
-      if (!window.confirm(`Supprimer l'option « ${opt.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: "Supprimer l'option",
+        text: `Supprimer l'option « ${opt.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteRestaurantOption(opt.id)

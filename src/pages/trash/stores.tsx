@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -42,7 +43,12 @@ export default function TrashStores() {
 
   const handleRestore = useCallback(
     async (m: Store) => {
-      if (!window.confirm(`Restaurer le magasin « ${m.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Restaurer le magasin',
+        text: `Restaurer le magasin « ${m.name} » ?`,
+        confirmButtonText: 'Restaurer',
+      })
+      if (!ok) return
       setError(null)
       setSuccess(null)
       try {

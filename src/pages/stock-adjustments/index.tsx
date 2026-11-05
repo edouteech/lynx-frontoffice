@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, Plus, Printer, Trash2 } from 'lucide-react'
@@ -50,7 +51,12 @@ export default function StockAdjustmentsIndex() {
   useEffect(() => { void load(page) }, [page, load])
 
   const handleDelete = useCallback(async (a: StockAdjustment) => {
-    if (!window.confirm(`Supprimer l'ajustement #${String(a.id).padStart(4, '0')} ?`)) return
+    const ok = await confirmDialog({
+      title: "Supprimer l'ajustement",
+      text: `Supprimer l'ajustement #${String(a.id).padStart(4, '0')} ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     try {
       await deleteStockAdjustment(a.id)
       void load(page)

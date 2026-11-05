@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, Mail, Pencil, Plus, Search } from 'lucide-react'
@@ -125,12 +126,13 @@ export default function UsersIndex() {
 
   const handleResendCredentials = useCallback(async (u: User) => {
     if (resendingId !== null) return
-    if (
-      !window.confirm(
-        `Renvoyer les identifiants de connexion à « ${u.name} » (${u.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
-      )
-    )
-      return
+    const ok = await confirmDialog({
+      title: 'Renvoyer les identifiants',
+      text: `Renvoyer les identifiants de connexion à « ${u.name} » (${u.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`,
+      confirmButtonText: 'Renvoyer',
+      isDanger: true,
+    })
+    if (!ok) return
     setNotice(null)
     setError(null)
     setResendingId(u.id)
@@ -147,7 +149,12 @@ export default function UsersIndex() {
   const handleToggleStatus = useCallback(async (u: User, next: boolean) => {
     if (togglingId !== null) return
     const verb = next ? 'réactiver' : 'désactiver'
-    if (!window.confirm(`Voulez-vous ${verb} « ${u.name} » dans cette entreprise ?`)) return
+    const ok = await confirmDialog({
+      title: `${next ? 'Réactiver' : 'Désactiver'} l'utilisateur`,
+      text: `Voulez-vous ${verb} « ${u.name} » dans cette entreprise ?`,
+      isDanger: !next,
+    })
+    if (!ok) return
     setNotice(null)
     setError(null)
     setTogglingId(u.id)

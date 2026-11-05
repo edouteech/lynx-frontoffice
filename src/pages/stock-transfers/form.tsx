@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -349,7 +350,12 @@ export default function StockTransferForm() {
 
   // ── Confirmer le transfert ─────────────────────────────────────────────────
   async function handleConfirm() {
-    if (!window.confirm('Valider ce transfert ? Les stocks des deux magasins seront mis à jour.')) return
+    const ok = await confirmDialog({
+      title: 'Valider le transfert',
+      text: 'Valider ce transfert ? Les stocks des deux magasins seront mis à jour.',
+      confirmButtonText: 'Valider',
+    })
+    if (!ok) return
     setConfirming(true)
     setError(null)
     setConfirmErrors([])

@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -68,7 +69,12 @@ export default function FavoritesIndex() {
 
   const handleDelete = useCallback(
     async (f: Favorite) => {
-      if (!window.confirm(`Supprimer le favori « ${f.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Supprimer le favori',
+        text: `Supprimer le favori « ${f.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteFavorite(f.id)

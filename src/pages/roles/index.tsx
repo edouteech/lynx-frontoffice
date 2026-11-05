@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Shield, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -63,7 +64,12 @@ export default function RolesIndex() {
 
   const handleDelete = useCallback(
     async (r: Role) => {
-      if (!window.confirm(`Supprimer le rôle « ${r.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Supprimer le rôle',
+        text: `Supprimer le rôle « ${r.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteRole(r.id)

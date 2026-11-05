@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -242,7 +243,12 @@ export default function CashRegisterShow() {
   async function handleToggleStatus() {
     if (!cashRegister) return
     const action = cashRegister.status === 'active' ? 'désactiver' : 'activer'
-    if (!window.confirm(`Voulez-vous ${action} la caisse « ${cashRegister.name} » ?`)) return
+    const ok = await confirmDialog({
+      title: `${action === 'activer' ? 'Activer' : 'Désactiver'} la caisse`,
+      text: `Voulez-vous ${action} la caisse « ${cashRegister.name} » ?`,
+      isDanger: action === 'désactiver',
+    })
+    if (!ok) return
     setToggling(true)
     setError(null)
     try {
@@ -267,8 +273,13 @@ export default function CashRegisterShow() {
 
   async function handleForceRelease() {
     if (!cashRegister) return
-    const msg = `Voulez-vous forcer la libération de la caisse « ${cashRegister.name} » assignée à ${cashRegister.assigned_user_name ?? 'un utilisateur'} ?`
-    if (!window.confirm(msg)) return
+    const ok = await confirmDialog({
+      title: 'Forcer la libération',
+      text: `Voulez-vous forcer la libération de la caisse « ${cashRegister.name} » assignée à ${cashRegister.assigned_user_name ?? 'un utilisateur'} ?`,
+      isDanger: true,
+      confirmButtonText: 'Forcer la libération',
+    })
+    if (!ok) return
     setReleasing(true)
     setError(null)
     try {

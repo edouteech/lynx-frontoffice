@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Pencil, Trash2 } from 'lucide-react'
@@ -353,12 +354,12 @@ export default function UserShow() {
   async function handleDetach(row: UserStoreRoleRow) {
     if (!id) return
     const key = `${row.store_id}-${row.role_id}`
-    if (
-      !window.confirm(
-        `Retirer l’accès au magasin « ${row.store_name} » pour le rôle « ${displayRoleName(row.role_name)} » ?`
-      )
-    )
-      return
+    const ok = await confirmDialog({
+      title: 'Retirer l’accès',
+      text: `Retirer l’accès au magasin « ${row.store_name} » pour le rôle « ${displayRoleName(row.role_name)} » ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     setDetachingKey(key)
     setError(null)
     try {
@@ -373,12 +374,13 @@ export default function UserShow() {
 
   async function handleResendCredentials() {
     if (!id || !user) return
-    if (
-      !window.confirm(
-        `Renvoyer les identifiants de connexion à « ${user.name} » (${user.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`
-      )
-    )
-      return
+    const ok = await confirmDialog({
+      title: 'Renvoyer les identifiants',
+      text: `Renvoyer les identifiants de connexion à « ${user.name} » (${user.email}) ? Un nouveau mot de passe sera généré et l’ancien ne fonctionnera plus.`,
+      confirmButtonText: 'Renvoyer',
+      isDanger: true,
+    })
+    if (!ok) return
     setResendingCredentials(true)
     setError(null)
     setAttachNotice(null)
@@ -395,7 +397,12 @@ export default function UserShow() {
   async function handleToggleStatus(next: boolean) {
     if (!id || !user) return
     const verb = next ? 'réactiver' : 'désactiver'
-    if (!window.confirm(`Voulez-vous ${verb} « ${user.name} » dans cette entreprise ?`)) return
+    const ok = await confirmDialog({
+      title: `${next ? 'Réactiver' : 'Désactiver'} l'utilisateur`,
+      text: `Voulez-vous ${verb} « ${user.name} » dans cette entreprise ?`,
+      isDanger: !next,
+    })
+    if (!ok) return
     setTogglingStatus(true)
     setError(null)
     setAttachNotice(null)

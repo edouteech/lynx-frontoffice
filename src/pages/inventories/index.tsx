@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ClipboardCheck, Loader2, Plus, Printer, Trash2, X } from 'lucide-react'
 import { fetchInventories, deleteInventory } from '../../api/inventories'
 import { getApiErrorMessage } from '../../lib/apiError'
+import { confirmDialog } from '../../lib/alerts'
 import type { Inventory } from '../../types/api'
 import { OwnerOnly } from '../../components/Can'
 
@@ -59,7 +60,15 @@ export default function InventoriesIndex() {
   useEffect(() => { void load(page) }, [page])
 
   async function handleDelete(inv: Inventory) {
-    if (!window.confirm(`Supprimer l'inventaire du ${new Date(inv.created_at).toLocaleDateString('fr-FR')} ?`)) return
+    const confirmed = await confirmDialog({
+      title: 'Supprimer cet inventaire ?',
+      text: `Voulez-vous vraiment supprimer l'inventaire du ${new Date(inv.created_at).toLocaleDateString('fr-FR')} ?`,
+      icon: 'warning',
+      isDanger: true,
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+    })
+    if (!confirmed) return
     try {
       await deleteInventory(inv.id)
       void load(page)

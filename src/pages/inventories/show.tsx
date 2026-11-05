@@ -11,6 +11,7 @@ import {
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { Inventory, InventoryItem } from '../../types/api'
 import { OwnerOnly } from '../../components/Can'
+import { confirmDialog } from '../../lib/alerts'
 
 // ─── tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -148,16 +149,34 @@ export default function InventoryShowPage() {
   // ── apply ─────────────────────────────────────────────────────────────────
 
   async function handleApply() {
-    const filledCount = inventory?.items?.filter(i => i.actual_quantity != null).length ?? 0
+    const filledCount = inventory?.items?.filter(i => {
+      const v = actualQtys[i.id] ?? ''
+      return v.trim() !== ''
+    }).length ?? 0
     const totalCount  = inventory?.items_count ?? 0
+    const unfilledCount = totalCount - filledCount
 
-    const unfilledMsg = filledCount < totalCount
-      ? `\n\n⚠ Attention : ${totalCount - filledCount} article(s) n'ont pas de quantité saisie — ils ne seront pas modifiés.`
-      : ''
+    const confirmed = await confirmDialog({
+      title: 'Appliquer cet inventaire ?',
+      html: `
+        <div style="font-size: 14px; text-align: left; color: #374151;">
+          <p style="margin-bottom: 12px;">Voulez-vous appliquer cet inventaire au stock du magasin <strong>« ${inventory?.store?.name ?? ''} »</strong> ?</p>
+          ${unfilledCount > 0 ? `
+            <div style="background-color: #FEF3C7; border: 1px solid #FCD34D; color: #92400E; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;">
+              <strong>⚠ Note :</strong> <b>${unfilledCount} article(s)</b> n'ont pas de quantité saisie.<br/>
+              Leur stock passera automatiquement à <b>0</b>.
+            </div>
+          ` : ''}
+          <p style="color: #EF4444; font-size: 12px; margin: 0;">Cette action est irréversible.</p>
+        </div>
+      `,
+      icon: unfilledCount > 0 ? 'warning' : 'question',
+      confirmButtonText: 'Oui, appliquer au stock',
+      confirmButtonColor: '#059669',
+      cancelButtonText: 'Annuler',
+    })
 
-    if (!window.confirm(
-      `Appliquer cet inventaire au stock du magasin « ${inventory?.store?.name} » ?${unfilledMsg}\n\nCette action est irréversible.`
-    )) return
+    if (!confirmed) return
 
     setApplying(true)
     setError(null)
@@ -175,7 +194,16 @@ export default function InventoryShowPage() {
   // ── delete ────────────────────────────────────────────────────────────────
 
   async function handleDelete() {
-    if (!window.confirm('Supprimer définitivement cet inventaire brouillon ?')) return
+    const confirmed = await confirmDialog({
+      title: 'Supprimer cet inventaire ?',
+      text: 'Voulez-vous vraiment supprimer définitivement cet inventaire brouillon ?',
+      icon: 'warning',
+      isDanger: true,
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+    })
+    if (!confirmed) return
+
     setDeleting(true)
     try {
       await deleteInventory(id!)
@@ -339,7 +367,7 @@ export default function InventoryShowPage() {
           <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
             <ClipboardCheck className="inline h-3.5 w-3.5 mr-1" />
             Sauvegarde automatique — chaque quantité saisie est enregistrée dès que vous quittez le champ.
-            Les articles sans quantité saisie ne seront pas modifiés lors de l'application.
+            Les articles sans quantité saisie passeront automatiquement à 0 lors de l'application au stock.
           </div>
         )}
 

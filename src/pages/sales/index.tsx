@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, FileText, Filter, Globe, Plus, RotateCcw, Store as StoreIcon, Trash2 } from 'lucide-react'
@@ -109,7 +110,12 @@ export default function SalesIndex() {
 
   const handleDelete = useCallback(async (s: Sale) => {
     const label = s.invoice_number ?? `#${String(s.id).padStart(4, '0')}`
-    if (!window.confirm(`Supprimer la vente ${label} ?`)) return
+    const ok = await confirmDialog({
+      title: 'Supprimer la vente',
+      text: `Supprimer la vente ${label} ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     try {
       await deleteSale(s.id)
       void load(page)

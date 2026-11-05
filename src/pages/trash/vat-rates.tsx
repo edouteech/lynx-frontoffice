@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -68,7 +69,12 @@ export default function TrashVatRates() {
 
   const handleRestore = useCallback(
     async (t: VatRate) => {
-      if (!window.confirm(`Restaurer la TVA « ${t.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Restaurer la TVA',
+        text: `Restaurer la TVA « ${t.name} » ?`,
+        confirmButtonText: 'Restaurer',
+      })
+      if (!ok) return
       setError(null)
       setSuccess(null)
       try {

@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -42,7 +43,12 @@ export default function TrashPaymentMethods() {
 
   const handleRestore = useCallback(
     async (pm: PaymentMethod) => {
-      if (!window.confirm(`Restaurer le moyen de paiement « ${pm.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Restaurer le moyen de paiement',
+        text: `Restaurer le moyen de paiement « ${pm.name} » ?`,
+        confirmButtonText: 'Restaurer',
+      })
+      if (!ok) return
       setError(null)
       setSuccess(null)
       try {

@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Building2, ChevronDown, Download, FileUp, Loader2, Pencil, Plus, Trash2, Package, RefreshCw, X, Eye } from 'lucide-react'
@@ -266,7 +267,12 @@ export default function ItemsIndex() {
   }
 
   const handleDelete = useCallback(async (p: Product) => {
-    if (!window.confirm(`Supprimer l'article « ${p.name} » ?`)) return
+    const ok = await confirmDialog({
+      title: "Supprimer l'article",
+      text: `Supprimer l'article « ${p.name} » ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     try {
       await deleteProduct(p.id)
       void load(page)

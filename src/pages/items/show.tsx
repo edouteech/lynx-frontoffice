@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -367,7 +368,12 @@ export default function ItemShowPage() {
 
   async function handleDelete() {
     if (!product) return
-    if (!window.confirm(`Supprimer définitivement l'article « ${product.name} » ?`)) return
+    const ok = await confirmDialog({
+      title: "Supprimer l'article",
+      text: `Supprimer définitivement l'article « ${product.name} » ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     setDeleting(true)
     setError(null)
     try {

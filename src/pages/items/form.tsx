@@ -1253,7 +1253,6 @@ export default function ItemFormPage() {
                             <div className="flex items-center justify-end">
                               <input
                                 type="number"
-                                min="0"
                                 value={stockEdits[row.store_id] ?? row.quantity}
                                 onChange={e => setStockEdits(prev => ({ ...prev, [row.store_id]: e.target.value }))}
                                 className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"

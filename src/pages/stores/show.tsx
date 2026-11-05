@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -50,7 +51,12 @@ export default function StoreShow() {
 
   async function handleDelete() {
     if (!store) return
-    if (!window.confirm(`Supprimer définitivement « ${store.name} » ?`)) return
+    const ok = await confirmDialog({
+      title: 'Supprimer le magasin',
+      text: `Supprimer définitivement « ${store.name} » ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     setDeleting(true)
     setError(null)
     try {

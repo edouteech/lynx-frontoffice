@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -85,7 +86,12 @@ export default function PaymentMethodsIndex() {
 
   const handleDelete = useCallback(
     async (pm: PaymentMethod) => {
-      if (!window.confirm(`Supprimer le moyen « ${pm.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Supprimer le moyen de paiement',
+        text: `Supprimer le moyen « ${pm.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deletePaymentMethod(pm.id)

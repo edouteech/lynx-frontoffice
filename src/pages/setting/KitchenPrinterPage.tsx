@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import DataTable, { type Action, type Column } from '../../components/DataTable'
@@ -359,7 +360,12 @@ export default function KitchenPrinterPage() {
 
   const handleDelete = useCallback(
     async (kp: KitchenPrinter) => {
-      if (!window.confirm(`Supprimer l'imprimante « ${kp.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: "Supprimer l'imprimante",
+        text: `Supprimer l'imprimante « ${kp.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteKitchenPrinter(kp.id)

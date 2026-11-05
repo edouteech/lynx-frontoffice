@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
@@ -344,7 +345,12 @@ export default function StockAdjustmentForm() {
 
   // ── Appliquer l'ajustement ─────────────────────────────────────────────────
   async function handleApply() {
-    if (!window.confirm('Appliquer cet ajustement ? Le stock du magasin sera mis à jour immédiatement.')) return
+    const ok = await confirmDialog({
+      title: "Appliquer l'ajustement",
+      text: 'Appliquer cet ajustement ? Le stock du magasin sera mis à jour immédiatement.',
+      confirmButtonText: 'Appliquer',
+    })
+    if (!ok) return
     setApplying(true)
     setError(null)
     setApplyErrors([])

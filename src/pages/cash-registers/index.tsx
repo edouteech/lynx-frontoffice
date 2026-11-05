@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -97,7 +98,12 @@ export default function CashRegistersIndex() {
 
   async function handleToggleStatus(r: CashRegister) {
     const action = r.status === 'active' ? 'désactiver' : 'activer'
-    if (!window.confirm(`Voulez-vous ${action} la caisse « ${r.name} » ?`)) return
+    const ok = await confirmDialog({
+      title: `${action === 'activer' ? 'Activer' : 'Désactiver'} la caisse`,
+      text: `Voulez-vous ${action} la caisse « ${r.name} » ?`,
+      isDanger: action === 'désactiver',
+    })
+    if (!ok) return
     try {
       const updated = await toggleCashRegisterStatus(r.id, r.status)
       setRegisters(prev => prev.map(x => x.id === updated.id ? updated : x))

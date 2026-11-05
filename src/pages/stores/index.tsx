@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -75,7 +76,12 @@ export default function StoresIndex() {
 
   const handleDelete = useCallback(
     async (m: Store) => {
-      if (!window.confirm(`Supprimer le magasin « ${m.name} » ?`)) return
+      const ok = await confirmDialog({
+        title: 'Supprimer le magasin',
+        text: `Supprimer le magasin « ${m.name} » ?`,
+        isDanger: true,
+      })
+      if (!ok) return
       setError(null)
       try {
         await deleteStore(m.id)

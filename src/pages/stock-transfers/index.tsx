@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Eye, Plus, Printer, Trash2 } from 'lucide-react'
@@ -51,7 +52,12 @@ export default function StockTransfersIndex() {
   useEffect(() => { void load(page) }, [page, load])
 
   const handleDelete = useCallback(async (t: StockTransfer) => {
-    if (!window.confirm(`Supprimer le transfert #${String(t.id).padStart(4, '0')} ?`)) return
+    const ok = await confirmDialog({
+      title: 'Supprimer le transfert',
+      text: `Supprimer le transfert #${String(t.id).padStart(4, '0')} ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     try {
       await deleteStockTransfer(t.id)
       void load(page)

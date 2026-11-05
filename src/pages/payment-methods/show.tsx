@@ -1,3 +1,4 @@
+import { confirmDialog } from '../../lib/alerts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Store as StoreIcon, Trash2 } from 'lucide-react'
@@ -100,8 +101,12 @@ export default function PaymentMethodShow() {
 
   async function handleDelete() {
     if (!paymentMethod) return
-    if (!window.confirm(`Supprimer définitivement « ${paymentMethod.name} » ?`))
-      return
+    const ok = await confirmDialog({
+      title: 'Supprimer le moyen de paiement',
+      text: `Supprimer définitivement « ${paymentMethod.name} » ?`,
+      isDanger: true,
+    })
+    if (!ok) return
     setDeleting(true)
     setError(null)
     try {
