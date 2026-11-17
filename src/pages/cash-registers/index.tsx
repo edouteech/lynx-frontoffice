@@ -174,17 +174,36 @@ export default function CashRegistersIndex() {
       },
     },
     {
-      key: 'is_available',
-      label: 'Disponibilité',
-      sortable: true,
-      render: (v) => {
-        const isAvail = Boolean(v)
+      key: 'is_assigned',
+      label: 'État',
+      render: (_, r) => {
+        // Occupée = tenue par un appareil (de sa prise jusqu'à sa déconnexion)
+        const occupied = Boolean(r.is_assigned)
         return (
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            isAvail ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+            occupied ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
           }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${isAvail ? 'bg-green-500' : 'bg-orange-500'}`} />
-            {isAvail ? 'Disponible' : 'Occupée'}
+            <span className={`h-1.5 w-1.5 rounded-full ${occupied ? 'bg-orange-500' : 'bg-green-500'}`} />
+            {occupied ? 'Occupée' : 'Libre'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'is_available',
+      label: 'Visibilité',
+      sortable: true,
+      render: (v) => {
+        // Non visible = non proposée dans la liste des tablettes
+        const visible = Boolean(v)
+        return (
+          <span
+            title={visible ? 'Proposée dans la liste des tablettes' : 'Non proposée dans la liste des tablettes'}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              visible ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${visible ? 'bg-green-500' : 'bg-gray-400'}`} />
+            {visible ? 'Visible' : 'Non visible'}
           </span>
         )
       },
@@ -271,7 +290,7 @@ export default function CashRegistersIndex() {
                   ? 'text-orange-600 hover:bg-orange-50'
                   : 'text-green-600 hover:bg-green-50'
               }`}
-              title={isAvailable ? 'Occuper' : 'Libérer'}
+              title={isAvailable ? 'Masquer sur les tablettes' : 'Afficher sur les tablettes'}
             >
               <CircleSlash className="h-4 w-4" />
             </button>

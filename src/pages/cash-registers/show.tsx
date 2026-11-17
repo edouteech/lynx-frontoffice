@@ -274,10 +274,10 @@ export default function CashRegisterShow() {
   async function handleForceRelease() {
     if (!cashRegister) return
     const ok = await confirmDialog({
-      title: 'Forcer la libération',
-      text: `Voulez-vous forcer la libération de la caisse « ${cashRegister.name} » assignée à ${cashRegister.assigned_user_name ?? 'un utilisateur'} ?`,
+      title: 'Libérer la caisse',
+      text: `La caisse « ${cashRegister.name} » est utilisée sur un appareil${cashRegister.assigned_user_name ? ` (dernier utilisateur : ${cashRegister.assigned_user_name})` : ''}. La libérer déconnecte cet appareil : une vente en cours y serait interrompue. Continuer ?`,
       isDanger: true,
-      confirmButtonText: 'Forcer la libération',
+      confirmButtonText: 'Libérer la caisse',
     })
     if (!ok) return
     setReleasing(true)
@@ -344,7 +344,7 @@ export default function CashRegisterShow() {
                   : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'}`}
             >
               <CircleSlash className="h-4 w-4" />
-              {cashRegister.is_available ? 'Occuper' : 'Libérer'}
+              {cashRegister.is_available ? 'Masquer' : 'Afficher'}
             </button>
             <button
               type="button"
@@ -385,16 +385,20 @@ export default function CashRegisterShow() {
             <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statutPill(cashRegister.status)}`}>
               {cashRegister.status === 'active' ? 'Active' : 'Inactive'}
             </span>
+            {/* État réel : une caisse est occupée par un APPAREIL, de sa prise jusqu'à sa déconnexion */}
             <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold
-              ${cashRegister.is_available ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-orange-100 text-orange-700 border border-orange-200'}`}>
-              {cashRegister.is_available ? 'Disponible' : 'Occupée'}
+              ${cashRegister.is_assigned ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
+              {cashRegister.is_assigned ? 'Occupée' : 'Libre'}
             </span>
-            {cashRegister.is_assigned && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
-                <Lock className="h-3 w-3" />
-                Assignée à : {cashRegister.assigned_user_name ?? 'Caissier'}
-              </span>
-            )}
+            {/* Visibilité : une caisse non visible n'est plus proposée dans la liste des tablettes */}
+            <span
+              title={cashRegister.is_available
+                ? 'Proposée dans la liste des tablettes'
+                : 'Non proposée dans la liste des tablettes (toujours visible ici, dans le back-office)'}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border
+              ${cashRegister.is_available ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+              {cashRegister.is_available ? 'Visible' : 'Non visible'}
+            </span>
             {openSession && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
