@@ -8,9 +8,16 @@ import type { Customer } from '../../types/api'
 import { CustomerCreateModal } from './create'
 import { CustomerImportModal } from './import'
 import Swal from 'sweetalert2'
+import { useAuth } from '../../contexts/useAuth'
+import { hasPermissionCode } from '../../lib/permissions'
 
 export default function CustomersIndex() {
   const navigate = useNavigate()
+  const { user, activeOrganizationId } = useAuth()
+  // « Gestion des clients » (customers.manage) : liste, ajout, modification.
+  // Fiche détaillée et import restent réservés à stores.manage ; la suppression
+  // est réservée au propriétaire.
+  const canFullManage = hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage')
   const [page, setPage] = useState(1)
   const [paginated, setPaginated] = useState<{
     data: Customer[]
@@ -159,16 +166,20 @@ export default function CustomersIndex() {
 
   const actions: Action<Customer>[] = useMemo(
     () => [
-      {
-        label: 'Voir',
-        icon: Eye,
-        variant: 'primary',
-        onClick: (c) => navigate(`/customers/${c.id}`),
-      },
+      ...(canFullManage
+        ? [
+            {
+              label: 'Voir',
+              icon: Eye,
+              variant: 'primary' as const,
+              onClick: (c: Customer) => navigate(`/customers/${c.id}`),
+            },
+          ]
+        : []),
       {
         label: 'Modifier',
         icon: Pencil,
-        onClick: (c) => {
+        onClick: (c: Customer) => {
           setModalCustomer(c)
           setModalOpen(true)
         },
@@ -177,11 +188,12 @@ export default function CustomersIndex() {
         label: 'Supprimer',
         icon: Trash2,
         variant: 'danger',
-        onClick: (c) => void handleDelete(c),
+        onClick: (c: Customer) => void handleDelete(c),
+        // Propriétaire uniquement (appliqué par le tableau ET par l'API).
         ownerOnly: true,
       },
     ],
-    [navigate, handleDelete]
+    [navigate, handleDelete, canFullManage]
   )
 
   return (
@@ -194,14 +206,16 @@ export default function CustomersIndex() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setImportModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <Upload className="h-4 w-4" />
-            Importer Excel
-          </button>
+          {canFullManage && (
+            <button
+              type="button"
+              onClick={() => setImportModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <Upload className="h-4 w-4" />
+              Importer Excel
+            </button>
+          )}
 
           <button
             type="button"

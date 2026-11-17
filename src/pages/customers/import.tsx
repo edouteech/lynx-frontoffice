@@ -1,7 +1,11 @@
 import { useRef, useState } from 'react'
 import Modal from '../../components/Modal'
 import { Download, UploadCloud } from 'lucide-react'
-import { downloadCustomerTemplate, importCustomers } from '../../api/customer'
+import {
+  downloadCustomerTemplate,
+  importCustomers,
+  type CustomerImportResults,
+} from '../../api/customer'
 import { getApiErrorMessage } from '../../lib/apiError'
 import Swal from 'sweetalert2'
 
@@ -9,6 +13,69 @@ interface Props {
   open: boolean
   onClose: () => void
   onSuccess: () => void
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Compte rendu d'import fidèle : créés, mis à jour, ignorés, doublons et erreurs sont
+ * séparés. « X importés avec succès » seul laissait croire que X clients avaient été créés
+ * alors que des lignes avaient seulement mis à jour un client existant.
+ */
+function buildImportReport(r: CustomerImportResults): { html: string; needsAttention: boolean } {
+  const created = r.created ?? r.success
+  const updated = r.updated ?? 0
+  const skipped = r.skipped ?? 0
+  const duplicates = r.duplicates_in_file ?? 0
+  const ignoredSheets = r.ignored_sheets ?? []
+
+  const lines: string[] = []
+  if (r.rows_read !== undefined) {
+    lines.push(
+      `<b>${r.rows_read}</b> ligne(s) lue(s)${r.sheet ? ` dans la feuille « ${escapeHtml(r.sheet)} »` : ''}.`
+    )
+  }
+  lines.push(`<span style="color:#15803d">✔ <b>${created}</b> client(s) créé(s)</span>`)
+  if (updated > 0) {
+    lines.push(`↻ <b>${updated}</b> client(s) existant(s) mis à jour (même e-mail déjà enregistré)`)
+  }
+  if (duplicates > 0) {
+    lines.push(
+      `<span style="color:#b45309">⚠ <b>${duplicates}</b> ligne(s) avec un e-mail déjà présent plus haut dans le fichier : aucun nouveau client n'a été créé pour elles</span>`
+    )
+  }
+  if (skipped > 0) lines.push(`${skipped} ligne(s) vide(s) ignorée(s)`)
+  if (r.errors > 0) {
+    lines.push(`<span style="color:#dc2626">✖ <b>${r.errors}</b> erreur(s)</span>`)
+  }
+  for (const sheet of ignoredSheets) {
+    lines.push(
+      `<span style="color:#b45309">⚠ La feuille « ${escapeHtml(sheet.name)} » contient aussi ${sheet.rows} ligne(s) de clients : <b>elle n'a pas été importée</b> (une seule feuille est lue à la fois).</span>`
+    )
+  }
+
+  let html = `<div style="text-align:left;line-height:1.7">${lines.join('<br>')}</div>`
+
+  const details = (r.error_details ?? []).slice(0, 10)
+  if (details.length > 0) {
+    const more = (r.error_details?.length ?? 0) - details.length
+    html +=
+      `<ul style="text-align:left;margin-top:12px;max-height:180px;overflow:auto;font-size:12px;color:#6b7280">` +
+      details.map((d) => `<li>${escapeHtml(d)}</li>`).join('') +
+      (more > 0 ? `<li>… et ${more} autre(s)</li>` : '') +
+      `</ul>`
+  }
+
+  return {
+    html,
+    needsAttention: r.errors > 0 || duplicates > 0 || ignoredSheets.length > 0 || (created === 0 && updated > 0),
+  }
 }
 
 export function CustomerImportModal({ open, onClose, onSuccess }: Props) {
@@ -31,15 +98,13 @@ export function CustomerImportModal({ open, onClose, onSuccess }: Props) {
 
     try {
       const results = await importCustomers(file)
-      let message = `${results.success} client(s) importé(s) avec succès.`
-      if (results.errors > 0) {
-        message += `<br><br><span class="text-red-500">${results.errors} erreur(s) rencontrée(s).</span>`
-      }
-      
+      const { html, needsAttention } = buildImportReport(results)
+
       await Swal.fire({
         title: 'Importation terminée',
-        html: message,
-        icon: results.errors > 0 ? 'warning' : 'success',
+        html,
+        icon: needsAttention ? 'warning' : 'success',
+        width: 640,
       })
       onSuccess()
       onClose()

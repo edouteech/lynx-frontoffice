@@ -84,11 +84,21 @@ export async function downloadCustomerTemplate(): Promise<void> {
   document.body.removeChild(link)
 }
 
-export async function importCustomers(file: File): Promise<{
+export type CustomerImportResults = {
+  /** Créés + mis à jour (ancien compteur, gardé pour compatibilité). */
   success: number
+  created?: number
+  updated?: number
+  skipped?: number
+  duplicates_in_file?: number
   errors: number
   error_details: string[]
-}> {
+  rows_read?: number
+  sheet?: string
+  ignored_sheets?: { name: string; rows: number }[]
+}
+
+export async function importCustomers(file: File): Promise<CustomerImportResults> {
   const formData = new FormData()
   formData.append('file', file)
   

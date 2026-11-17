@@ -647,7 +647,9 @@ export default function App() {
           path="/customers"
           element={
             <ProtectedRoute>
-              <RequirePermission code="admin_panel.stores.manage">
+              <RequirePermission
+                code={['admin_panel.stores.manage', 'admin_panel.customers.manage']}
+              >
                 {withLayout(<CustomersIndex />)}
               </RequirePermission>
             </ProtectedRoute>
