@@ -6,6 +6,8 @@ import DataTable, { type Action, type Column } from '../../components/DataTable'
 import { deleteStockTransfer, fetchStockTransfers } from '../../api/stockTransfers'
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { StockTransfer } from '../../types/api'
+import StockListFilters from '../../components/StockListFilters'
+import type { StockListFilters as Filters } from '../../lib/stockListFilters'
 
 function formatFcfa(value: number) {
   return new Intl.NumberFormat('fr-FR', {
@@ -35,19 +37,20 @@ export default function StockTransfersIndex() {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Filters>({})
 
   const load = useCallback(async (p: number) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchStockTransfers(p)
+      const res = await fetchStockTransfers(p, filters)
       setPaginated({ data: res.data, current_page: res.current_page, last_page: res.last_page, total: res.total })
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters])
 
   useEffect(() => { void load(page) }, [page, load])
 
@@ -145,6 +148,15 @@ export default function StockTransfersIndex() {
           Nouveau transfert
         </button>
       </header>
+
+      <StockListFilters
+        statusOptions={Object.entries(STATUS_LABELS).map(([value, s]) => ({ value, label: s.label }))}
+        separateStores
+        onApply={(f) => {
+          setPage(1)
+          setFilters(f)
+        }}
+      />
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
