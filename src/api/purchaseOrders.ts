@@ -1,12 +1,14 @@
 import type { Paginated, PurchaseOrder, PurchaseOrderItem, Store } from '../types/api'
 import { api } from './apiClient'
+import { stockListParams, type StockListFilters } from '../lib/stockListFilters'
 
 export async function fetchPurchaseOrders(
   page = 1,
-  type?: 'central' | 'supplier'
+  type?: 'central' | 'supplier',
+  filters?: StockListFilters
 ): Promise<Paginated<PurchaseOrder>> {
   const { data } = await api.get<Paginated<PurchaseOrder>>('/purchase-orders', {
-    params: { page, ...(type ? { type } : {}) },
+    params: { page, ...(type ? { type } : {}), ...stockListParams(filters) },
   })
   return data
 }

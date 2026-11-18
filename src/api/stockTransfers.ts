@@ -1,8 +1,14 @@
 import type { Paginated, StockTransfer, StockTransferItem } from '../types/api'
 import { api } from './apiClient'
+import { stockListParams, type StockListFilters } from '../lib/stockListFilters'
 
-export async function fetchStockTransfers(page = 1): Promise<Paginated<StockTransfer>> {
-  const { data } = await api.get<Paginated<StockTransfer>>('/stock-transfers', { params: { page } })
+export async function fetchStockTransfers(
+  page = 1,
+  filters?: StockListFilters
+): Promise<Paginated<StockTransfer>> {
+  const { data } = await api.get<Paginated<StockTransfer>>('/stock-transfers', {
+    params: { page, ...stockListParams(filters) },
+  })
   return data
 }
 

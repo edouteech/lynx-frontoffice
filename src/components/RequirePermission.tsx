@@ -7,7 +7,8 @@ export default function RequirePermission({
   code,
   children,
 }: {
-  code: string
+  /** Un code, ou une liste de codes dont UN SEUL suffit. */
+  code: string | string[]
   children: ReactNode
 }) {
   const { user, activeOrganizationId, bootstrapping } = useAuth()
@@ -15,7 +16,8 @@ export default function RequirePermission({
 
   if (bootstrapping) return null
 
-  if (!hasPermissionCode(user, activeOrganizationId, code)) {
+  const codes = Array.isArray(code) ? code : [code]
+  if (!codes.some((c) => hasPermissionCode(user, activeOrganizationId, c))) {
     return (
       <Navigate
         to={getDefaultLandingPage(user, activeOrganizationId)}

@@ -45,6 +45,7 @@ import { getApiErrorMessage } from '../../lib/apiError'
 import { fetchGeneralSetting } from '../../api/generalSettings'
 
 import { useAuth } from '../../contexts/useAuth'
+import { hasPermissionCode } from '../../lib/permissions'
 
 import Swal from 'sweetalert2'
 
@@ -161,7 +162,12 @@ export default function SaleForm() {
 
   const isEdit = !!id
 
-  const { currentOrganization, user } = useAuth()
+  const { currentOrganization, user, activeOrganizationId } = useAuth()
+
+  // Créer un client depuis la vente : mêmes droits que l'API (stores.manage ou customers.manage).
+  const canCreateCustomer =
+    hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage') ||
+    hasPermissionCode(user, activeOrganizationId, 'admin_panel.customers.manage')
 
 
 
@@ -2229,6 +2235,7 @@ export default function SaleForm() {
 
                     ))}
 
+                    {canCreateCustomer && (
                     <button
 
                       type="button"
@@ -2268,6 +2275,7 @@ export default function SaleForm() {
                       </div>
 
                     </button>
+                    )}
 
                   </div>
 

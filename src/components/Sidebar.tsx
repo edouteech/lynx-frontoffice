@@ -298,10 +298,13 @@ export default function Sidebar({
     //   - admin_panel.sales.manage  : permission fine dédiée au menu Ventes (nouvelle,
     //     ajoutée en même temps que la sortie du groupe "Point de vente")
     //   - cash_register.sales.create_from_backoffice : permission historique côté caisse
+    //   - admin_panel.customers.manage : permission dédiée aux clients (n'ouvre que « Clients » ;
+    //     le filtrage par entrée est fait dans getVisibleChildren)
     if (item.id === 'ventes-clients-menu') {
       return (
         hasPermissionCode(user, activeOrganizationId, 'admin_panel.stores.manage') ||
         hasPermissionCode(user, activeOrganizationId, 'admin_panel.sales.manage') ||
+        hasPermissionCode(user, activeOrganizationId, 'admin_panel.customers.manage') ||
         hasPermissionCode(user, activeOrganizationId, 'cash_register.sales.create_from_backoffice')
       )
     }
@@ -384,6 +387,29 @@ export default function Sidebar({
             )
           case 'settings/subscription':
             return hasPermissionCode(user, activeOrganizationId, 'admin_panel.settings.licenses')
+          default:
+            return false
+        }
+      })
+    }
+
+    // Ventes & Clients : chaque entrée suit sa propre permission, pour qu'un lien
+    // affiché mène toujours à une page réellement accessible.
+    if (item.id === 'ventes-clients-menu') {
+      const has = (code: string) => hasPermissionCode(user, activeOrganizationId, code)
+      const canSales =
+        has('admin_panel.stores.manage') ||
+        has('admin_panel.sales.manage') ||
+        has('cash_register.sales.create_from_backoffice')
+      const canCustomers =
+        has('admin_panel.stores.manage') || has('admin_panel.customers.manage')
+
+      return (item.children ?? []).filter((sub) => {
+        switch (sub.id) {
+          case 'sales':
+            return canSales
+          case 'customers':
+            return canCustomers
           default:
             return false
         }

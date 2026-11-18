@@ -7,6 +7,8 @@ import { deletePurchaseOrder, fetchPurchaseOrders } from '../../api/purchaseOrde
 import { getApiErrorMessage } from '../../lib/apiError'
 import type { PurchaseOrder } from '../../types/api'
 import Can from '../../components/Can'
+import StockListFilters from '../../components/StockListFilters'
+import type { StockListFilters as Filters } from '../../lib/stockListFilters'
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   draft:              { label: 'Brouillon',           className: 'bg-gray-100 text-gray-600' },
@@ -32,12 +34,13 @@ export default function PurchaseOrdersIndex({ type }: Props) {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Filters>({})
 
   const load = useCallback(async (p: number) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchPurchaseOrders(p, type)
+      const res = await fetchPurchaseOrders(p, type, filters)
       setPaginated({
         data: res.data,
         current_page: res.current_page,
@@ -49,7 +52,7 @@ export default function PurchaseOrdersIndex({ type }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [type])
+  }, [type, filters])
 
   useEffect(() => { void load(page) }, [page, load])
 
@@ -177,6 +180,16 @@ export default function PurchaseOrdersIndex({ type }: Props) {
           )}
         </div>
       </header>
+
+      <StockListFilters
+        statusOptions={Object.entries(STATUS_LABELS).map(([value, s]) => ({ value, label: s.label }))}
+        withCenter={isCentral}
+        storeLabel={isCentral ? 'Magasin de livraison' : 'Magasin'}
+        onApply={(f) => {
+          setPage(1)
+          setFilters(f)
+        }}
+      />
 
       {error && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
