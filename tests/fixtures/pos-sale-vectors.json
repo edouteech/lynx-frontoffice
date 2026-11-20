@@ -268,10 +268,10 @@
           "quantity": 1.0
         }
       ],
-      "total": 11918.0,
+      "total": 11900.0,
       "total_ht": 10000.0,
       "discount": -0.0,
-      "aib_amount": 118.0,
+      "aib_amount": 100.0,
       "aib_rate": 0.01
     }
   },
@@ -324,10 +324,10 @@
           "quantity": 1.0
         }
       ],
-      "total": 11813.0,
+      "total": 11727.0,
       "total_ht": 9534.0,
       "discount": 1250.0,
-      "aib_amount": 563.0,
+      "aib_amount": 477.0,
       "aib_rate": 0.05
     }
   }

@@ -490,7 +490,9 @@ export default function WorkPeriodsPage() {
                         <div className="grid grid-cols-2 gap-px bg-gray-200">
                           <div className="bg-white p-3 flex justify-between items-center">
                             <span className="text-sm text-gray-600">CA TTC</span>
-                            <span className="font-bold text-gray-900">{formatFcfa(n(d.sales_total_ttc))}</span>
+                            {/* CA net (remboursements et rachats retranchés), comme le CA HT et le ticket Z.
+                                Les clôtures enregistrées avant l'ajout de net_sales_ttc ne l'ont pas : repli sur les ventes. */}
+                            <span className="font-bold text-gray-900">{formatFcfa(n(d.net_sales_ttc ?? d.sales_total_ttc))}</span>
                           </div>
                           <div className="bg-white p-3 flex justify-between items-center">
                             <span className="text-sm text-gray-600">CA HT</span>

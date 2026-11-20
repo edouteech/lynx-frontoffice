@@ -10,7 +10,8 @@
  *    dérive d'arrondi) ;
  *  - Bénin uniquement : arrondi au franc SUPÉRIEUR du prix net TTC et HT de chaque ligne envoyée, du
  *    total, du total HT, de la remise et de l'AIB. Autres pays : aucun arrondi ;
- *  - AIB (Bénin) : arrondi de (total non arrondi × 1 % ou 5 %) ; total = arrondi du total + AIB ;
+ *  - AIB (Bénin) : arrondi de (total HT non arrondi × 1 % ou 5 %) ; total = arrondi du total + AIB.
+ *    Base HT confirmée le 2026-11-20 : sur ce point le web s'écarte de la caisse tant qu'elle calcule sur le TTC ;
  *  - frais supplémentaires (propres au web) : ajoutés au total, sans TVA et hors remise.
  *
  * Ce module est volontairement sans dépendance : il est vérifié par tests/saleCalc.test.ts
@@ -154,8 +155,10 @@ export function computeSale(lines: CalcLineInput[], options: CalcOptions): CalcR
 
   // Les frais sont ajoutés avant l'arrondi et l'AIB : ils font partie de ce que le client paie.
   const payable = cartTotal + extraFees
+  const payableHt = cartTotalHt + extraFees // les frais n'ont pas de TVA : ils comptent tels quels dans le HT
   const aibRate = aibPercent === 1 ? 0.01 : aibPercent === 5 ? 0.05 : null
-  const aibAmount = aibRate === null ? null : beninCeil(payable * aibRate)
+  // L'AIB se calcule sur le montant HORS TAXE (confirmé le 2026-11-20), pas sur le TTC.
+  const aibAmount = aibRate === null ? null : beninCeil(payableHt * aibRate)
 
   return {
     lines: resultLines,
