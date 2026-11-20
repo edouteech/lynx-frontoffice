@@ -60,6 +60,10 @@ export interface CreateSaleItemPayload {
   product_category_id?: number | null
   product_vat_rate?: number | null
   product_tax_name?: string | null
+  /** Commentaire libre de la ligne (ex. « sans sel »). */
+  comment?: string | null
+  selected_supplements?: { supplement_id: string; supplement_name: string; supplement_price: number; quantity: number }[]
+  selected_options?: { option_id: string; option_name: string; option_price: number }[]
 }
 
 export interface CreateSalePayload {
@@ -90,6 +94,12 @@ export interface CreateSalePayload {
   extra_fees?: number
   total?: number | null
   total_ht?: number | null
+  /** Montant de la remise (TTC), calculé côté client comme la caisse. */
+  discount?: number | null
+  /** Code AIB du client pour cette vente : '1' ou '5' (transmis à la DGI). */
+  customer_aib?: string | null
+  aib_rate?: number | null
+  aib_amount?: number | null
   paid_amount?: number | null
   change_amount?: number | null
   items?: CreateSaleItemPayload[]

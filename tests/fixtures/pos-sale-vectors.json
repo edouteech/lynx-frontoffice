@@ -1,0 +1,334 @@
+{
+  "sans remise, TVA 18, 1 ligne": {
+    "input": {
+      "lines": [
+        [
+          11800.0,
+          18.0,
+          1.0
+        ]
+      ],
+      "globalPct": 0.0,
+      "aibPercent": 0
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 11800.0,
+          "unit_price_ht": 10000.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11800.0,
+      "total_ht": 10000.0,
+      "discount": 0.0,
+      "aib_amount": null,
+      "aib_rate": null
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 11800.0,
+          "unit_price_ht": 10000.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11800.0,
+      "total_ht": 10000.0,
+      "discount": -0.0,
+      "aib_amount": null,
+      "aib_rate": null
+    }
+  },
+  "remise 10 %, TVA 0, 2 x 5000": {
+    "input": {
+      "lines": [
+        [
+          5000.0,
+          0.0,
+          2.0
+        ]
+      ],
+      "globalPct": 10.0,
+      "aibPercent": 0
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 4500.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 9000.0,
+      "total_ht": 9000.0,
+      "discount": 1000.0,
+      "aib_amount": null,
+      "aib_rate": null
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 4500.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 9000.0,
+      "total_ht": 9000.0,
+      "discount": 1000.0,
+      "aib_amount": null,
+      "aib_rate": null
+    }
+  },
+  "remise 10 %, TVA 18, 2 x 5000": {
+    "input": {
+      "lines": [
+        [
+          5000.0,
+          18.0,
+          2.0
+        ]
+      ],
+      "globalPct": 10.0,
+      "aibPercent": 0
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 3814.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 9000.0,
+      "total_ht": 7628.0,
+      "discount": 1000.0,
+      "aib_amount": null,
+      "aib_rate": null
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 3814.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 9000.0,
+      "total_ht": 7628.0,
+      "discount": 1000.0,
+      "aib_amount": null,
+      "aib_rate": null
+    }
+  },
+  "remise 10 %, TVA 18, 3 lignes": {
+    "input": {
+      "lines": [
+        [
+          1250.0,
+          18.0,
+          3.0
+        ],
+        [
+          799.0,
+          18.0,
+          1.0
+        ],
+        [
+          10000.0,
+          0.0,
+          2.0
+        ]
+      ],
+      "globalPct": 10.0,
+      "aibPercent": 0
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 1125.0,
+          "unit_price_ht": 954.0,
+          "quantity": 3.0
+        },
+        {
+          "unit_price": 720.0,
+          "unit_price_ht": 610.0,
+          "quantity": 1.0
+        },
+        {
+          "unit_price": 9000.0,
+          "unit_price_ht": 9000.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 22095.0,
+      "total_ht": 21470.0,
+      "discount": 2455.0,
+      "aib_amount": null,
+      "aib_rate": null
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 1125.0,
+          "unit_price_ht": 954.0,
+          "quantity": 3.0
+        },
+        {
+          "unit_price": 720.0,
+          "unit_price_ht": 610.0,
+          "quantity": 1.0
+        },
+        {
+          "unit_price": 9000.0,
+          "unit_price_ht": 9000.0,
+          "quantity": 2.0
+        }
+      ],
+      "total": 22095.0,
+      "total_ht": 21470.0,
+      "discount": 2455.0,
+      "aib_amount": null,
+      "aib_rate": null
+    }
+  },
+  "remise 7,5 %, TVA 18, 3 x 3333": {
+    "input": {
+      "lines": [
+        [
+          3333.0,
+          18.0,
+          3.0
+        ]
+      ],
+      "globalPct": 7.5,
+      "aibPercent": 0
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 3084.0,
+          "unit_price_ht": 2613.0,
+          "quantity": 3.0
+        }
+      ],
+      "total": 9250.0,
+      "total_ht": 7839.0,
+      "discount": 750.0,
+      "aib_amount": null,
+      "aib_rate": null
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 3084.0,
+          "unit_price_ht": 2613.0,
+          "quantity": 3.0
+        }
+      ],
+      "total": 9250.0,
+      "total_ht": 7839.0,
+      "discount": 750.0,
+      "aib_amount": null,
+      "aib_rate": null
+    }
+  },
+  "AIB 1 %, sans remise, TVA 18": {
+    "input": {
+      "lines": [
+        [
+          11800.0,
+          18.0,
+          1.0
+        ]
+      ],
+      "globalPct": 0.0,
+      "aibPercent": 1
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 11800.0,
+          "unit_price_ht": 10000.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11918.0,
+      "total_ht": 10000.0,
+      "discount": 0.0,
+      "aib_amount": 118.0,
+      "aib_rate": 0.01
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 11800.0,
+          "unit_price_ht": 10000.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11918.0,
+      "total_ht": 10000.0,
+      "discount": -0.0,
+      "aib_amount": 118.0,
+      "aib_rate": 0.01
+    }
+  },
+  "AIB 5 %, remise 10 %, TVA 18": {
+    "input": {
+      "lines": [
+        [
+          5000.0,
+          18.0,
+          2.0
+        ],
+        [
+          2500.0,
+          18.0,
+          1.0
+        ]
+      ],
+      "globalPct": 10.0,
+      "aibPercent": 5
+    },
+    "actuel": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 3814.0,
+          "quantity": 2.0
+        },
+        {
+          "unit_price": 2250.0,
+          "unit_price_ht": 1907.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11813.0,
+      "total_ht": 9534.0,
+      "discount": 1250.0,
+      "aib_amount": 563.0,
+      "aib_rate": 0.05
+    },
+    "sur": {
+      "lines": [
+        {
+          "unit_price": 4500.0,
+          "unit_price_ht": 3814.0,
+          "quantity": 2.0
+        },
+        {
+          "unit_price": 2250.0,
+          "unit_price_ht": 1907.0,
+          "quantity": 1.0
+        }
+      ],
+      "total": 11813.0,
+      "total_ht": 9534.0,
+      "discount": 1250.0,
+      "aib_amount": 563.0,
+      "aib_rate": 0.05
+    }
+  }
+}

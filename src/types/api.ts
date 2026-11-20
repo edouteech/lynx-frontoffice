@@ -419,6 +419,8 @@ export interface Product {
   stocks?: ProductStock[]
   composite_items?: CompositeProductItem[]
   supplements?: ProductSupplement[]
+  /** Options (choix unique) activées pour ce produit. */
+  options?: Option[]
 }
 
 export interface ProductStorePrice {

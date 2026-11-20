@@ -20,6 +20,16 @@ import {
 import type { CreateSalePayload } from '../../api/sales'
 
 import { isBeninCountry } from '../../lib/dgi'
+import { computeSale, freezeDiscounts } from '../../lib/saleCalc'
+import type { CalcLineInput, GlobalDiscount, LineDiscount } from '../../lib/saleCalc'
+import { activeReductions, findReductionByCode, isGlobalReduction, reductionAppliesToProduct } from '../../lib/reductions'
+import type { ReductionLike } from '../../lib/reductions'
+import { emptyExtras, extrasUnitPrice } from '../../lib/lineExtras'
+import type { ExtraOption, ExtraSupplement, LineExtras } from '../../lib/lineExtras'
+import { fetchDiscounts } from '../../api/discounts'
+import { GlobalDiscountFields, LineDiscountModal } from './SaleDiscountControls'
+import type { LineDiscountChoice } from './SaleDiscountControls'
+import { LineExtrasModal } from './LineExtrasModal'
 
 import { fetchStores } from '../../api/stores'
 
@@ -125,6 +135,14 @@ interface PendingItem {
   quantity: number
 
   unitPrice: number
+
+  /** Taux de TVA de vente du produit en % (0 si aucun) : sert au calcul identique à la caisse. */
+  vatRate: number
+
+  /** Suppléments et options du produit : proposés à la personnalisation de la ligne. */
+  supplements: ExtraSupplement[]
+
+  options: ExtraOption[]
 
 }
 
@@ -249,6 +267,33 @@ export default function SaleForm() {
   const [orderType, setOrderType] = useState('')
 
   const [discountPct, setDiscountPct] = useState('0')
+
+  // AIB (Bénin) : 1 % ou 5 %, choisi à CHAQUE vente comme à l'encaissement de la caisse.
+  const [aibPercentChoice, setAibPercentChoice] = useState<1 | 5>(1)
+
+  // Remises avancées (création), comme la caisse : remise par ligne, remise globale en % ou en montant,
+  // remises enregistrées et code promo. Personnalisation d'une ligne : suppléments, option, commentaire.
+  const [reductions, setReductions] = useState<ReductionLike[]>([])
+  const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent')
+  const [discountAmount, setDiscountAmount] = useState('0')
+  const [lineDiscounts, setLineDiscounts] = useState<Record<number, LineDiscount>>({})
+  const [lineExtras, setLineExtras] = useState<Record<number, LineExtras>>({})
+  const [lineBasePrice, setLineBasePrice] = useState<Record<number, number>>({})
+  const [discountModalFor, setDiscountModalFor] = useState<number | null>(null)
+  const [extrasModalFor, setExtrasModalFor] = useState<number | null>(null)
+
+  // Réductions enregistrées du magasin (page « Remises »), chargées pour une nouvelle vente seulement.
+  useEffect(() => {
+    if (isEdit || !storeId) {
+      setReductions([])
+      return
+    }
+    let cancelled = false
+    fetchDiscounts(1, Number(storeId), 500)
+      .then(res => { if (!cancelled) setReductions(res.data as ReductionLike[]) })
+      .catch(() => { if (!cancelled) setReductions([]) })
+    return () => { cancelled = true }
+  }, [isEdit, storeId])
 
   const [extraFees, setExtraFees] = useState('0')
 
@@ -970,9 +1015,125 @@ export default function SaleForm() {
 
   const subtotal = displayItems.reduce((s, i) => s + i.total, 0)
 
-  const discount = subtotal * (parseFloat(discountPct) || 0) / 100
+  // Création : calcul IDENTIQUE à celui de la caisse (cf. lib/saleCalc.ts) — remise ligne par ligne,
+  // arrondis au franc supérieur et AIB pour le Bénin. Les chiffres affichés sont ceux qui sont envoyés.
+  // Modification d'une vente existante : calcul historique inchangé.
+  const isBeninOrg = isBeninCountry(currentOrganization?.country)
 
-  const total    = subtotal - discount + (parseFloat(extraFees) || 0)
+  const calcCustomer = customerId ? customers.find(c => String(c.id) === customerId) : null
+
+  const globalDiscountSpec: GlobalDiscount | null =
+    discountMode === 'amount'
+      ? ((parseFloat(discountAmount) || 0) > 0 ? { kind: 'amount', value: parseFloat(discountAmount) || 0 } : null)
+      : ((parseFloat(discountPct) || 0) > 0 ? { kind: 'percent', value: parseFloat(discountPct) || 0 } : null)
+
+  const calcLines: CalcLineInput[] = pendingItems.map(pi => ({
+    unitPrice: parseFloat(pendingEdits[pi.tempId]?.unit_price ?? String(pi.unitPrice)) || pi.unitPrice,
+    vatRate:   pi.vatRate,
+    quantity:  parseFloat(pendingEdits[pi.tempId]?.quantity ?? String(pi.quantity)) || pi.quantity,
+    discount:  lineDiscounts[pi.tempId] ?? null,
+  }))
+
+  const calc = computeSale(calcLines, {
+    benin:          isBeninOrg,
+    globalDiscount: globalDiscountSpec,
+    // Client « AIB » au Bénin : taux choisi pour cette vente (1 % ou 5 %), comme la caisse.
+    aibPercent:     isBeninOrg && calcCustomer?.aib ? aibPercentChoice : 0,
+    extraFees:      parseFloat(extraFees) || 0,
+  })
+
+  // Réductions proposables maintenant (actives, dans leur créneau de validité).
+  const activeNow = activeReductions(reductions)
+
+  const lineDiscountLabel = (d: LineDiscount | undefined): string => {
+    if (!d) return 'Remise'
+    if (d.kind === 'percent') return `Remise −${d.value} %`
+    if (d.kind === 'amount') return `Remise −${d.value.toLocaleString('fr-FR')} F/u`
+    return 'Remise ✓'
+  }
+
+  // « Commentaire » si le produit n'a ni supplément ni option à choisir, « Personnaliser » sinon.
+  const extrasButtonLabel = (tempId: number): string => {
+    const pi = pendingItems.find(p => p.tempId === tempId)
+    const hasChoices = (pi?.supplements.length ?? 0) > 0 || (pi?.options.length ?? 0) > 0
+    const done = lineExtras[tempId] !== undefined
+    if (hasChoices) return done ? 'Personnalisée ✓' : 'Personnaliser'
+    return done ? 'Commentaire ✓' : 'Commentaire'
+  }
+
+  // Une remise sur UNE ligne abandonne la remise globale ; les autres lignes gardent ce qu'elle avait
+  // calculé (comme la caisse) : on « fige » la remise globale en remises de ligne avant d'appliquer.
+  const lineDiscountsWithoutGlobal = (): Record<number, LineDiscount> => {
+    if (!globalDiscountSpec) return { ...lineDiscounts }
+    const frozen = freezeDiscounts(calcLines, globalDiscountSpec)
+    const base: Record<number, LineDiscount> = {}
+    pendingItems.forEach((pi, i) => { base[pi.tempId] = frozen[i] })
+    setDiscountPct('0')
+    setDiscountAmount('0')
+    return base
+  }
+
+  const applyLineDiscount = (tempId: number, choice: LineDiscountChoice) => {
+    const base = lineDiscountsWithoutGlobal()
+    if (choice.type === 'clear') delete base[tempId]
+    else if (choice.type === 'manual') base[tempId] = choice.discount
+    else base[tempId] = { kind: choice.reduction.type === 'percentage' ? 'percent' : 'amount', value: Number(choice.reduction.value) }
+    setLineDiscounts(base)
+    setDiscountModalFor(null)
+  }
+
+  // Réduction enregistrée : globale -> remise globale ; spécifique -> remise sur les lignes des produits visés.
+  // Retourne un message d'erreur, ou null si appliquée.
+  const applyReduction = (r: ReductionLike): string | null => {
+    const value = Number(r.value)
+    if (isGlobalReduction(r)) {
+      setLineDiscounts({})
+      if (r.type === 'percentage') {
+        setDiscountMode('percent'); setDiscountPct(String(value)); setDiscountAmount('0')
+      } else {
+        setDiscountMode('amount'); setDiscountAmount(String(value)); setDiscountPct('0')
+      }
+      return null
+    }
+    const matching = pendingItems.filter(pi => reductionAppliesToProduct(r, pi.productId))
+    if (matching.length === 0) return `Aucun produit du ticket concerné par « ${r.name} »`
+    const base = lineDiscountsWithoutGlobal()
+    matching.forEach(pi => { base[pi.tempId] = { kind: r.type === 'percentage' ? 'percent' : 'amount', value } })
+    setLineDiscounts(base)
+    return null
+  }
+
+  const applyPromoCode = (code: string): string | null => {
+    const r = findReductionByCode(code, activeNow)
+    return r ? applyReduction(r) : 'Code promo inconnu'
+  }
+
+  // Personnalisation d'une ligne : le prix unitaire devient prix de base + suppléments (comme la caisse).
+  const applyLineExtras = (tempId: number, extras: LineExtras) => {
+    const pi = pendingItems.find(p => p.tempId === tempId)
+    if (!pi) return
+    const currentPrice = parseFloat(pendingEdits[tempId]?.unit_price ?? String(pi.unitPrice)) || pi.unitPrice
+    const base = lineBasePrice[tempId] ?? currentPrice
+    setLineBasePrice(prev => ({ ...prev, [tempId]: base }))
+    setLineExtras(prev => ({ ...prev, [tempId]: extras }))
+    // Seul le prix change : l'option et les suppléments sont enregistrés à part (selected_options /
+    // selected_supplements), le champ « Description » reste à la libre saisie de l'utilisateur.
+    setPendingEdits(prev => ({
+      ...prev,
+      [tempId]: {
+        ...prev[tempId],
+        quantity: prev[tempId]?.quantity ?? String(pi.quantity),
+        unit_price: String(extrasUnitPrice(base, pi.supplements, extras)),
+      },
+    }))
+    setExtrasModalFor(null)
+  }
+
+  const discount = isEdit ? subtotal * (parseFloat(discountPct) || 0) / 100 : calc.discount
+
+  const aibAmount = isEdit ? 0 : (calc.aib_amount ?? 0)
+
+  const total    = isEdit ? subtotal - discount + (parseFloat(extraFees) || 0) : calc.total
 
   // ── Paiement par solde client ("Compte client") ───────────────────────────
   const customerAccountPaymentsEnabled = generalSetting?.customer_account_payments ?? false
@@ -1069,6 +1230,12 @@ export default function SaleForm() {
 
           unitPrice: price,
 
+          vatRate: Number(product.sales_vat_rate?.rate ?? 0) || 0,
+
+          supplements: (product.supplements ?? []).map(sp => ({ id: String(sp.id), name: sp.supplement_name, price: Number(sp.price) || 0 })),
+
+          options: (product.options ?? []).map(op => ({ id: String(op.id), name: op.name })),
+
         }])
 
         setPendingEdits(prev => ({ ...prev, [tempId]: { quantity: String(qty), unit_price: String(price) } }))
@@ -1120,6 +1287,12 @@ export default function SaleForm() {
       setPendingItems(prev => prev.filter(i => i.tempId !== itemId))
 
       setPendingEdits(prev => { const n = { ...prev }; delete n[itemId]; return n })
+
+      setLineDiscounts(prev => { const n = { ...prev }; delete n[itemId]; return n })
+
+      setLineExtras(prev => { const n = { ...prev }; delete n[itemId]; return n })
+
+      setLineBasePrice(prev => { const n = { ...prev }; delete n[itemId]; return n })
 
       return
 
@@ -1337,19 +1510,54 @@ export default function SaleForm() {
 
           invoice_number:       nextInvoiceNumber,
 
-          discount_percentage:  parseFloat(discountPct) || 0,
+          discount_percentage:  discountMode === 'percent' ? (parseFloat(discountPct) || 0) : 0,
 
           extra_fees:           parseFloat(extraFees) || 0,
 
-          items: pendingItems.map(pi => ({
+          // Chiffres calculés ici, comme la caisse : l'API les enregistre et les additionne.
+          total:                calc.total,
+
+          total_ht:             calc.total_ht,
+
+          discount:             calc.discount,
+
+          // Même code AIB que la caisse ('1' ou '5') : c'est lui que l'API transmet à la DGI.
+          customer_aib:         calc.aib_amount !== null ? String(aibPercentChoice) : undefined,
+
+          aib_rate:             calc.aib_rate,
+
+          aib_amount:           calc.aib_amount,
+
+          items: pendingItems.map((pi, index) => ({
 
             product_id: pi.productId,
 
             quantity:   parseFloat(pendingEdits[pi.tempId]?.quantity   ?? String(pi.quantity))   || pi.quantity,
 
-            unit_price: parseFloat(pendingEdits[pi.tempId]?.unit_price ?? String(pi.unitPrice)) || pi.unitPrice,
+            // Prix NET de remise (la remise est déjà appliquée : on n'envoie jamais les deux, sinon
+            // la DGI la déduirait deux fois), comme la caisse.
+            unit_price:    calc.lines[index].unit_price,
+
+            unit_price_ht: calc.lines[index].unit_price_ht,
+
+            discount:      0,
 
             description: pendingEdits[pi.tempId]?.description?.trim() || null,
+
+            comment: lineExtras[pi.tempId]?.comment.trim() || null,
+
+            selected_supplements: pi.supplements
+              .filter(sp => (lineExtras[pi.tempId]?.supplements[sp.id] ?? 0) > 0)
+              .map(sp => ({
+                supplement_id:    sp.id,
+                supplement_name:  sp.name,
+                supplement_price: sp.price,
+                quantity:         lineExtras[pi.tempId]?.supplements[sp.id] ?? 0,
+              })),
+
+            selected_options: pi.options
+              .filter(op => op.id === lineExtras[pi.tempId]?.optionId)
+              .map(op => ({ option_id: op.id, option_name: op.name, option_price: 0 })),
 
           })),
 
@@ -1886,6 +2094,41 @@ export default function SaleForm() {
     <div className="space-y-5">
 
 
+
+      {discountModalFor !== null && (() => {
+        const pi = pendingItems.find(p => p.tempId === discountModalFor)
+        if (!pi) return null
+        return (
+          <LineDiscountModal
+            key={pi.tempId}
+            open
+            productName={pi.productName}
+            reductions={activeNow.filter(r => reductionAppliesToProduct(r, pi.productId))}
+            hasDiscount={!!lineDiscounts[pi.tempId]}
+            onClose={() => setDiscountModalFor(null)}
+            onChoose={choice => applyLineDiscount(pi.tempId, choice)}
+          />
+        )
+      })()}
+
+      {extrasModalFor !== null && (() => {
+        const pi = pendingItems.find(p => p.tempId === extrasModalFor)
+        if (!pi) return null
+        const currentPrice = parseFloat(pendingEdits[pi.tempId]?.unit_price ?? String(pi.unitPrice)) || pi.unitPrice
+        return (
+          <LineExtrasModal
+            key={pi.tempId}
+            open
+            productName={pi.productName}
+            basePrice={lineBasePrice[pi.tempId] ?? currentPrice}
+            supplements={pi.supplements}
+            options={pi.options}
+            initial={lineExtras[pi.tempId] ?? emptyExtras}
+            onClose={() => setExtrasModalFor(null)}
+            onApply={extras => applyLineExtras(pi.tempId, extras)}
+          />
+        )
+      })()}
 
       {/* ── Header sticky ─────────────────────────────────────────────────── */}
 
@@ -3121,6 +3364,31 @@ export default function SaleForm() {
 
                           )}
 
+                        
+                          {!isEdit && !isConfirmed && (
+
+                            <div className="mt-1 flex justify-end gap-3 text-xs">
+
+                              <button
+                                type="button"
+                                onClick={() => setDiscountModalFor(item.id)}
+                                className="font-medium text-[#3B82F6] hover:underline"
+                              >
+                                {lineDiscountLabel(lineDiscounts[item.id])}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setExtrasModalFor(item.id)}
+                                className="font-medium text-[#3B82F6] hover:underline"
+                              >
+                                {extrasButtonLabel(item.id)}
+                              </button>
+
+                            </div>
+
+                          )}
+
                         </td>
 
 
@@ -3183,9 +3451,11 @@ export default function SaleForm() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto">
 
+                {isEdit ? (
+
                 <div className="w-full sm:w-52">
 
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Remise globale (%)</label>
+                  <label className="mb-1 flex h-7 items-center text-xs font-medium text-gray-600">Remise globale (%)</label>
 
                   <Inp
 
@@ -3207,9 +3477,26 @@ export default function SaleForm() {
 
                 </div>
 
+                ) : (
+
+                  <GlobalDiscountFields
+                    mode={discountMode}
+                    percent={discountPct}
+                    amount={discountAmount}
+                    reductions={activeNow}
+                    disabled={isConfirmed}
+                    onModeChange={setDiscountMode}
+                    onPercentChange={v => { setDiscountPct(v); if ((parseFloat(v) || 0) > 0) setLineDiscounts({}) }}
+                    onAmountChange={v => { setDiscountAmount(v); if ((parseFloat(v) || 0) > 0) setLineDiscounts({}) }}
+                    onApplyReduction={applyReduction}
+                    onApplyCode={applyPromoCode}
+                  />
+
+                )}
+
                 <div className="w-full sm:w-52">
 
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
+                  <label className="mb-1 flex h-7 items-center text-xs font-medium text-gray-600">Frais supplémentaires (CFA)</label>
 
                   <Inp
 
@@ -3245,11 +3532,11 @@ export default function SaleForm() {
 
                 </div>
 
-                {(parseFloat(discountPct) || 0) > 0 && (
+                {discount > 0 && (
 
                   <div className="flex justify-between text-red-600">
 
-                    <span>Remise ({discountPct}%)</span>
+                    <span>{discountMode === 'percent' && (isEdit || globalDiscountSpec) ? `Remise (${discountPct}%)` : 'Remise'}</span>
 
                     <span>−{discount.toLocaleString('fr-FR')} CFA</span>
 
@@ -3264,6 +3551,32 @@ export default function SaleForm() {
                     <span>Frais suppl.</span>
 
                     <span>+{parseFloat(extraFees).toLocaleString('fr-FR')} CFA</span>
+
+                  </div>
+
+                )}
+
+                {aibAmount > 0 && (
+
+                  <div className="flex justify-between text-gray-600">
+
+                    <span className="flex items-center gap-2">
+
+                      AIB
+
+                      <select
+                        value={aibPercentChoice}
+                        onChange={e => setAibPercentChoice(e.target.value === '5' ? 5 : 1)}
+                        className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs"
+                        aria-label="Taux d'AIB"
+                      >
+                        <option value={1}>1 %</option>
+                        <option value={5}>5 %</option>
+                      </select>
+
+                    </span>
+
+                    <span>+{aibAmount.toLocaleString('fr-FR')} CFA</span>
 
                   </div>
 
